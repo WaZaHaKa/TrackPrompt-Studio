@@ -1,0 +1,39 @@
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+
+# TrackPrompt runtime state (uploads, derived audio, SQLite, model cache)
+.trackprompt-data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.pytest_*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.e2e-data/
+*.tsbuildinfo
+
+# Generated synthetic fixtures stay local; the generator and README are tracked.
+test-fixtures/*
+!test-fixtures/README.md
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

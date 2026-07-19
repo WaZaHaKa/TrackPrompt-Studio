@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from ..adapters import deep_adapters, run_demucs
+from ..adapters import DeepAdapterError, deep_adapters, run_demucs
 from ..config import Settings
 
 
@@ -29,10 +29,18 @@ def main() -> int:
             signal = (0.08 * np.sin(2 * np.pi * 220 * time) + 0.03 * np.sin(2 * np.pi * 440 * time)).astype(np.float32)
             sf.write(source, signal, sample_rate, subtype="PCM_16")
             output = directory / "stems"
-            stems = run_demucs(source, output, settings, device=capability.selected_device)
-            payload["tinyInference"] = all(path.is_file() and path.stat().st_size > 44 for path in stems.values())
-            shutil.rmtree(output, ignore_errors=True)
-            payload["temporaryStemsRemoved"] = not output.exists()
+            try:
+                stems = run_demucs(source, output, settings, device=capability.selected_device)
+            except DeepAdapterError as exc:
+                payload["tinyInference"] = False
+                payload["errorType"] = type(exc).__name__
+            else:
+                payload["tinyInference"] = all(
+                    path.is_file() and path.stat().st_size > 44 for path in stems.values()
+                )
+            finally:
+                shutil.rmtree(output, ignore_errors=True)
+                payload["temporaryStemsRemoved"] = not output.exists()
     print(json.dumps(payload, indent=2))
     return 0 if capability.available and (not arguments.smoke or payload.get("tinyInference") is True) else 1
 

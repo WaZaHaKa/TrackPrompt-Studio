@@ -22,7 +22,13 @@ from app.analysis.core import (
     with_failure_isolation,
 )
 from app.analysis.sanity import validate_analysis_result
-from app.schemas import Confidence
+from app.schemas import (
+    Confidence,
+    GenreAnalysis,
+    GenreCandidate,
+    LyricsAnalysisSummary,
+)
+from app.visualizer.schemas import CurveName, VisualFeatureArtifact
 
 
 def _loaded(fixture_dir: Path, name: str):
@@ -380,6 +386,15 @@ def test_successful_deep_analysis_populates_sections_and_cleans_stems(
     assert any(value in {"present", "prominent"} for value in activity)
     assert "inactive" in activity
     assert all("no enabled vocal separator" not in (value or "") for value in activity)
+    visual_features = VisualFeatureArtifact.model_validate_json(
+        (tmp_path / "visual-features.json").read_text(encoding="utf-8")
+    )
+    assert {
+        CurveName.DRUM_ENERGY,
+        CurveName.BASS_ENERGY,
+        CurveName.VOCAL_ENERGY,
+        CurveName.OTHER_ENERGY,
+    }.issubset(visual_features.curves)
     assert not (tmp_path / "stems").exists()
 
 
@@ -395,3 +410,116 @@ def test_sanity_layer_omits_contradictory_peak_and_beat_grid(click_analysis) -> 
     assert any("normalized_peak_not_positive" in warning for warning in validated.warnings)
     assert any("beat_grid_matches_bpm" in warning for warning in validated.warnings)
     assert "NaN" not in validated.model_dump_json()
+
+
+def test_sanity_projects_authoritative_genre_and_repairs_false_edit_state(click_analysis) -> None:
+    analysis = click_analysis.model_copy(deep=True)
+    analysis.genre_analysis = GenreAnalysis(
+        broad_candidates=[
+            GenreCandidate(
+                id="electronic-dance",
+                label="electronic dance",
+                canonical_label="electronic dance",
+                similarity=0.42,
+                confidence=Confidence.MEDIUM,
+            )
+        ],
+        blend_candidates=["techno / progressive-house blend"],
+        confidence=Confidence.MEDIUM,
+        method="hierarchical audio-text similarity",
+        model_id="fake-clap",
+        taxonomy_version="2.0.0",
+        selected_device="cpu",
+        user_edited=True,
+    )
+    validated = validate_analysis_result(analysis)
+    assert validated.genre_analysis is not None
+    assert validated.genre_analysis.user_edited is False
+    assert validated.style_and_mood.broad_style.value == ["electronic dance"]
+    assert validated.style_and_mood.broad_style.score == pytest.approx(0.42)
+    assert validated.style_and_mood.genre_blend.value == [
+        "techno / progressive-house blend"
+    ]
+    assert "probability" in validated.style_and_mood.broad_style.method
+    assert any("genre_edit_state" in warning for warning in validated.warnings)
+
+
+def test_sanity_reconciles_genre_review_and_lyrics_section_references(click_analysis) -> None:
+    analysis = click_analysis.model_copy(deep=True)
+    section_id = analysis.structure.sections[0].id
+    analysis.genre_analysis = GenreAnalysis(
+        broad_candidates=[
+            GenreCandidate(
+                id="electronic-dance",
+                label="electronic dance",
+                canonical_label="electronic dance",
+                similarity=0.4,
+                confidence=Confidence.MEDIUM,
+                accepted=True,
+                rejected=True,
+            )
+        ],
+        confidence=Confidence.MEDIUM,
+        method="hierarchical audio-text similarity",
+        model_id="fake-clap",
+        taxonomy_version="2.0.0",
+        selected_device="cpu",
+    )
+    analysis.lyrics_summary = LyricsAnalysisSummary(
+        enabled=True,
+        status="completed",
+        transcript_available=True,
+        segment_count=0,
+        active_section_ids=[section_id, "missing-section", section_id],
+    )
+    validated = validate_analysis_result(analysis)
+    assert validated.genre_analysis is not None
+    candidate = validated.genre_analysis.broad_candidates[0]
+    assert candidate.rejected and not candidate.accepted
+    assert validated.genre_analysis.user_edited
+    assert validated.lyrics_summary is not None
+    assert not validated.lyrics_summary.transcript_available
+    assert validated.lyrics_summary.active_section_ids == []
+    assert any("lyrics_active_sections_exist" in warning for warning in validated.warnings)
+
+
+def test_sanity_disables_completed_lyrics_when_private_artifact_is_missing(click_analysis) -> None:
+    analysis = click_analysis.model_copy(deep=True)
+    section_id = analysis.structure.sections[0].id
+    analysis.lyrics_summary = LyricsAnalysisSummary(
+        enabled=True,
+        status="completed",
+        selected_device="cpu",
+        language="en",
+        language_confidence=Confidence.HIGH,
+        transcript_available=True,
+        segment_count=2,
+        active_section_ids=[section_id],
+        vocal_word_density="dense",
+        non_lexical_vocalization_tendency="possible",
+        abstract_themes=["restless nighttime motion"],
+        theme_confidence=Confidence.MEDIUM,
+    )
+
+    validated = validate_analysis_result(
+        analysis,
+        private_lyrics_artifact_available=False,
+    )
+
+    assert validated.lyrics_summary is not None
+    summary = validated.lyrics_summary
+    assert summary.status == "artifact_missing"
+    assert not summary.transcript_available
+    assert summary.segment_count == 0
+    assert summary.active_section_ids == []
+    assert summary.language is None
+    assert summary.language_confidence == Confidence.UNKNOWN
+    assert summary.vocal_word_density is None
+    assert summary.non_lexical_vocalization_tendency is None
+    assert summary.abstract_themes == []
+    assert summary.theme_confidence == Confidence.UNKNOWN
+    assert any("private transcript artifact is unavailable" in warning.lower() for warning in summary.warnings)
+    assert any(
+        "lyrics_completed_requires_private_artifact" in warning
+        for warning in validated.warnings
+    )

@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
   patchLyrics: vi.fn(),
   deleteLyrics: vi.fn(),
   generatePrompt: vi.fn(),
+  selectPromptCandidate: vi.fn(),
+  exportVisualCues: vi.fn(),
   deleteAnalysis: vi.fn(),
   subscribeToAnalysisEvents: vi.fn(),
   callbacks: undefined as undefined | {
@@ -35,6 +37,43 @@ const wave = vi.hoisted(() => ({
   setMuted: vi.fn(),
 }))
 
+const lyricsTranscript = {
+  schemaVersion: '1.1.0',
+  jobId: 'job-1',
+  language: 'en',
+  modelId: 'Systran/faster-whisper-small',
+  selectedDevice: 'cuda',
+  warnings: [],
+  userEdited: false,
+  createdAt: '2026-07-16T00:00:00Z',
+  segments: [
+    {
+      id: 'segment-1',
+      startSeconds: 1,
+      endSeconds: 2.5,
+      text: 'synthetic local phrase',
+      confidence: 'medium',
+      noSpeechScore: 0.1,
+      qualityDecision: 'uncertain',
+      qualityFlags: [],
+      activeSectionIds: ['section-1'],
+      userEdited: false,
+    },
+    {
+      id: 'segment-rejected',
+      startSeconds: 8,
+      endSeconds: 10,
+      text: 'private rejected phrase',
+      confidence: 'low',
+      noSpeechScore: 0.91,
+      qualityDecision: 'rejected_as_likely_hallucination',
+      qualityFlags: ['high_no_speech_probability'],
+      activeSectionIds: [],
+      userEdited: false,
+    },
+  ],
+}
+
 vi.mock('./api', () => ({
   ApiError: class ApiError extends Error {},
   getCapabilities: api.getCapabilities,
@@ -47,6 +86,8 @@ vi.mock('./api', () => ({
   patchLyrics: api.patchLyrics,
   deleteLyrics: api.deleteLyrics,
   generatePrompt: api.generatePrompt,
+  selectPromptCandidate: api.selectPromptCandidate,
+  exportVisualCues: api.exportVisualCues,
   deleteAnalysis: api.deleteAnalysis,
   subscribeToAnalysisEvents: api.subscribeToAnalysisEvents,
   exportUrl: (_jobId: string, format: string) => `/api/export.${format}`,
@@ -63,8 +104,11 @@ async function selectValidFile(user: ReturnType<typeof userEvent.setup>): Promis
   return file
 }
 
-async function startCompleted(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  api.createAnalysis.mockResolvedValueOnce(completedJob())
+async function startCompleted(
+  user: ReturnType<typeof userEvent.setup>,
+  result = completedJob(),
+): Promise<void> {
+  api.createAnalysis.mockResolvedValueOnce(result)
   await selectValidFile(user)
   await user.click(screen.getByRole('button', { name: 'Analyze track' }))
   await screen.findByRole('heading', { name: 'synthetic-click.wav' })
@@ -79,13 +123,11 @@ describe('TrackPrompt Studio primary flow', () => {
     api.cancelAnalysis.mockResolvedValue({ ...queuedJob(), status: 'cancelled', stage: 'cancelled', message: 'Cancelled.' })
     api.patchAnalysis.mockResolvedValue(completedJob())
     api.patchGenre.mockResolvedValue({ ...analysis.genreAnalysis, broadCandidates: analysis.genreAnalysis?.broadCandidates.map((item) => ({ ...item, accepted: true })) })
-    api.getLyrics.mockResolvedValue({
-      schemaVersion: '1.0.0', jobId: 'job-1', language: 'en', modelId: 'Systran/faster-whisper-small', selectedDevice: 'cuda', warnings: [], userEdited: false, createdAt: '2026-07-16T00:00:00Z',
-      segments: [{ id: 'segment-1', startSeconds: 1, endSeconds: 2.5, text: 'synthetic local phrase', confidence: 'medium', noSpeechScore: 0.1, qualityFlags: [], userEdited: false }],
-    })
-    api.patchLyrics.mockImplementation(async () => api.getLyrics())
+    api.getLyrics.mockResolvedValue(lyricsTranscript)
+    api.patchLyrics.mockResolvedValue(lyricsTranscript)
     api.deleteLyrics.mockResolvedValue(undefined)
     api.generatePrompt.mockResolvedValue(promptPackage)
+    api.selectPromptCandidate.mockResolvedValue(promptPackage)
     api.deleteAnalysis.mockResolvedValue(undefined)
     api.subscribeToAnalysisEvents.mockImplementation((_jobId: string, callbacks: typeof api.callbacks) => {
       api.callbacks = callbacks
@@ -449,6 +491,8 @@ describe('TrackPrompt Studio primary flow', () => {
     await user.click(screen.getByRole('tab', { name: 'Prompt' }))
     expect(screen.getByRole('radio', { name: /Creative/ })).toBeDisabled()
     expect(screen.getByRole('radio', { name: /Experimental/ })).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'Approved abstract themes' })).toBeDisabled()
+    expect(screen.getByText(/Approved themes are unavailable/)).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Candidate count'), '1')
     await user.click(screen.getByRole('button', { name: 'New seed' }))
     expect(screen.getByLabelText('Optional seed')).not.toHaveValue(null)
@@ -476,14 +520,61 @@ describe('TrackPrompt Studio primary flow', () => {
 
   it('reviews genre candidates with similarity, acceptance, editing, and disable controls', async () => {
     const user = userEvent.setup()
+    const acceptedGenre = {
+      ...analysis.genreAnalysis!,
+      broadCandidates: analysis.genreAnalysis!.broadCandidates.map((item) => (
+        item.id === 'electronic' ? { ...item, accepted: true } : item
+      )),
+    }
+    const disabledGenre = { ...acceptedGenre, disabledForPrompt: true }
+    api.patchGenre
+      .mockResolvedValueOnce(acceptedGenre)
+      .mockResolvedValueOnce(disabledGenre)
+    api.getAnalysis
+      .mockResolvedValueOnce(completedJob({
+        analysis: { ...analysis, genreAnalysis: acceptedGenre },
+        promptPackage: undefined,
+      }))
+      .mockResolvedValueOnce(completedJob({
+        analysis: { ...analysis, genreAnalysis: disabledGenre },
+        promptPackage: undefined,
+      }))
     render(<App />)
     await startCompleted(user)
     await user.click(screen.getByRole('tab', { name: 'Genre & style' }))
     expect(screen.getByText('similarity 0.310')).toBeInTheDocument()
+    expect(screen.getAllByText('Detected').length).toBeGreaterThan(0)
+    expect(screen.getByText('Electronic alternatives are close.')).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Accept' })[0]!)
     expect(api.patchGenre).toHaveBeenCalledWith('job-1', { updates: [{ candidateId: 'electronic', accepted: true }] })
-    await user.click(screen.getByRole('checkbox', { name: /Use accepted genre in prompt/i }))
+    expect(await screen.findAllByText('Accepted')).not.toHaveLength(0)
+    expect(screen.getAllByText('Prompt-eligible').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Used in prompt')).not.toBeInTheDocument()
+    expect(api.getAnalysis).toHaveBeenCalledWith('job-1')
+    await user.click(screen.getByRole('checkbox', { name: /Enable genre evidence for prompts/i }))
     expect(api.patchGenre).toHaveBeenCalledWith('job-1', { disabledForPrompt: true })
+  })
+
+  it('labels genre evidence as used only when the persisted prompt records its candidate ID', async () => {
+    const user = userEvent.setup()
+    const acceptedGenre = {
+      ...analysis.genreAnalysis!,
+      broadCandidates: analysis.genreAnalysis!.broadCandidates.map((item) => (
+        item.id === 'electronic' ? { ...item, accepted: true } : item
+      )),
+    }
+    render(<App />)
+    await startCompleted(user, completedJob({
+      analysis: { ...analysis, genreAnalysis: acceptedGenre },
+      promptPackage: {
+        ...promptPackage,
+        factsUsed: [...promptPackage.factsUsed, { path: 'genreAnalysis.accepted.electronic', value: 'electronic', role: 'user-accepted' as const }],
+      },
+    }))
+
+    await user.click(screen.getByRole('tab', { name: 'Genre & style' }))
+    expect(screen.getByText('Used in prompt')).toBeInTheDocument()
+    expect(screen.getByText('Prompt-eligible')).toBeInTheDocument()
   })
 
   it('loads, seeks, edits, exports, and explicitly deletes the private transcript', async () => {
@@ -498,6 +589,127 @@ describe('TrackPrompt Studio primary flow', () => {
     expect(api.deleteLyrics).toHaveBeenCalledWith('job-1')
   })
 
+  it('shows lyric quality gates, hides rejected text, maps sections, and requires theme approval', async () => {
+    const user = userEvent.setup()
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    api.getLyrics.mockResolvedValueOnce({
+      ...lyricsTranscript,
+      segments: lyricsTranscript.segments.map((segment) => (
+        segment.id === 'segment-1' ? { ...segment, activeSectionIds: ['a1', 'b1'] } : segment
+      )),
+    })
+    api.createAnalysis.mockResolvedValueOnce(completedJob({
+      analysis: {
+        ...analysis,
+        lyricsSummary: {
+          ...analysis.lyricsSummary!,
+          segmentCount: 1,
+          activeSectionIds: ['a1', 'b1'],
+          abstractThemes: [],
+          themeConfidence: 'unknown',
+          themesUserApproved: false,
+        },
+      },
+    }))
+    render(<App />)
+    await selectValidFile(user)
+    await user.click(screen.getByRole('button', { name: 'Analyze track' }))
+    await screen.findByRole('heading', { name: 'synthetic-click.wav' })
+    await user.click(screen.getByRole('tab', { name: 'Lyrics' }))
+
+    expect(await screen.findByDisplayValue('synthetic local phrase')).toBeInTheDocument()
+    expect(screen.getByText('uncertain')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('private rejected phrase')).not.toBeInTheDocument()
+    expect(screen.getByText(/1 detected segment hidden/)).toBeInTheDocument()
+    expect(screen.getByText(/Abstract themes are unavailable/)).toBeInTheDocument()
+    expect(screen.getByText('Themes are not approved for prompt evidence.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'b1' }))
+    const privateAudio = screen.getByLabelText('Private source track playback')
+    expect(privateAudio).toBeInstanceOf(HTMLAudioElement)
+    if (!(privateAudio instanceof HTMLAudioElement)) throw new Error('Expected private audio playback control.')
+    expect(privateAudio.currentTime).toBe(4)
+    expect(play).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Review rejected detections' }))
+    expect(screen.getByDisplayValue('private rejected phrase')).toBeInTheDocument()
+
+    const themes = screen.getByLabelText('Approved abstract themes')
+    await user.type(themes, 'courage and renewal')
+    api.getAnalysis.mockResolvedValueOnce(completedJob({
+      analysis: {
+        ...analysis,
+        lyricsSummary: {
+          ...analysis.lyricsSummary!,
+          abstractThemes: ['courage and renewal'],
+          themeConfidence: 'medium',
+          themesUserApproved: true,
+        },
+      },
+      promptPackage: undefined,
+    }))
+    await user.click(screen.getByRole('button', { name: 'Save and approve abstract themes' }))
+    expect(api.patchLyrics).toHaveBeenCalledWith('job-1', { abstractThemes: ['courage and renewal'] })
+    expect(api.getAnalysis).toHaveBeenCalledWith('job-1')
+    expect(await screen.findByText('Themes are user approved.')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Prompt' }))
+    const approvedThemes = screen.getByRole('option', { name: 'Approved abstract themes' })
+    expect(approvedThemes).toBeEnabled()
+    expect(screen.getByText(/Approved themes are available/)).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Lyrics influence'), 'abstract_themes')
+    expect(screen.getByLabelText('Lyrics influence')).toHaveValue('abstract_themes')
+
+    await user.click(screen.getByRole('tab', { name: 'Lyrics' }))
+    await user.clear(screen.getByLabelText('Approved abstract themes'))
+    api.getAnalysis.mockResolvedValueOnce(completedJob({
+      analysis: {
+        ...analysis,
+        lyricsSummary: {
+          ...analysis.lyricsSummary!,
+          abstractThemes: [],
+          themeConfidence: 'unknown',
+          themesUserApproved: false,
+        },
+      },
+      promptPackage: undefined,
+    }))
+    await user.click(screen.getByRole('button', { name: 'Save and approve abstract themes' }))
+    expect(api.patchLyrics).toHaveBeenLastCalledWith('job-1', { abstractThemes: [] })
+    await user.click(screen.getByRole('tab', { name: 'Prompt' }))
+    expect(screen.getByRole('option', { name: 'Approved abstract themes' })).toBeDisabled()
+    expect(screen.getByLabelText('Lyrics influence')).toHaveValue('none')
+    expect(screen.getByText(/Approved themes are unavailable/)).toBeInTheDocument()
+    play.mockRestore()
+  })
+
+  it('loads a rejected-only private transcript for explicit review', async () => {
+    const user = userEvent.setup()
+    api.getLyrics.mockResolvedValueOnce({
+      ...lyricsTranscript,
+      segments: lyricsTranscript.segments.filter((segment) => (
+        segment.qualityDecision === 'rejected_as_likely_hallucination'
+      )),
+    })
+    render(<App />)
+    await startCompleted(user, completedJob({
+      analysis: {
+        ...analysis,
+        lyricsSummary: {
+          ...analysis.lyricsSummary!,
+          status: 'no_reliable_words',
+          transcriptAvailable: false,
+          segmentCount: 0,
+          activeSectionIds: [],
+        },
+      },
+    }))
+
+    await user.click(screen.getByRole('tab', { name: 'Lyrics' }))
+    expect(await screen.findByText(/1 detected segment hidden/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Review rejected detections' }))
+    expect(screen.getByDisplayValue('private rejected phrase')).toBeInTheDocument()
+  })
+
   it('shows candidate comparison and protects manual edits when choosing a candidate', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -508,5 +720,99 @@ describe('TrackPrompt Studio primary flow', () => {
     await user.type(editor, ' protected edit')
     await user.click(screen.getByRole('button', { name: 'Use this prompt' }))
     expect(screen.getByRole('dialog', { name: 'Replace your manual edits?' })).toBeInTheDocument()
+  })
+
+  it('keeps compact and detailed alternatives local and marks them as protected edits', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await startCompleted(user)
+    await user.click(screen.getByRole('tab', { name: 'Prompt' }))
+    await user.click(screen.getByRole('button', { name: 'Use compact' }))
+    expect(screen.getByLabelText('Editable primary prompt')).toHaveValue(promptPackage.compactPrompt)
+    expect(screen.getByText('Manual edits protected')).toBeInTheDocument()
+    expect(api.selectPromptCandidate).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Generate candidates' }))
+    expect(screen.getByRole('dialog', { name: 'Replace your manual edits?' })).toBeInTheDocument()
+  })
+
+  it('persists a chosen generated candidate and restores the server-selected prompt', async () => {
+    const user = userEvent.setup()
+    const first = {
+      ...promptPackage.candidates[0]!,
+      id: 'candidate-creative-1',
+      prompt: 'First creative direction with an original melody and arrangement.',
+      shortTitle: 'Rhythmic direction',
+      engineMode: 'creative' as const,
+    }
+    const second = {
+      ...first,
+      id: 'candidate-creative-2',
+      prompt: 'Second creative direction with spacious contrast and an original melody and arrangement.',
+      shortTitle: 'Spacious direction',
+    }
+    const generated = {
+      ...promptPackage,
+      primaryPrompt: first.prompt,
+      engineMode: 'creative' as const,
+      candidates: [first, second],
+      selectedCandidateId: first.id,
+    }
+    const persisted = {
+      ...generated,
+      primaryPrompt: second.prompt,
+      selectedCandidateId: second.id,
+      factsUsed: second.factsUsed,
+    }
+    api.getCapabilities.mockResolvedValueOnce(fullCapabilities)
+    api.generatePrompt.mockResolvedValueOnce(generated)
+    api.selectPromptCandidate.mockResolvedValueOnce(persisted)
+    render(<App />)
+    await startCompleted(user)
+    await user.click(screen.getByRole('tab', { name: 'Prompt' }))
+    await user.click(screen.getByRole('radio', { name: /Creative/ }))
+    await user.click(screen.getByRole('button', { name: 'Generate candidates' }))
+    await screen.findByText('Spacious direction')
+    await user.click(screen.getAllByRole('button', { name: 'Use this prompt' })[1]!)
+    await waitFor(() => expect(api.selectPromptCandidate).toHaveBeenCalledWith('job-1', second.id))
+    expect(screen.getByLabelText('Editable primary prompt')).toHaveValue(second.prompt)
+    expect(screen.getByRole('button', { name: 'Use this prompt', pressed: true })).toBeInTheDocument()
+  })
+
+  it('submits Creative and Experimental mode with explicit genre and lyrics influence controls', async () => {
+    const user = userEvent.setup()
+    api.getCapabilities.mockResolvedValueOnce(fullCapabilities)
+    render(<App />)
+    await startCompleted(user, completedJob({
+      analysis: {
+        ...analysis,
+        lyricsSummary: { ...analysis.lyricsSummary!, themesUserApproved: true },
+      },
+    }))
+    await user.click(screen.getByRole('tab', { name: 'Prompt' }))
+
+    await user.click(screen.getByRole('radio', { name: /Creative/ }))
+    await user.selectOptions(screen.getByLabelText('Candidate count'), '3')
+    await user.selectOptions(screen.getByLabelText('Genre use in prompt'), 'blend')
+    await user.selectOptions(screen.getByLabelText('Lyrics influence'), 'abstract_themes')
+    await user.click(screen.getByRole('button', { name: 'Generate candidates' }))
+    await waitFor(() => expect(api.generatePrompt).toHaveBeenLastCalledWith('job-1', expect.objectContaining({
+      promptEngineMode: 'creative',
+      candidateCount: 3,
+      genreInterpretationMode: 'blend',
+      lyricsInfluenceMode: 'abstract_themes',
+      includeLyricalThemes: true,
+    })))
+
+    await user.click(screen.getByRole('radio', { name: /Experimental/ }))
+    await user.selectOptions(screen.getByLabelText('Genre use in prompt'), 'user_selected_only')
+    await user.selectOptions(screen.getByLabelText('Lyrics influence'), 'user_written_direction')
+    await user.type(screen.getByLabelText('Your lyrical direction'), 'Use broad nocturnal imagery without quoting lyrics.')
+    await user.click(screen.getByRole('button', { name: 'Generate candidates' }))
+    await waitFor(() => expect(api.generatePrompt).toHaveBeenLastCalledWith('job-1', expect.objectContaining({
+      promptEngineMode: 'experimental',
+      genreInterpretationMode: 'user_selected_only',
+      lyricsInfluenceMode: 'user_written_direction',
+      userWrittenLyricalDirection: 'Use broad nocturnal imagery without quoting lyrics.',
+    })))
   })
 })

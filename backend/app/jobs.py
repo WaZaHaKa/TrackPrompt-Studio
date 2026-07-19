@@ -14,7 +14,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from .analysis import AnalysisCancelled
+from .analysis.pipeline import AnalysisCancelled
+from .analysis.sanity import validate_analysis_result
 from .config import Settings
 from .media import (
     MediaCancelled,
@@ -261,6 +262,7 @@ class JobManager:
                     [
                         "source.bin", "analysis.json", "detected-analysis.json", "prompt.json", "preferences.json",
                         "lyrics.json", "detected-lyrics.json", "lyrics-summary.json",
+                        "visual-features.json",
                     ]
                 )
             for filename in filenames:
@@ -656,6 +658,7 @@ class JobManager:
                     analysis.lyrics_summary.theme_confidence = (
                         Confidence.MEDIUM if themes else Confidence.UNKNOWN
                     )
+                    analysis.lyrics_summary.themes_user_approved = False
                     analysis.lyrics_summary.warnings = list(
                         dict.fromkeys([*analysis.lyrics_summary.warnings, *theme_warnings])
                     )
@@ -816,8 +819,16 @@ class JobManager:
     async def response(self, job_id: str) -> JobResponse:
         record = await asyncio.to_thread(self.store.require_job, job_id)
         analysis_data = await asyncio.to_thread(self.store.read_json, job_id, "analysis.json")
+        lyrics_data = await asyncio.to_thread(self.store.read_json, job_id, "lyrics.json")
         prompt_data = await asyncio.to_thread(self.store.read_json, job_id, "prompt.json")
-        analysis = AnalysisResult.model_validate(analysis_data) if analysis_data else None
+        analysis = (
+            validate_analysis_result(
+                AnalysisResult.model_validate(analysis_data),
+                private_lyrics_artifact_available=lyrics_data is not None,
+            )
+            if analysis_data
+            else None
+        )
         prompt = PromptPackage.model_validate(prompt_data) if prompt_data else None
         error = (
             ErrorDetail(code=record.error_code, message=record.error_message or record.message)

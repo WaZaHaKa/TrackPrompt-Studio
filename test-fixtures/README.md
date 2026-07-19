@@ -17,6 +17,28 @@ intro-A-B-A-outro arrangement, and invalid/truncated media. They are mathematica
 test signals, not recordings of copyrighted music. Do not add downloaded songs,
 commercial recordings, or personal recordings to this directory.
 
+The generator also creates six nonverbal hybrid regressions: techno instrumental,
+techno with spoken-rhythmic vocal acoustics, progressive house with melodic pop-
+vocal acoustics, hip-hop with rap-like rhythmic vocal acoustics, electronic
+production with a vocal-only outro, and a track whose production changes between
+sections. These signals test layer separation; their names are fixture intent,
+not hardcoded expected classifier output.
+
 Backend tests should prefer temporary generated fixtures when persistence is not
 needed. If the generator's output set changes, update its tests and the analysis
 methods documentation together.
+
+For the Blender visualizer smoke path, generate this directory first, then use
+`arrangement_intro_a_b_a_outro.wav` (not a shortened alias) with the cue-sheet
+compiler:
+
+```powershell
+.\backend\.venv\Scripts\python.exe tools\generate_visualizer_smoke.py `
+  --audio test-fixtures\arrangement_intro_a_b_a_outro.wav `
+  --output test-output\blender-smoke\visual-cues.json `
+  --fps 30 `
+  --curve-detail compact
+```
+
+The smoke compiler runs Fast analysis locally, writes the public cue sheet, and
+loads it through the pure-Python Blender cue validator before reporting `ok`.

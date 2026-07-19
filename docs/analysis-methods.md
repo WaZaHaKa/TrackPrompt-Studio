@@ -1,7 +1,32 @@
 # Analysis methods and limitations
 
-This document describes analysis version `0.2.0` and result schema `1.1.0`.
+This document describes analysis version `0.5.0` and result schema `1.4.0`.
 Exports preserve both versions and the runtime analyzer-version map.
+
+## Blender visual-control features
+
+After the reusable 16 kHz decode, the analysis worker computes a separate
+private `visual-features.json` artifact at 20 samples per second. Short-window
+RMS supplies master energy. FFT energy supplies low (20–150 Hz), mid
+(150–4000 Hz), and high (4000 Hz–Nyquist) bands; spectral centroid supplies
+brightness; positive spectral flux supplies transient activity. Successful Deep
+mode computes drum, bass, vocal, and other RMS curves from temporary Demucs
+stems immediately before those stems are deleted.
+
+All curves use finite 5th/95th-percentile robust normalization and clamp to
+`[0, 1]`. Stem curves share one normalization group so relative prominence is
+retained. Asymmetric exponential smoothing uses 0.08/0.35 second attack/release
+for energy, 0.15/0.30 for brightness, 0.025/0.10 for transients, and 0.10/0.45
+for vocals. These are visual controls, not probabilities.
+
+Public cue export maps times to frames with explicit half-up rounding and uses
+deterministic vertical-error Ramer-Douglas-Peucker simplification. First/last
+points, section and transition landmarks, extrema, and strong transient peaks
+are preserved. Compact, balanced, and detailed profiles cap each curve at 600,
+1600, and 3500 points respectively and report the effective tolerance and
+measured maximum linear-reconstruction error. See
+[blender-visual-cue-sheet.md](blender-visual-cue-sheet.md) for the complete
+contract.
 
 ## How to read a result
 
@@ -325,12 +350,191 @@ organic/synthetic character are low/medium heuristic translations of tempo,
 onset stability, and timbre. `production-era resemblance` remains unknown and
 would never claim an actual recording date.
 
+When the explicitly provisioned local CLAP adapter is enabled, genre taxonomy
+`2.0.0` uses three separate stages. Natural-language description ensembles first
+rank twelve broad musical families. Only subgenres belonging to the top family,
+plus a second or third family when its ranking remains close, are evaluated in
+the second stage. Descriptors such as `club-driven`, `vocal-led`, `synthetic`,
+and `progressive arrangement` are evaluated independently in the third stage;
+they are evidence about the sound and never become genre labels by themselves.
+The serialized values are cosine similarities, not probabilities.
+
+The adapter trims measured edge silence and retains central, high-energy,
+median-energy, repeated-groove, percussion-dominant, intro, and outro views when
+those views are distinct. Aggregation combines a normalized weighted mean with
+a weighted median. Weight favors sustained central or repeated material,
+section-level percussion evidence, similarity to the track-wide spectral
+centroid, representative level, usable activity, and duration. Intro and outro
+views remain visible at lower base weight. A window whose Demucs section evidence
+is vocal-dominant receives a further reduction, especially at the outro, so an
+isolated vocal passage cannot receive the same vote as the main groove.
+
+CLAP remains the primary semantic evidence. Existing pulse regularity,
+percussiveness, beat-grid alignment, and CLAP descriptive tags may make only a
+small bounded ranking adjustment. A tempo prior can break a close subgenre tie
+only after independent rhythmic and semantic evidence exists; tempo alone never
+creates a techno or electronic-dance result. Strong conventional club evidence
+slightly restrains the broad `experimental` catch-all. Confidence is qualitative
+and combines broad and subgenre margins, weighted window agreement, hierarchy
+consistency, usable duration, measured-evidence compatibility, and
+leave-one-window-out stability. Close results retain an ambiguity statement or
+a compatible blend instead of being forced into a precise subgenre.
+
+`genreAnalysis` is authoritative. After initial tagging and after every genre
+review mutation, the consistency pass derives `styleAndMood.broadStyle` and
+`styleAndMood.genreBlend` from that object. Detected candidates remain distinct
+from accepted, rejected, custom, locked, and prompt-disabled state. A generated
+candidate alone never sets `genreAnalysis.userEdited`; only a user review or
+prompt-inclusion action does.
+
+When private Demucs stems exist, TrackPrompt constructs a temporary analysis-only
+accompaniment view from `drums`, `bass`, and `other`. The genre adapter evaluates
+that view separately from the full mix; the view is deleted after classification
+and is never exported. The private vocal stem receives a non-identifying acoustic
+delivery analysis based on activity, phrase runs, onset rate, spectral tonality,
+and envelope repetition. This can distinguish such properties as
+`spoken-rhythmic`, `sung`, `melodic vocal`, `sparse vocal chops`, sustained
+phrases, and hook-like repetition without requiring a transcript. It does not
+identify a singer or infer personal traits.
+
+The authoritative object exposes `primaryProductionGenre`,
+`secondaryProductionGenres`, `vocalDeliveryStyle`, `vocalGenreInfluences`,
+`sectionGenreEvidence`, and `overallGenreBlend`. Every layer records its value,
+qualitative confidence, method, supporting windows/sections, alternatives,
+ambiguity, detected/user-entered source, acceptance, and prompt-enabled state.
+Production candidates come from the accompaniment view when available. Vocal-
+dominant full-mix windows can add component influences such as hip-hop, pop, or
+R&B without replacing the backing-track genre. Section entries preserve local
+changes, and an isolated vocal outro remains visible while retaining its reduced
+vote in the global production estimate.
+
+Prompt requests may narrow the persisted accepted-candidate set, but a request
+ID cannot reactivate an unaccepted or rejected candidate. JSON carries the full
+authoritative object, and Markdown includes its layered interpretation,
+hierarchy, review/prompt eligibility, legacy projections, ambiguity,
+section-level evidence, and full-mix/accompaniment window evidence.
+
+Genre prompt modes are exact: `strict_top` retains the first reviewed selection,
+`blend` retains two and constructs their reviewed blend phrase,
+`detected_layered` may use the eligible detected production/vocal blend with an
+explicit ambiguous role even before acceptance,
+`user_selected_only` retains selected accepted user-edited/custom labels without
+collapsing them to one, and `disabled` supplies none. The sampled-writer allowlist
+contains only those labels, the eligible layered blend and component influences,
+and a sanitized explicit target genre. Known taxonomy labels/aliases and detected
+or canonical labels outside the active mode's allowlist are forbidden after
+generation as well as in the writer contract. Prompt warnings distinguish an
+unavailable adapter, a failed/unavailable analysis, ambiguity, unaccepted
+candidates in acceptance-required modes, prompt-disabled genre evidence, and a
+genre result that was actually used.
+
+## Private singing transcript quality and section mapping
+
+The optional local faster-whisper adapter operates only on the temporary Demucs
+vocal stem. It uses word timestamps, disables conditioning on previous segment
+text, uses a bounded deterministic temperature fallback, and applies a small
+repetition penalty. Every decoder segment keeps only metrics actually provided
+by faster-whisper: average log probability, no-speech probability, and
+compression ratio. TrackPrompt adds repeated-token, adjacent-phrase, word-rate,
+punctuation, timing, non-lexical-vocalization, and known-hallucination checks.
+Repeated-phrase occurrence counts are computed across the complete decoder
+result before decisions are assigned, so the first copies of a three-times
+repeated phrase cannot remain accepted merely because they arrived earlier.
+The resulting private decision is `accepted`, `uncertain`,
+`rejected_as_likely_hallucination`, or `non_lexical`.
+
+Rejected and non-lexical detections remain in the private transcript so the user
+can inspect model behavior, but they are hidden by default, excluded from the
+public segment count, excluded from structural activity, and never supplied to
+theme generation. Accepted and uncertain segments are usable for structural
+mapping; only accepted segments can feed theme generation. Greatest timestamp
+overlap selects the dominant structural section. A second section is retained
+only when its overlap reaches `max(0.05 seconds, 8% of segment duration)`, and the
+summary keeps the first-seen ordered union of those exact IDs. Rejected and
+non-lexical segments map nowhere. Transcript decisions and section-boundary edits
+rerun this mapper and synchronize both private and aggregate artifacts. A
+transcript mutation clears previously approved themes unless the same request
+supplies a newly sanitized set for explicit approval. Invalid, overlapping, or
+out-of-track structure is rejected rather than receiving invented assignments.
+
+Abstract themes require at least two accepted segments, eight accepted words,
+stable language/decoder evidence, and sufficient distinct semantic roots before
+the local writer is called. Only accepted text is placed inside a delimited
+untrusted-data block. Structured themes are checked for grounding, specificity,
+instructions, URLs/handles/platforms, brands or named people, sensitive claims,
+technical-analysis language, near-verbatim text, and duplicates. One bounded
+repair is allowed; failure yields no themes and an explicit warning. Generated
+themes default to `themesUserApproved=false`; only a user approval can make
+those abstract themes prompt evidence. Explicitly approved themes use a bounded
+open vocabulary rather than the musical fact-edit whitelist; instruction-like
+text, URLs, handles, private paths, imitation requests, and copied transcript
+fragments are still rejected. Privacy matching scans the timestamp-ordered
+private transcript as one normalized token stream, so a four-word phrase split
+across adjacent decoder segments is still treated as copied text. If the private
+artifact disappears, the API persistently downgrades the summary, clears themes,
+and invalidates any stale prompt package before prompt generation or export.
+
 ## Deterministic prompt composition
 
 The base composer is a typed rule engine, not an external language model. It
 receives the versioned analysis plus `PromptPreferences` and produces a primary,
 compact, and detailed paragraph; separate exclusions; an arrangement blueprint;
 phrase-to-fact rationale; facts used/omitted; and warnings.
+
+`factsUsed` is persisted as structured `{path, value, role}` evidence rather than
+an unqualified string list. Roles distinguish observations, preferences,
+user-entered or user-accepted values, ambiguous detections, and component
+influences. Only approved aggregate values can be resolved; private transcript
+text, filenames, exact melodies/chords, and source identity have no resolver.
+
+Reliable uses that deterministic composer directly. Creative and Experimental
+send only the bounded `PromptEvidence` object to the private local Ollama
+service; Experimental uses a higher sampling range and must still preserve
+locked facts. Both sampled modes require the requested one-or-three complete,
+schema-valid, materially distinct candidates. Invalid or incomplete output
+receives at most one complete-set model repair. If that output omits required
+reviewed evidence, a bounded deterministic safety repair may insert only the
+exact allowlisted genre, theme, user-direction, BPM, or meter literal. The
+result must still pass every privacy, contradiction, diversity, and length
+validator; otherwise generation falls back to a declared Reliable candidate.
+Candidate IDs, mode, model, seed, parameters, validation warnings, structured
+evidence, arrangement blueprint, rationale, and fallback state are stored with
+the package. Selecting another generated candidate preserves its evidence and
+the package's arrangement context instead of clearing those fields.
+The Ollama response schema bounds every candidate field, and both the initial
+instruction and repair contract require every candidate to contain the literal
+originality terms `original`, `melody`, and `arrangement`. A repair applies that
+contract to the complete candidate set; diagnostics expose only safe validator
+reason codes and never candidate text.
+Eligible locked BPM and meter values are required exact evidence. Omission
+enters the repair path, and a conflicting numeric claim is rejected even if a
+later clause also states the correct value.
+
+The request contract assigns three numbered opening blueprints: “Drive the
+rhythm into a direct entrance”, “Reveal a sparse texture before the pulse
+settles”, and “Transform a compact motif from the opening”. Creative pairs them
+with cumulative/contrasting/nonlinear arrangement directions and focused/wide/
+tactile production views. Experimental keeps the distinct openings but uses
+more disruptive form, transition, spectral, density, and perspective changes.
+The validator independently requires different first-five-word openings;
+Creative uses normalized-similarity/bigram-overlap limits of `0.86`/`0.72`,
+while Experimental tightens them to `0.80`/`0.60`. One repair regenerates the
+complete set under the same mode-specific contract; remaining invalidity or
+incompleteness produces a declared Reliable fallback.
+Diagnostics expose counts, schema/diversity state, `repairReasons`, and
+`finalValidationErrors`, never candidate or transcript text. The writer receives
+an explicit required path-to-literal contract, but its `factsUsed` metadata is
+advisory: the server derives final provenance from exact expressions in the
+validated prompt. Reviewed genre selections, target genre, approved abstract
+themes, user-written lyrical direction, and eligible locked BPM/meter are
+required evidence for the modes that request them. Omission triggers the model
+repair and then the bounded deterministic safety repair rather than a fabricated
+provenance claim. Persisted and request-only disabled paths share the same
+sampled-evidence gate, and an unsupported or contradictory numeric BPM/meter
+claim is rejected even when the fact was not locked. Requested creative
+transformations must match the allowlist exactly, and candidate titles plus
+transformation metadata pass the same transcript/source/instruction safety
+screen as the prompt body.
 
 ### Evidence and safety gates
 
@@ -390,6 +594,14 @@ edit or acceptance for prompt selection. Each analysis PATCH invalidates the
 previously stored prompt package; the next prompt must be generated from the new
 analysis snapshot. Manual text in the browser's prompt editor is deliberately
 not persisted by this API.
+
+Choosing a generated candidate is different from editing text: the candidate ID
+must already exist in the stored package, and the server atomically persists it
+as both `selectedCandidateId` and `primaryPrompt`. Reload and JSON/Markdown
+export therefore show the same generated selection. The consistency validator
+rejects a missing or duplicate selected ID, a primary prompt that does not match
+the selection, or a Creative/Experimental package whose candidate mode implies
+an undeclared Reliable fallback.
 
 Section label/bound edits are plain guarded section fields rather than
 `FeatureValue` objects, so they do not use acceptance or alter analyzer
@@ -451,17 +663,49 @@ complete with that group represented by unknown fallback fields and a safe
 warning while independent groups remain usable. Non-finite decoded samples are
 zeroed before calculation; serialized scores and measurements must remain finite.
 
-Fast calculations and prompt composition are deterministic for the same decoded
-signal, analysis version, and preferences. Prompt variation uses an explicit
-seed. Algorithm thresholds are versioned behavior: changing one requires a test,
-an `analysisVersion` update when results materially change, and an update here.
+Fast calculations and Reliable prompt composition are deterministic for the
+same decoded signal, analysis version, and preferences. Creative and
+Experimental use bounded local sampling; a supplied seed is best-effort model
+reproduction and their outputs still pass deterministic validators. Algorithm
+thresholds are versioned behavior: changing one requires a test, an
+`analysisVersion` update when results materially change, and an update here.
+
+### Version 0.5.0 / schema 1.4.0 migration
+
+Analysis `0.5.0` separates production-view, vocal-delivery, section-local, and
+overall genre evidence. The production view is built from private separated
+accompaniment rather than letting a vocal style overwrite the backing genre;
+vocal delivery remains an acoustic, non-identifying description. Result schema
+`1.4.0` adds those layered fields, window view identifiers, and structured
+prompt `factsUsed` records containing path, value, and evidence role. Legacy
+string-only prompt facts remain readable and are migrated with an unknown value.
+
+### Version 0.4.0 / schema 1.3.0 migration
+
+Analysis `0.4.0` introduces hierarchical genre ranking/window aggregation,
+authoritative genre projection, singing-specific segment quality, guarded theme
+derivation, and transcript-to-section mapping. Result schema `1.3.0` adds window
+weight/representativeness/context, per-segment quality metrics and section IDs,
+and `themesUserApproved`. The private transcript artifact is schema `1.1.0`.
+
+Older serialized data remains parseable through conservative defaults: absent
+window context uses neutral weight/representativeness and false dominance flags;
+absent segment decisions become `uncertain`; absent section IDs are empty; and
+absent theme approval is false. These defaults prevent old themes from silently
+entering prompts. A newly generated package always requires a consistent
+selected candidate; stale packages are invalidated whenever analysis, genre, or
+lyrics evidence changes.
 
 ## Final consistency validation
 
 Before serialization, a dedicated sanity pass verifies finite values, edge
 silence totals, ordered/in-range section bounds, bounded beat timestamps, BPM to
 beat-grid interval agreement, normalized sample-peak consistency, key-margin to
-confidence agreement, and Deep-mode section evidence. An affected field is
+confidence agreement, and Deep-mode section evidence. On job load, it also
+cross-checks a completed/available lyrics summary against the private transcript
+artifact. If that artifact is missing, transcript availability, counts,
+section activity, language, prosody, and unapproved generated themes are marked
+unavailable with an explicit invariant warning. An affected field is
 omitted or downgraded rather than serialized misleadingly. Safe warnings name
 the analyzer invariant; logs contain only analyzer/invariant identifiers.
 

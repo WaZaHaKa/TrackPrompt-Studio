@@ -17,10 +17,11 @@ import app.media as media_module
 import app.store as store_module
 import app.subprocess_utils as subprocess_utils_module
 from app.adapters import deep_adapters, run_demucs
+from app.diagnostics.provision_demucs import provision_demucs_repository
 from app.jobs import JobManager
 from app.main import _media_type, _sse_event_name
 from app.media import MediaCancelled, MediaValidationError, probe_media, sanitize_display_name
-from app.schemas import AnalysisMode, JobStatus
+from app.schemas import AnalysisMode, JobStatus, LyricsAnalysisSummary
 from app.security import LocalRequestBoundaryMiddleware
 from app.store import DeletionError, JobStore, utc_now
 from app.subprocess_utils import BoundedProcessResult, ProcessTimedOut, run_process_bounded
@@ -124,6 +125,7 @@ async def test_ttl_cleanup_removes_metadata_and_files(tmp_path: Path, monkeypatc
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
     (store.job_dir(job_id) / "source.bin").write_bytes(b"private audio")
+    (store.job_dir(job_id) / "visual-features.json").write_text("{}", encoding="utf-8")
     manager = JobManager(store, settings)
     monkeypatch.setattr(store, "expired_job_ids", lambda _now: [job_id])
     try:
@@ -154,6 +156,7 @@ async def test_cancellation_is_idempotent_and_cleans_upload(tmp_path: Path) -> N
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
     (store.job_dir(job_id) / "source.bin").write_bytes(b"private audio")
+    (store.job_dir(job_id) / "visual-features.json").write_text("{}", encoding="utf-8")
     manager = JobManager(store, settings)
     try:
         assert await manager.try_admit(job_id)
@@ -163,6 +166,7 @@ async def test_cancellation_is_idempotent_and_cleans_upload(tmp_path: Path) -> N
         assert first.status == JobStatus.CANCELLED
         assert second.status == JobStatus.CANCELLED
         assert not (store.job_dir(job_id) / "source.bin").exists()
+        assert not (store.job_dir(job_id) / "visual-features.json").exists()
     finally:
         await manager.shutdown()
 
@@ -246,6 +250,48 @@ async def test_deep_mode_is_reported_until_confirmed_fallback(tmp_path: Path) ->
         assert fallback_event.mode == AnalysisMode.FAST
     finally:
         await manager.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_response_repairs_lyrics_summary_when_private_artifact_is_missing(
+    tmp_path: Path,
+    click_analysis,
+) -> None:
+    settings = settings_for(tmp_path / "data")
+    store = JobStore(settings)
+    job_id = str(uuid4())
+    store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
+    analysis = click_analysis.model_copy(update={"job_id": job_id}, deep=True)
+    analysis.lyrics_summary = LyricsAnalysisSummary(
+        enabled=True,
+        status="completed",
+        selected_device="cpu",
+        transcript_available=True,
+        segment_count=1,
+        vocal_word_density="moderate",
+    )
+    store.write_json(
+        job_id,
+        "analysis.json",
+        analysis.model_dump(mode="json", by_alias=True),
+    )
+    manager = JobManager(store, settings)
+    try:
+        response = await manager.response(job_id)
+    finally:
+        await manager.shutdown()
+
+    assert response.analysis is not None
+    assert response.analysis.lyrics_summary is not None
+    summary = response.analysis.lyrics_summary
+    assert summary.status == "artifact_missing"
+    assert not summary.transcript_available
+    assert summary.segment_count == 0
+    assert summary.vocal_word_density is None
+    assert any(
+        "lyrics_completed_requires_private_artifact" in warning
+        for warning in response.analysis.warnings
+    )
 
 
 @pytest.mark.asyncio
@@ -544,6 +590,24 @@ def test_demucs_repo_rejects_any_unmanifested_file(tmp_path: Path) -> None:
     assert adapters_module._reviewed_demucs_weights(settings) == []
 
 
+def test_demucs_provisioning_is_verified_atomic_and_reusable(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    cache = tmp_path / "cache"
+    destination = cache / "demucs"
+    source.mkdir()
+    weight = source / "tiny.th"
+    weight.write_bytes(b"reviewed synthetic checkpoint")
+    digest = hashlib.sha256(weight.read_bytes()).hexdigest()
+    (source / "demucs-models.json").write_text(
+        json.dumps({"models": {"htdemucs": {"files": {weight.name: digest}}}}),
+        encoding="utf-8",
+    )
+
+    assert provision_demucs_repository(source, destination, cache, "htdemucs")
+    assert (destination / weight.name).read_bytes() == weight.read_bytes()
+    assert not provision_demucs_repository(source, destination, cache, "htdemucs")
+
+
 def test_demucs_adapter_executes_only_against_local_repo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -581,3 +645,4 @@ def test_demucs_adapter_executes_only_against_local_repo(
     assert args[args.index("--jobs") + 1] == "1"
     assert args[args.index("--segment") + 1] == "7"
     assert observed["env"]["HF_HUB_OFFLINE"] == "1"
+    assert observed["env"]["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] == "1"

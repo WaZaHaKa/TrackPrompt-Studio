@@ -2,9 +2,10 @@
 
 TrackPrompt Studio is a local-first web application that turns a permitted audio
 file into a transparent music-analysis report, an editable arrangement timeline,
-and deterministic prompts suitable for pasting into Suno. It describes musical
-and production characteristics; it is not intended to reproduce the recording's
-identity, exact melody, lyrics, or full chord sequence.
+and validated local prompt candidates suitable for pasting into Suno, with a
+deterministic Reliable mode. It describes musical and production
+characteristics; it is not intended to reproduce the recording's identity,
+exact melody, lyrics, or full chord sequence.
 
 The primary workflow is local and does not require a Suno account, an external
 AI API, telemetry, or an internet connection after dependencies and container
@@ -20,7 +21,7 @@ endorsed by, or sponsored by Suno.
 
 ## UI at a glance
 
-The browser experience has four working areas:
+The browser experience has five working areas:
 
 1. **Upload:** drag or choose a file, confirm that you may analyze it, choose Fast
    or Deep, and review the configured limits and network status.
@@ -31,6 +32,9 @@ The browser experience has four working areas:
    restore findings.
 4. **Prompt:** choose intent and length, adjust overrides and exclusions, inspect
    phrase rationale, copy an editable prompt, or export JSON/Markdown.
+5. **Blender Visualizer:** choose an FPS and curve-detail budget, include or
+   exclude beats/onsets/curves, and download a minimized Blender-ready cue sheet.
+   This button does not launch Blender or expose the source audio path.
 
 **Accept** persists an explicit review decision on a fact. It does not change the
 detected value or analyzer confidence, but it lets an otherwise low-confidence
@@ -42,6 +46,32 @@ analysis PATCH, including Accept/Unaccept, invalidates the
 server's generated-prompt snapshot, so GET/export omits that prompt until it is
 regenerated. Text typed directly in the prompt editor remains browser-local and
 is not silently written into server exports.
+
+Generated Reliable, Creative, and Experimental candidate packages are stored in
+the private job directory. Choosing **Use this prompt** persists only that
+already-generated candidate as the selected primary prompt, so job reload and
+JSON/Markdown exports agree with the visible selection. Freeform edits in the
+prompt textarea remain browser-local and require no hidden server write.
+Reliable is deterministic. Creative and Experimental send only bounded reviewed
+evidence to the private local Ollama service and request one or three distinct
+candidates. Validation allows one complete-set model repair, then a bounded
+deterministic safety repair may insert only missing exact reviewed evidence;
+every repaired candidate still passes the normal privacy, contradiction,
+diversity, and length validators. Remaining failures produce a declared
+Reliable fallback. Genre use has separate acceptance-required modes and a
+`Layered detected evidence` mode that can describe production and vocal
+influences separately with ambiguity retained. Raw lyrics and rejected,
+disabled, or otherwise ineligible detected genres remain outside sampled prompt
+evidence. Persisted `factsUsed` entries contain a safe path, aggregate value, and
+role; Creative/Experimental selection retains the arrangement blueprint and
+rationale instead of blanking them.
+
+Deep genre analysis keeps the listener-facing full mix separate from a private,
+temporary accompaniment view made only from drums, bass, and other stems. Vocal
+delivery is classified acoustically without requiring transcript confidence.
+Results therefore report primary/secondary production genre, vocal delivery,
+vocal genre influence, section-level influence, and an overall layered blend.
+The accompaniment view and Demucs stems are deleted and never exported.
 
 Timeline section cards separately support neutral label and numeric-boundary
 edits, use/exclusion of the corrected label in the arrangement blueprint, and
@@ -61,13 +91,93 @@ invalidate the stored prompt snapshot.
   too and are deleted immediately after feature extraction.
 - Normal analysis makes no outbound requests and includes no analytics.
 - Internal paths use UUID job IDs rather than source filenames.
-- The prompt composer excludes source filenames, private media tags, lyrics,
+- The prompt composer excludes source filenames, private media tags, raw lyrics,
   exact melody data, and the complete chord sequence.
+- Likely lyric hallucinations remain reviewable only in the private transcript;
+  they cannot drive themes or section activity. Generated abstract themes require
+  explicit user approval before prompt use.
 - Delete removes one job's upload, derivatives, stored analysis, and live state.
   Every job expires `JOB_TTL_MINUTES` after creation.
 - Docker storage is persistent until its named volume is explicitly removed.
 
 See [docs/privacy.md](docs/privacy.md) for the storage and deletion model.
+
+## Blender Visualizer MVP
+
+Completed analyses can export the versioned `TrackPromptVisualCueSheet 1.1.0`.
+It combines deterministic frame timing, beats, onsets, sections, transitions,
+and bounded normalized continuous controls without exporting filenames, raw
+lyrics, server paths, full waveforms, stems, or prompt internals. Fast mode
+provides six full-mix curves; successful Deep mode adds shared-normalized drum,
+bass, vocal, and other curves before temporary stems are deleted.
+
+The repository includes a reusable Blender Python importer and one deterministic
+procedural `abstract-geometry` preset. It builds `TP_AUDIO_BUS` F-curves,
+timeline markers, nine predictable collections, an Eevee preview scene, a
+contract-checked build manifest, representative stills, and a short preview clip
+whose duration and mux status are verified with local ffprobe. Blender receives
+the original local audio as a separate explicit input; no audio is copied into
+the cue export. The documented smoke path uses only deterministic signals from
+`tools/generate_test_audio.py`.
+
+See:
+
+- [Cue-sheet schema and DSP methods](docs/blender-visual-cue-sheet.md)
+- [Blender build and preview guide](docs/blender-visualizer-mvp.md)
+- [Codex/Blender-MCP workflow](docs/codex-blender-mcp-preview.md)
+
+On Windows, `run-trackprompt-to-blender.ps1` is the canonical whole-system
+entrypoint. It uploads the permitted file, saves and polls the job, exports the
+analysis/cues, builds Blender, and validates the bounded preview in one recorded
+run. Common forms are:
+
+The Deep/genre/lyrics examples assume `setup-full-gpu.ps1` has already
+provisioned the reviewed local model volumes. `-BuildStack` rebuilds current
+source images; it does not install or redownload model caches.
+
+```powershell
+# Rebuild current source, then run.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\track.wav" `
+  -ConfirmPermission -ConfirmLyricsConsent -BuildStack
+
+# Reuse cached images; a healthy-but-stale backend is repaired at most once.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\track.wav" `
+  -ConfirmPermission -ConfirmLyricsConsent
+
+# Build the validated scene but skip preview media.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\track.wav" `
+  -ConfirmPermission -ConfirmLyricsConsent -SkipPreview
+
+# Run without lyrics or transcript consent.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\track.wav" `
+  -ConfirmPermission -EnableLyrics:$false
+```
+
+Add `-AutoRebuildStaleBackend:$false` when automatic image building is not
+allowed; the runner then stops with source/live diagnostics if routes are stale.
+
+Artifacts live under `test-output\system-runs\<timestamp>\`; each folder has a
+`run-manifest.json`, job/export evidence, cue sheet, `.blend`, build manifest,
+and preview manifest/media unless preview was skipped. The newest preserved job
+ID is also in `test-output\last-trackprompt-job-id.txt` and can be inspected with:
+
+```powershell
+$jobId = (Get-Content test-output\last-trackprompt-job-id.txt -Raw).Trim()
+Invoke-RestMethod "http://127.0.0.1:8000/api/analyses/$jobId" | ConvertTo-Json -Depth 100
+```
+
+The older `build-trackprompt-visualizer.ps1` job-ID handoff is retained only for
+targeted recovery. Do not use it as the routine workflow because it separates
+the Blender artifacts from the upload/poll provenance. The Blender guide also
+contains the complete generated-audio smoke commands for a copyright-free run.
 
 ## Prerequisites
 
@@ -325,6 +435,73 @@ package and pre-populate `/data/models` with a complete reviewed repository plus
 `demucs-models.json`, with no extra files. The provided Docker build never
 installs that large dependency or downloads weights silently.
 
+## Full GPU profile
+
+The reviewed full-GPU profile adds CUDA PyTorch, Demucs, the local CLAP genre
+tagger, the local faster-whisper lyrics adapter, and the private Ollama prompt
+writer. Model installation is an explicit setup action; track analysis remains
+offline and never initiates a model download. Read
+[docs/model-licenses.md](docs/model-licenses.md) before accepting the model
+terms.
+
+On Windows PowerShell 5.1, the canonical first setup command is:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\setup-full-gpu.ps1 `
+  -AcceptAllReviewedModelTerms
+```
+
+When the images and model volumes are already installed, the normal recovery or
+relaunch command reuses them without rebuilding or reinstalling:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\setup-full-gpu.ps1 `
+  -AcceptAllReviewedModelTerms `
+  -SkipBuild `
+  -SkipModelInstall
+```
+
+The installer validates Docker, NVIDIA, Compose, dependency integrity, fresh-
+process imports, CUDA/CTranslate2, Demucs, genre, lyrics, prompt-writer, and
+combined capabilities. It starts the prompt writer, backend, and frontend in
+that order and waits for each service. `-ForceDownload` is opt-in and cannot be
+combined with `-SkipModelInstall`; normal recovery does not redownload model
+files. `-NoStart` runs provisioning and diagnostics without leaving newly
+started application services running, and `-NoBrowser` suppresses the browser.
+
+Run the import diagnostic directly in an isolated backend container with:
+
+```powershell
+docker compose `
+  -f compose.yaml `
+  -f compose.full-gpu.yaml `
+  run --rm --no-deps `
+  backend `
+  python -m app.diagnostics.imports
+```
+
+Verify an already-running full stack, including tiny local inference and the
+synthetic Deep/genre/lyrics flow plus persisted Reliable, Creative, and
+Experimental candidates, with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\verify-full-gpu.ps1
+```
+
+`docker compose -f compose.yaml -f compose.full-gpu.yaml down` removes
+containers and networks but preserves the `trackprompt-data` and
+`trackprompt-ollama` volumes. Do not add `--volumes` during setup, recovery, or
+ordinary shutdown. The complete-deletion command later in this README is the
+only documented flow that intentionally removes those caches and private data.
+
+The full-GPU dependency set deliberately pins NumPy `2.4.6`: the reviewed
+`librosa==0.11.0` path installs Numba with a `<2.5` NumPy constraint. Pinning the
+compatible version in the base lock prevents optional installation from silently
+replacing a different locked NumPy. Image build and verification both run
+`python -m pip check` plus the direct-pin diagnostic.
+
 ## Configuration
 
 All limits are validated as positive integers. Paths are filesystem paths or
@@ -339,6 +516,12 @@ executable names, never shell command fragments.
 | `ENABLE_DEMUCS` | `false` | Explicitly opt in to the local Demucs adapter; package and reviewed cached weights are also required. |
 | `DEMUCS_MODEL_NAME` | `htdemucs` | Safe local model identifier and matching key in `demucs-models.json`. |
 | `DEMUCS_DEVICE` | `auto` | `auto`, `cpu`, or `cuda`; `auto` selects CUDA only when build and runtime checks pass, and CPU remains the safe fallback. |
+| `GPU_TASK_WORKERS` | `1` | Shared concurrency bound for Demucs, lyrics, genre, and sampled local-prompt GPU work. One preserves the 12 GB VRAM-safe serialized policy. |
+| `ENABLE_GENRE_TAGGER` / `GENRE_DEVICE` | `false` / `auto` | Explicitly enable the checksum-manifested offline CLAP adapter and select `auto`, `cpu`, or `cuda`. Model ID/revision remain pinned by `GENRE_MODEL_ID` / `GENRE_MODEL_REVISION`. |
+| `ENABLE_LYRICS_ADAPTER` / `LYRICS_DEVICE` | `false` / `auto` | Explicitly enable the checksum-manifested faster-whisper adapter and select its device. `LYRICS_COMPUTE_TYPE` defaults to `float16`; CPU fallback remains opt-in. |
+| `ENABLE_LOCAL_PROMPT_WRITER` | `false` | Explicitly enable Creative/Experimental requests to the internal Ollama service after its configured model/digest is present. |
+| `LOCAL_LLM_ENDPOINT` / `LOCAL_LLM_TIMEOUT_SECONDS` | internal Ollama URL / `90` | Private writer endpoint and bounded generation timeout. `LOCAL_LLM_KEEP_LOADED=false` releases the model after each task. |
+| `PROMPT_WRITER_DEVICE` | `cuda` | Truthful device label for the reviewed local writer capability; full-GPU verification also checks returned model provenance. |
 | `MAX_UPLOAD_MB` | `200` | Maximum streamed upload size in MiB. |
 | `NGINX_UPLOAD_LIMIT` | `202m` | Production proxy body cap in nginx size syntax; includes multipart headroom and applies only to Compose/nginx. |
 | `MAX_DURATION_SECONDS` | `1200` | Maximum probed audio duration. |
@@ -405,6 +588,7 @@ cd frontend && npm run lint
 cd frontend && npm run typecheck
 cd frontend && npm run build
 docker compose config
+docker compose -f compose.yaml -f compose.full-gpu.yaml config
 ```
 
 When Playwright/browser support is installed:
@@ -440,32 +624,33 @@ process-scoped invocation is:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tasks.ps1 check -Python backend\.venv\Scripts\python.exe
 ```
 
-### Verification record (2026-07-15)
+### Verification record (2026-07-18)
 
 This is a machine-specific snapshot, not a substitute for rerunning the commands
-above. The environment was Windows build 26200 with PowerShell 5.1, Python
-3.12.13 in `backend/.venv`, Node.js 24.16.0, npm 11.13.0, and FFmpeg/ffprobe
-8.1.1, with Docker Compose 5.2.0. For the backend integration run,
-`FFMPEG_PATH` and `FFPROBE_PATH` pointed to the installed real 8.1.1
-executables. The final Docker lifecycle check also verified complete teardown
-of each synthetic job through both the API and its private job directory. The
-final Deep profile was intentionally left healthy on the loopback-only ports.
+above. It was produced on Windows with the repository virtual environment,
+installed FFmpeg/ffprobe 8.1.1, Docker Compose, an NVIDIA GeForce RTX 3060, and
+the reviewed local model cache. The portable command below uses placeholders;
+the run supplied the actual absolute executable paths through the two environment
+variables. No private transcript, source identity, or generated real-track
+prompt text was printed or added to the repository.
 
-| Working directory | Exact command | Outcome |
+| Working directory | Command or check | Outcome |
 | --- | --- | --- |
-| Repository root | `.\backend\.venv\Scripts\python.exe tools\generate_test_audio.py --output-dir test-fixtures` | Generated 34 ignored, synthetic-only fixtures. |
-| `backend/` | `$env:FFMPEG_PATH='C:\Users\theon\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe'; $env:FFPROBE_PATH='C:\Users\theon\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffprobe.exe'; .\.venv\Scripts\python.exe -m pytest --basetemp .pytest_final_05 -q` | 114 passed in 13.32 s; one non-failing Starlette TestClient deprecation warning. |
+| `backend/` | `$env:FFMPEG_PATH='<absolute-path-to-ffmpeg>'; $env:FFPROBE_PATH='<absolute-path-to-ffprobe>'; .\.venv\Scripts\python.exe -m pytest -q --basetemp <isolated-temp-directory>` | 200 tests passed in 38.88 s. The only warning was Starlette TestClient's non-failing `httpx` deprecation. |
 | `backend/` | `.\.venv\Scripts\python.exe -m ruff check .` | All checks passed. |
-| `backend/` | `.\.venv\Scripts\python.exe -m mypy app` | Success with no issues in 21 source files. |
-| `frontend/` | `npm.cmd test -- --run` | 15 tests passed in 12.03 s. |
+| `backend/` | `.\.venv\Scripts\python.exe -m mypy app` | Success with no issues in 42 source files. |
+| `backend/` | `.\.venv\Scripts\python.exe -m pip check` | No broken requirements found. |
+| `frontend/` | `npm.cmd test -- --run` | 26 tests passed. |
 | `frontend/` | `npm.cmd run lint` | Passed with zero warnings allowed. |
 | `frontend/` | `npm.cmd run typecheck` | Both application and Node/Vite TypeScript projects passed. |
-| `frontend/` | `npm.cmd run build` | Production build passed in 3.02 s: 1,588 modules; CSS 35.78 kB (7.90 kB gzip); JavaScript 289.98 kB (87.18 kB gzip). |
-| Repository root | `docker compose config --quiet` and `docker compose -f compose.yaml -f compose.deep.yaml config --quiet` | Both the true Fast default and Deep override models rendered successfully. The sandboxed CLI also emitted a non-failing access warning for this machine's user-level Docker config file. |
-| Repository root | `docker compose -f compose.yaml -f compose.deep.yaml up --build -d` | Final Deep images built and both services became healthy on loopback at `127.0.0.1:8000` and `127.0.0.1:5173`. Capabilities reported Torch 2.13.0, CUDA build support true, CUDA runtime false, selected device CPU, and no fallback. |
-| Repository root | local multipart upload/poll/delete against `/api/analyses` | The 16-second synthetic 133 BPM fixture completed in 27.6 s with requested/effective mode `deep`, Demucs four-stem evidence, 133.3 BPM, 35 beats, 35 onsets, one section, and no invariant warnings. No stem files remained before deletion; DELETE returned 204, the subsequent GET returned 404, and the UUID job directory was absent. |
-| `frontend/` | `$env:E2E_BASE_URL='http://127.0.0.1:5173'; npm.cmd run test:e2e` | One Chromium scenario passed in 10.4 s (9.4 s test): upload, Fast analysis, section correction, prompt composition, copy, and complete delete against the final rebuilt stack. |
-| Repository root | `$env:FFMPEG_PATH=...; $env:FFPROBE_PATH=...; .\backend\.venv\Scripts\python.exe scripts\diagnose_analysis.py test-fixtures\133bpm_click.wav --json` | Real decode path reported 133.3 BPM, 35 beats/onsets, one stable 16-second neutral section, no invariant warnings, and an ambiguity-safe prompt. |
+| `frontend/` | `npm.cmd run build` | Production build passed: 1,590 modules; CSS 37.58 kB (8.33 kB gzip); JavaScript 326.25 kB (95.93 kB gzip). |
+| Repository root | `docker compose config --quiet` and `docker compose -f compose.yaml -f compose.full-gpu.yaml config --quiet` | Both the local Fast baseline and full-GPU override rendered successfully. |
+| Repository root | `docker compose -f compose.yaml -f compose.full-gpu.yaml build backend frontend` | Both canonical images built successfully; the containerized frontend production build also processed 1,590 modules. |
+| Repository root | `powershell -NoProfile -ExecutionPolicy Bypass -File .\setup-full-gpu.ps1 -AcceptAllReviewedModelTerms -SkipBuild -SkipModelInstall -NoBrowser` | Provisioning validation passed and the canonical services became healthy. |
+| Repository root | canonical backend mount inspection | The baked backend had exactly one `/data` volume mount and no `/app/app` source bind. |
+| Repository root | `powershell -NoProfile -ExecutionPolicy Bypass -File .\verify-full-gpu.ps1` | The baked-image verifier passed CUDA/Torch and CTranslate2 checks, Demucs GPU inference with temporary-stem cleanup, CLAP hierarchy/aggregation diagnostics, faster-whisper GPU/privacy checks, local Qwen writer diagnostics, and the complete synthetic Deep workflow. Reliable strict and blend, Creative, and Experimental generation, selection, reload, JSON/Markdown export, privacy scanning, and deletion all passed. |
+| Repository root | permitted real-track quality verifier | A 262.031-second local track completed in effective Deep mode with CUDA Demucs, six genre windows, honest low-confidence genre ambiguity, private lyrics review and section mapping, and all four exercised prompt configurations: Reliable strict, Reliable blend, Creative, and Experimental. Every selected candidate persisted identically through reload and both exports, no mode fell back, safety repairs were declared where exact reviewed evidence was initially omitted, and deletion was confirmed. Output remained sanitized. |
+| `frontend/` | `npm.cmd run test:e2e` | One Chromium scenario passed in 10.2 s: upload, analysis, section correction, prompt composition, copy, and complete deletion. |
 
 ## Completely delete local data
 
@@ -524,6 +709,15 @@ separately.
   enable flag, the optional package, and compatible reviewed weights whose
   SHA-256 values match `demucs-models.json`. The stock Docker image intentionally
   omits the package.
+- **The full-GPU backend does not become healthy:** rerun the canonical setup
+  command with `-SkipBuild -SkipModelInstall`. It prints `compose ps --all`,
+  backend logs, container state, and `python -m app.diagnostics.imports` on
+  failure. The same diagnostic can be run manually with the command in the Full
+  GPU profile section. Do not delete volumes as a startup-repair step.
+- **A model diagnostic is unavailable after a rebuild:** inspect
+  `/api/capabilities` and run `verify-full-gpu.ps1`. Image rebuilds do not remove
+  either named model volume. Use `-ForceDownload` only after an integrity or
+  compatibility failure has been established.
 - **Analysis queue is full:** the server returns a retryable capacity error once
   `MAX_PENDING_JOBS` running/waiting jobs are admitted. Wait for a job to finish
   or raise the limit only after reviewing memory capacity.
@@ -544,10 +738,11 @@ separately.
 - Fast instrumentation and vocal findings are coarse. The optional Deep adapter
   adds only four broad stem categories and relative-energy evidence, not reliable
   specific-instrument recognition.
-- GPU-aware Demucs selection is available, but the stock Compose profile does
-  not require an NVIDIA runtime and the setup script intentionally installs a
-  CPU PyTorch build. Lyrical analysis and external LLM polishing are not
-  implemented.
+- The base Compose profile remains CPU/Fast-only. The separate full-GPU profile
+  requires a compatible NVIDIA runtime and explicitly provisioned reviewed
+  models; genre and lyrics remain estimates, and the local prompt writer can
+  still fall back to Reliable deterministic composition after validation or
+  runtime failure.
 - The application generates prompts for manual copy/paste; it does not connect to
   or automate Suno.
 

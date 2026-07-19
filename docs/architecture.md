@@ -13,8 +13,17 @@ flowchart LR
     Web --> API["FastAPI"]
     API --> Jobs["Job coordinator"]
     Jobs --> Media["ffprobe + FFmpeg"]
-    Jobs --> Worker["bounded CPU analysis worker"]
-    Worker --> Prompt["deterministic prompt composer"]
+    Jobs --> Worker["serialized CPU/GPU analysis worker"]
+    Worker --> Models["Demucs + CLAP + faster-whisper"]
+    Worker --> VisualFeatures["private 20 Hz visual features"]
+    VisualFeatures --> CueCompiler["pure visual cue compiler"]
+    CueCompiler --> CueExport["minimized visual-cues.json"]
+    CueExport -. "separate approved audio input" .-> Blender["Blender Python preset"]
+    Blender --> Preview["bounded stills + short movie"]
+    Preview --> Probe["local ffprobe stream/duration verification"]
+    API --> Prompt["prompt evidence + validation engine"]
+    Prompt --> Reliable["deterministic Reliable composer"]
+    Prompt --> Writer["private local Ollama writer"]
     Jobs <--> DB["SQLite lifecycle metadata"]
     Jobs <--> Files["UUID media + result files"]
     Jobs -. "stage events" .-> API
@@ -33,11 +42,15 @@ There is deliberately no normal-analysis arrow to an external service.
 | `backend/app/config.py` | Environment validation and local storage/tool paths. |
 | `backend/app/media.py` | Display-name sanitization, bounded ffprobe validation, and cancellable FFmpeg decode. |
 | `backend/app/analysis/` | Pure or isolated signal analyzers and versioned result assembly. |
-| `backend/app/prompting/` | Deterministic evidence filtering, descriptor conflict rules, whole-phrase budgeting, rationale, and seeded variation. |
+| `backend/app/visualizer/` | Private continuous-feature schema/DSP, deterministic frame conversion, public cue compilation, simplification, and privacy validation. |
+| `backend/app/tagging/`, `backend/app/lyrics/` | Optional local model adapters imported from concrete leaf modules. |
+| `backend/app/diagnostics/` | Safe executable import, GPU, model, provisioning, and capability diagnostics. |
+| `backend/app/prompting/` | Reviewed evidence filtering, deterministic Reliable composition, private sampled candidate writing, validation/repair, and provenance. |
 | `backend/app/adapters.py` | FFmpeg/ffprobe checks, truthful Deep readiness, and bounded offline local separation. |
-| `backend/requirements.txt`, `backend/requirements.lock.txt` | Human-maintained runtime compatibility policy and the exact verified Linux container dependency set. |
+| `backend/requirements.txt`, `backend/requirements.lock.txt`, `backend/requirements.full-gpu.txt` | Human-maintained runtime policy, the exact base Linux set, and reviewed pinned full-GPU direct dependencies. |
 | `backend/tests/`, `frontend/src/**/*.test.*`, `frontend/e2e/` | Unit, component, and browser coverage using generated synthetic media. |
 | `tools/generate_test_audio.py` | Deterministic, synthetic-only audio fixtures. |
+| `blender/` | Reusable cue loader, audio-control F-curves, procedural abstract preset, diagnostics, previews, and MCP-safe entrypoints. |
 | `.trackprompt-data/` or Docker `/data` | Runtime state; ignored by Git and removable independently of source. |
 
 The Pydantic models are the API boundary and FastAPI publishes their OpenAPI
@@ -45,6 +58,47 @@ schema. The frontend accepts network responses as `unknown`, validates the field
 needed for each screen, and maps camel-case JSON into strict local types. When a
 Pydantic field changes, its TypeScript mirror, parser, tests, and documentation
 must change in the same patch.
+
+Blender build and preview manifests are local verification boundaries. The build
+manifest records explicit frame/FPS, audio-bus, collection, F-curve, audio-strip,
+camera, and output checks. The preview manifest pairs planned still frames with
+written artifacts and uses a bounded local ffprobe argument array to confirm the
+movie duration and whether its actual audio stream matches the scene request.
+
+On Windows, `run-trackprompt-to-blender.ps1` is the canonical whole-system
+orchestrator: it optionally rebuilds the full-GPU Compose images, starts or
+reuses the stack, uploads one permitted audio file, persists the job ID, polls
+to completion, exports analysis and cue artifacts, builds the `.blend`, and
+renders/verifies the bounded preview unless `-SkipPreview` is set. Omitting
+`-BuildStack` starts from cached images; the default may perform one bounded
+backend rebuild when live OpenAPI lacks the visualizer routes. Passing
+`-AutoRebuildStaleBackend:$false` enforces a cached-only run. Every invocation
+gets an isolated `test-output/system-runs/<timestamp>/` directory and
+`run-manifest.json`; the
+separate job-ID builder and Blender MCP entrypoints remain targeted recovery or
+interactive-preview paths, not the routine lifecycle.
+
+## Python import boundaries
+
+Package initializers are deliberately dependency-free. `app.analysis.__init__`
+and `app.tagging.__init__` do not re-export orchestration or concrete adapter
+symbols. Low-level tagging may import `app.analysis.core`; orchestration imports
+the concrete `app.tagging.music` leaf; `app.jobs` imports `AnalysisCancelled`
+directly from `app.analysis.pipeline`; and `app.main` depends on jobs and
+capability assembly. This keeps the dependency direction explicit:
+
+```text
+analysis.core <- tagging.music <- adapters
+analysis.core <- analysis.pipeline -> adapters / tagging.music
+analysis.pipeline <- jobs <- main
+```
+
+No leaf import initializes `analysis.pipeline`, optional model weights, or the
+FastAPI application. `python -m app.diagnostics.imports` validates multiple
+orders in clean child Python processes, accesses each direct API/factory, imports
+the FastAPI application, and repeats the main-first case with optional ML
+package discovery simulated unavailable. The diagnostic uses no inline Python
+or private job data.
 
 ## Upload and analysis flow
 
@@ -68,7 +122,8 @@ must change in the same patch.
    stereo as needed for mix analysis. It uses an argument array, `shell=False`, a
    fixed timeout, bounded captured output, and cancellation polling.
 5. The job coordinator publishes real stages such as validation, decode, core
-   analysis, prompt composition, and finalization. CPU work is kept off the API
+   analysis, visual-feature extraction, prompt composition, and finalization.
+   CPU work is kept off the API
    event loop. `ANALYSIS_WORKERS` bounds simultaneous decoded/STFT workloads and
    defaults to one; `MAX_PENDING_JOBS` bounds all admitted running plus waiting
    jobs and rejects excess requests before their upload is stored. Core DSP,
@@ -81,7 +136,10 @@ must change in the same patch.
    evidence, and delete the stems immediately. Device selection reports PyTorch
    build/runtime state and retries CPU after a failed CUDA execution. Missing
    readiness, insufficient signal, or adapter failure retains the Fast result
-   with a warning.
+   with a warning. With separate consent, lyrics transcription runs against the
+   temporary vocal stem, classifies private segments, and maps accepted/uncertain
+   timestamps to structure before stem deletion. CLAP independently ranks
+   bounded silence-trimmed decoded-mix windows; it never consumes transcript text.
 7. Independent analyzers contribute `FeatureValue` values. A recoverable analyzer
    failure becomes a warning and omitted/unknown values where safe rather than a
    fabricated value or necessarily a failed job.
@@ -90,6 +148,9 @@ must change in the same patch.
 9. The deterministic composer filters disabled and weak facts, applies user
    overrides/preferences, produces prompt alternatives and rationale, and stores
    the package with the completed job.
+   Later Creative/Experimental prompt POSTs cross the internal-only Ollama
+   boundary with bounded `PromptEvidence`; they are not part of initial analysis
+   and never receive the audio or private transcript.
 10. The UI receives stage changes through server-sent events, then retrieves the
    completed result. PATCH operations preserve detected values while marking user
    edits, persisting explicit acceptance, or disabling facts for prompt
@@ -119,6 +180,8 @@ is:
 | Production | 75 |
 | Optional Deep separation | 82 |
 | Optional Deep descriptors | 87 |
+| Optional lyrics transcription | 88 |
+| Optional genre tagging | 91 |
 | Composing prompt | 92 |
 | Finalizing analysis | 98 |
 | Completed | 100 |
@@ -147,6 +210,9 @@ latest sequence.
       source.bin
       detected-analysis.json
       analysis.json
+      detected-lyrics.json  # private restore source, when consented
+      lyrics.json           # editable private transcript, when consented
+      lyrics-summary.json   # text-free aggregate handoff
       prompt.json
       preferences.json
       decoded.wav  # temporary
@@ -166,6 +232,10 @@ remain in the UUID filesystem directory. The API never returns physical paths.
 `analysis.json` is the current editable result. Prompt/preferences files preserve
 the most recent composition inputs and output. Writes use a job-local temporary
 file followed by an atomic replace, reject non-finite JSON, and cap payload reads.
+Generated prompt packages require a unique selected candidate whose text matches
+`primaryPrompt`. Candidate selection accepts only an ID already present in the
+stored package and atomically replaces that selected view; browser-authored
+freeform text is deliberately not persisted.
 
 Each feature carries separate `userEdited` and `userAccepted` flags. Acceptance
 persists an explicit review decision without rewriting the detected value or
@@ -210,11 +280,19 @@ the storage layout or retention behavior.
 | `GET /api/analyses/{job_id}/events` | Subscribe to ordered server-sent stage events. |
 | `POST /api/analyses/{job_id}/cancel` | Idempotently cancel work. |
 | `PATCH /api/analyses/{job_id}` | Edit, accept/unaccept, disable/use, or restore supported analysis facts and guarded timeline section fields; invalidates the stored prompt package. |
+| `PATCH /api/analyses/{job_id}/genre` | Accept, reject, relabel, lock, restore, add, or disable authoritative genre candidates; invalidates the stored prompt package. |
+| `GET /api/analyses/{job_id}/lyrics` | Read the job-scoped private approximate transcript for explicit local review. |
+| `PATCH /api/analyses/{job_id}/lyrics` | Edit/delete/restore private segments or approve sanitized abstract themes; remaps sections and invalidates the prompt package. |
+| `DELETE /api/analyses/{job_id}/lyrics` | Remove both editable/detected private transcript artifacts and their summary evidence. |
+| `GET /api/analyses/{job_id}/lyrics/export` | Explicitly download the private transcript; standard exports never include it. |
 | `POST /api/analyses/{job_id}/prompt` | Compose a prompt package from analysis and preferences. |
+| `PATCH /api/analyses/{job_id}/prompt` | Persist one candidate already present in the stored package as `selectedCandidateId` and `primaryPrompt`; unknown IDs are rejected. |
 | `DELETE /api/analyses/{job_id}` | Idempotently remove the job and its data. |
 | `GET /api/analyses/{job_id}/export.json` | Download the versioned local result. |
 | `GET /api/analyses/{job_id}/export.md` | Download a human-readable local report. |
 | `GET /api/analyses/{job_id}/audio` | Stream the private source to the local waveform player with bounded byte-range handling and a generic response filename. |
+| `POST /api/analyses/{job_id}/visual-cues` | Compile and return a minimized versioned Blender cue sheet from typed FPS/event/stem/curve/detail preferences. |
+| `GET /api/analyses/{job_id}/visual-cues/export` | Download the same cue contract with query preferences and a UUID-derived filename; no source path or filename is exported. |
 
 Errors use a safe shape with `code`, `message`, and optional non-sensitive
 `details`. Stack traces and filesystem paths are not returned. FastAPI serves the
@@ -238,11 +316,14 @@ The composer uses medium/high evidence by default. Exact chords stay in the
 analysis/export rather than the primary prompt, and melody/lyric/source identity
 data is excluded by construction.
 
-Schema `1.1.0` adds backward-compatible activity-threshold/sample-range
-diagnostics, separate onset and beat-grid evidence, section-level Deep evidence,
-boundary confidence, evidence kind, optional-analyzer capabilities, and Deep
-device/fallback diagnostics. Analysis version `0.2.0` changes the associated
-algorithms and analyzer-version map.
+Schema `1.4.0` adds separate production/vocal/section/overall genre layers,
+full-mix versus private-accompaniment window identity, acoustic vocal-delivery
+evidence, and structured prompt facts with path, aggregate value, and role.
+Analysis version `0.5.0` covers that layer synthesis and prompt-state behavior.
+Missing fields from older results receive conservative backward-compatible
+defaults; legacy prompt fact-path strings migrate to structured records with an
+unknown value, old segments remain uncertain, and old themes are not approved
+for prompt evidence.
 
 ## Deployment profiles
 
@@ -262,6 +343,17 @@ requires a deliberately reviewed custom image and a complete
 The nginx image renders its config from a runtime template, defaulting
 `NGINX_UPLOAD_LIMIT` to `202m` and a 10-minute client-body inactivity timeout;
 this protects the proxy before backend streaming validation.
+
+The separate `compose.full-gpu.yaml` override builds
+`backend/Dockerfile.full-gpu`, requests NVIDIA access for the backend and private
+Ollama service, and enables independently reported Demucs, genre, lyrics, and
+prompt-writer capabilities. `setup-full-gpu.ps1` is the single Windows
+installer/recovery entry point. It uses native argument arrays and repository
+diagnostic modules, provisions a checksum-verified ignored Demucs seed
+atomically, reuses named model volumes by default, and starts prompt writer,
+backend, then frontend with health waits between stages. `verify-full-gpu.ps1`
+is the single running-stack verifier. Neither script edits source or removes
+volumes.
 
 ### Direct development
 
@@ -297,6 +389,8 @@ is only one npm package manager and one Python project definition.
   by relative path and SHA-256. Any extra file disables the adapter. Hash results
   are cached by file metadata signature and recomputed after a change; execution
   uses offline flags and cannot silently download or manufacture unavailable
-  results.
+  results. Because the reviewed Demucs 4.0.1 checkpoint contains serialized model
+  classes, its legacy PyTorch loader override is scoped to that checksum-verified
+  offline Demucs child process and is never applied to the backend globally.
 - Bind published container ports to `127.0.0.1` by default. Remote/LAN exposure is
   outside the supported privacy boundary and requires a separate security review.

@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import {
   Activity,
   AudioLines,
@@ -38,6 +38,7 @@ import { GenrePanel } from './GenrePanel'
 import { LyricsPanel } from './LyricsPanel'
 import { WaveformTimeline } from './WaveformTimeline'
 import { Button, ConfidenceBadge, InlineNotice, Modal } from './ui'
+import { BlenderVisualizerPanel } from './BlenderVisualizerPanel'
 
 type ResultsTab = 'overview' | 'timeline' | 'rhythm' | 'instruments' | 'genre' | 'lyrics' | 'production' | 'prompt'
 
@@ -172,6 +173,8 @@ interface ResultsWorkspaceProps {
   onUpdateFact: (update: FactUpdate) => Promise<void>
   onUpdateFacts: (updates: FactUpdate[]) => Promise<void>
   onGeneratePrompt: (preferences: PromptPreferences) => Promise<PromptPackage>
+  onSelectPromptCandidate: (candidateId: string) => Promise<PromptPackage>
+  onRefreshAnalysis: () => Promise<boolean>
   onDelete: () => Promise<void>
 }
 
@@ -188,12 +191,26 @@ export function ResultsWorkspace({
   onUpdateFact,
   onUpdateFacts,
   onGeneratePrompt,
+  onSelectPromptCandidate,
+  onRefreshAnalysis,
   onDelete,
 }: ResultsWorkspaceProps) {
   const [tab, setTab] = useState<ResultsTab>('overview')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string>()
   const [currentGenre, setCurrentGenre] = useState(analysis.genreAnalysis)
+  const usedGenreIds = useMemo(
+    () => new Set(
+      (promptPackage?.factsUsed ?? [])
+        .map((fact) => fact.path)
+        .filter((path) => path.startsWith('genreAnalysis.accepted.'))
+        .map((path) => path.slice('genreAnalysis.accepted.'.length)),
+    ),
+    [promptPackage?.factsUsed],
+  )
+  useEffect(() => {
+    setCurrentGenre(analysis.genreAnalysis)
+  }, [analysis.genreAnalysis])
   const disabledPaths = analysis.disabledFeaturePaths
   const createdLabel = useMemo(() => {
     const value = new Date(analysis.createdAt)
@@ -246,6 +263,8 @@ export function ResultsWorkspace({
         </div>
       </header>
 
+      <BlenderVisualizerPanel jobId={jobId} />
+
       <div className="results-tabs" role="tablist" aria-label="Analysis workspace" onKeyDown={onTabKeyDown}>
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
@@ -289,8 +308,8 @@ export function ResultsWorkspace({
             <AnalysisGroupPanel group={analysis.signalQuality} prefix="signalQuality" title="Signal quality" description="Technical signal facts help calibrate the reliability of the rest of the report." disabledPaths={disabledPaths} savingPath={savingPath} onUpdate={onUpdateFact} />
           </>
         ) : null}
-        {tab === 'genre' ? <GenrePanel jobId={jobId} initialGenre={currentGenre} onChange={setCurrentGenre} /> : null}
-        {tab === 'lyrics' ? <LyricsPanel jobId={jobId} summary={analysis.lyricsSummary} /> : null}
+        {tab === 'genre' ? <GenrePanel jobId={jobId} initialGenre={currentGenre} usedGenreIds={usedGenreIds} onChange={(genre) => { setCurrentGenre(genre); void onRefreshAnalysis() }} /> : null}
+        {tab === 'lyrics' ? <LyricsPanel jobId={jobId} summary={analysis.lyricsSummary} sections={analysis.structure.sections ?? []} onAnalysisRefresh={onRefreshAnalysis} /> : null}
       </div> : null}
       <div
         className="results-panel"
@@ -300,7 +319,7 @@ export function ResultsWorkspace({
         tabIndex={0}
         hidden={tab !== 'prompt'}
       >
-        <PromptWorkspace jobId={jobId} analysis={{ ...analysis, genreAnalysis: currentGenre }} capabilities={capabilities} promptPackage={promptPackage} onGenerate={onGeneratePrompt} />
+        <PromptWorkspace jobId={jobId} analysis={{ ...analysis, genreAnalysis: currentGenre }} capabilities={capabilities} promptPackage={promptPackage} onGenerate={onGeneratePrompt} onSelectCandidate={onSelectPromptCandidate} />
       </div>
 
       <footer className="privacy-footer">

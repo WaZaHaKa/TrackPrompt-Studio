@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
-import re
+import math
+from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,8 +15,15 @@ from ..schemas import (
     Confidence,
     LyricsAnalysisSummary,
     LyricsSegment,
+    LyricsSegmentQualityDecision,
     ModelAdapterCapability,
     PrivateLyricsTranscript,
+)
+from .quality import (
+    assess_segment_quality,
+    normalize_lyrics_text,
+    quality_decision_counts,
+    usable_transcript_segments,
 )
 
 
@@ -34,20 +42,14 @@ class LyricsAdapter(Protocol):
     def cleanup(self) -> None: ...
 
 
-def _normalized_phrase(text: str) -> str:
-    return " ".join(re.findall(r"[\w']+", text.casefold()))
-
-
-def _quality(avg_log_prob: float | None, no_speech: float | None) -> Confidence:
-    if no_speech is not None and no_speech >= 0.5:
-        return Confidence.LOW
-    if avg_log_prob is None:
-        return Confidence.UNKNOWN
-    if avg_log_prob >= -0.45:
-        return Confidence.HIGH
-    if avg_log_prob >= -0.9:
-        return Confidence.MEDIUM
-    return Confidence.LOW
+def _finite_metric(value: object, *, minimum: float, maximum: float) -> float | None:
+    try:
+        metric = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(metric) or not minimum <= metric <= maximum:
+        return None
+    return metric
 
 
 class FakeLyricsAdapter:
@@ -89,7 +91,11 @@ class FakeLyricsAdapter:
                 end_seconds=2.0,
                 text="synthetic test phrase",
                 confidence=Confidence.MEDIUM,
+                quality_decision=LyricsSegmentQualityDecision.ACCEPTED,
+                avg_log_probability=-0.3,
                 no_speech_score=0.05,
+                compression_ratio=1.0,
+                repeated_token_ratio=0.0,
             )
         ]
         transcript = PrivateLyricsTranscript(
@@ -220,82 +226,142 @@ class FasterWhisperLyricsAdapter:
             str(vocal_stem),
             beam_size=3,
             best_of=3,
+            temperature=(0.0, 0.2),
             condition_on_previous_text=False,
             vad_filter=True,
-            word_timestamps=False,
+            vad_parameters={"min_silence_duration_ms": 750, "speech_pad_ms": 300},
+            word_timestamps=True,
             hallucination_silence_threshold=1.5,
             compression_ratio_threshold=2.2,
             log_prob_threshold=-1.0,
             no_speech_threshold=0.6,
+            repetition_penalty=1.1,
+            no_repeat_ngram_size=3,
         )
-        accepted: list[LyricsSegment] = []
-        seen: dict[str, int] = {}
-        filtered_low_quality = 0
-        filtered_repetitions = 0
+        buffered_segments: list[Any] = []
         for raw in raw_segments:
             if cancel_requested is not None and cancel_requested():
                 raise RuntimeError("Lyrics transcription was cancelled.")
+            buffered_segments.append(raw)
+        occurrence_counts = Counter(
+            normalized
+            for raw in buffered_segments
+            if (normalized := normalize_lyrics_text(str(raw.text).strip()[:1000]))
+        )
+        evaluated: list[LyricsSegment] = []
+        previous_normalized = ""
+        adjacent_repetition_count = 0
+        language_probability = _finite_metric(
+            getattr(info, "language_probability", None),
+            minimum=0.0,
+            maximum=1.0,
+        )
+        for raw in buffered_segments:
+            if cancel_requested is not None and cancel_requested():
+                raise RuntimeError("Lyrics transcription was cancelled.")
             text = str(raw.text).strip()[:1000]
-            normalized = _normalized_phrase(text)
-            no_speech = float(raw.no_speech_prob) if raw.no_speech_prob is not None else None
-            avg_log_prob = float(raw.avg_logprob) if raw.avg_logprob is not None else None
-            flags: list[str] = []
-            if not normalized or len(normalized) < 2 or (no_speech is not None and no_speech >= 0.65) or (avg_log_prob is not None and avg_log_prob < -1.2):
-                filtered_low_quality += 1
-                continue
-            seen[normalized] = seen.get(normalized, 0) + 1
-            if seen[normalized] > 2:
-                filtered_repetitions += 1
-                continue
-            confidence = _quality(avg_log_prob, no_speech)
-            if confidence == Confidence.LOW:
-                flags.append("uncertain_phrase")
-            accepted.append(
+            normalized = normalize_lyrics_text(text)
+            if normalized and normalized == previous_normalized:
+                adjacent_repetition_count += 1
+            else:
+                adjacent_repetition_count = 1
+            previous_normalized = normalized
+            raw_start = _finite_metric(getattr(raw, "start", None), minimum=-86_400.0, maximum=86_400.0)
+            raw_end = _finite_metric(getattr(raw, "end", None), minimum=-86_400.0, maximum=86_400.0)
+            stored_start = max(0.0, round(raw_start or 0.0, 3))
+            stored_end = max(round(raw_end or stored_start, 3), stored_start + 0.001)
+            no_speech = _finite_metric(
+                getattr(raw, "no_speech_prob", None),
+                minimum=0.0,
+                maximum=1.0,
+            )
+            avg_log_probability = _finite_metric(
+                getattr(raw, "avg_logprob", None),
+                minimum=-100.0,
+                maximum=10.0,
+            )
+            compression_ratio = _finite_metric(
+                getattr(raw, "compression_ratio", None),
+                minimum=0.0,
+                maximum=100.0,
+            )
+            quality = assess_segment_quality(
+                text=text,
+                start_seconds=raw_start if raw_start is not None else math.nan,
+                end_seconds=raw_end if raw_end is not None else math.nan,
+                avg_log_probability=avg_log_probability,
+                no_speech_probability=no_speech,
+                compression_ratio=compression_ratio,
+                language_probability=language_probability,
+                adjacent_repetition_count=adjacent_repetition_count,
+                total_occurrences=occurrence_counts.get(normalized, 1),
+            )
+            evaluated.append(
                 LyricsSegment(
                     id=str(uuid4()),
-                    start_seconds=max(0.0, round(float(raw.start), 3)),
-                    end_seconds=max(round(float(raw.end), 3), round(float(raw.start), 3) + 0.001),
+                    start_seconds=stored_start,
+                    end_seconds=stored_end,
                     text=text,
-                    confidence=confidence,
+                    confidence=quality.confidence,
+                    quality_decision=quality.decision,
+                    avg_log_probability=avg_log_probability,
                     no_speech_score=no_speech,
-                    quality_flags=flags,
+                    compression_ratio=compression_ratio,
+                    repeated_token_ratio=quality.repeated_token_ratio,
+                    quality_flags=list(quality.flags),
                 )
             )
         created = datetime.now(UTC)
         warnings = [
             "This is an approximate transcript: singing, reverb, layering, vocal chops, and dense accompaniment can cause substantial errors."
         ]
-        if filtered_low_quality:
-            warnings.append(f"{filtered_low_quality} low-quality or no-speech segment(s) were withheld.")
-        if filtered_repetitions:
-            warnings.append(f"{filtered_repetitions} repeated hallucination-like segment(s) were withheld.")
         transcript = PrivateLyricsTranscript(
             job_id=job_id,
             language=str(info.language) if getattr(info, "language", None) else None,
-            segments=accepted,
+            segments=evaluated,
             model_id=self.settings.lyrics_model_name,
             selected_device=self._device,
             warnings=warnings,
             created_at=created,
         )
-        total_span = max((segment.end_seconds for segment in accepted), default=0.0)
-        word_count = sum(len(_normalized_phrase(segment.text).split()) for segment in accepted)
+        decision_counts = quality_decision_counts(transcript)
+        rejected_count = decision_counts[LyricsSegmentQualityDecision.REJECTED_AS_LIKELY_HALLUCINATION.value]
+        non_lexical_count = decision_counts[LyricsSegmentQualityDecision.NON_LEXICAL.value]
+        uncertain_count = decision_counts[LyricsSegmentQualityDecision.UNCERTAIN.value]
+        if rejected_count:
+            warnings.append(
+                f"{rejected_count} likely hallucinated segment(s) remain private and were excluded from ordinary analysis and themes."
+            )
+        if any("repeated" in flag for segment in evaluated for flag in segment.quality_flags):
+            warnings.append("Repeated hallucination-like transcript evidence was excluded or marked uncertain.")
+        if non_lexical_count:
+            warnings.append(
+                f"{non_lexical_count} non-lexical vocal segment(s) remain private and were excluded from text evidence."
+            )
+        if uncertain_count:
+            warnings.append(
+                f"{uncertain_count} uncertain segment(s) remain private and are not eligible for abstract-theme generation."
+            )
+        transcript.warnings = warnings
+        usable = usable_transcript_segments(transcript)
+        total_span = max((segment.end_seconds for segment in usable), default=0.0)
+        word_count = sum(len(normalize_lyrics_text(segment.text).split()) for segment in usable)
         words_per_minute = word_count * 60 / max(total_span, 1.0)
         density = "dense" if words_per_minute >= 110 else "moderate" if words_per_minute >= 45 else "sparse"
-        language_probability = float(getattr(info, "language_probability", 0.0) or 0.0)
-        language_confidence = Confidence.HIGH if language_probability >= 0.8 else Confidence.MEDIUM if language_probability >= 0.5 else Confidence.LOW
+        language_score = language_probability or 0.0
+        language_confidence = Confidence.HIGH if language_score >= 0.8 else Confidence.MEDIUM if language_score >= 0.5 else Confidence.LOW
         summary = LyricsAnalysisSummary(
             enabled=True,
-            status="completed" if accepted else "no_reliable_words",
+            status="completed" if usable else "no_reliable_words",
             adapter_id=self.adapter_id,
             model_id=self.settings.lyrics_model_name,
             selected_device=self._device,
             language=transcript.language,
             language_confidence=language_confidence,
-            transcript_available=bool(accepted),
-            segment_count=len(accepted),
-            vocal_word_density=density if accepted else "unknown",
-            non_lexical_vocalization_tendency="possible" if filtered_low_quality and not accepted else "unknown",
+            transcript_available=bool(usable),
+            segment_count=len(usable),
+            vocal_word_density=density if usable else "unknown",
+            non_lexical_vocalization_tendency="possible" if non_lexical_count else "unknown",
             warnings=warnings,
             created_at=created,
         )

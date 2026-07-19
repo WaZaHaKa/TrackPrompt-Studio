@@ -1,72 +1,454 @@
 {
-  "taxonomyVersion": "1.0.0",
+  "taxonomyVersion": "2.0.0",
   "excludedArtistNames": [],
   "broadGenres": [
-    {"id":"electronic","label":"electronic","promptSafeLabel":"electronic","description":"electronic music built primarily from synthesized or processed sound","aliases":["electronica"]},
-    {"id":"dance","label":"dance","promptSafeLabel":"dance","description":"dance-focused music with a steady physical pulse","aliases":[]},
-    {"id":"hip-hop","label":"hip-hop","promptSafeLabel":"hip-hop","description":"hip-hop with beat-led production and rhythmic vocal space","aliases":["hip hop"]},
-    {"id":"r-and-b","label":"R&B","promptSafeLabel":"contemporary R&B","description":"rhythm and blues with expressive vocals and groove-centered harmony","aliases":["r&b","rhythm and blues"]},
-    {"id":"pop","label":"pop","promptSafeLabel":"pop","description":"concise melodic popular music with hook-oriented structure","aliases":[]},
-    {"id":"rock","label":"rock","promptSafeLabel":"rock","description":"rock music with amplified band energy and a strong backbeat","aliases":[]},
-    {"id":"metal","label":"metal","promptSafeLabel":"metal","description":"heavy amplified music with dense guitars and forceful drums","aliases":[]},
-    {"id":"punk","label":"punk","promptSafeLabel":"punk","description":"direct energetic punk with raw band momentum","aliases":[]},
-    {"id":"folk","label":"folk","promptSafeLabel":"folk","description":"folk-rooted acoustic music centered on organic performance","aliases":[]},
-    {"id":"country","label":"country","promptSafeLabel":"country","description":"country music with narrative phrasing and roots instrumentation","aliases":[]},
-    {"id":"jazz","label":"jazz","promptSafeLabel":"jazz","description":"jazz with improvisational phrasing, swing or extended harmony","aliases":[]},
-    {"id":"blues","label":"blues","promptSafeLabel":"blues","description":"blues-rooted music with expressive bent-note phrasing and cyclical harmony","aliases":[]},
-    {"id":"soul","label":"soul","promptSafeLabel":"soul","description":"soul music with expressive vocal delivery and warm groove","aliases":[]},
-    {"id":"funk","label":"funk","promptSafeLabel":"funk","description":"syncopated funk centered on interlocking bass and drums","aliases":[]},
-    {"id":"reggae","label":"reggae","promptSafeLabel":"reggae","description":"reggae with offbeat accents and spacious bass-led rhythm","aliases":[]},
-    {"id":"classical","label":"classical","promptSafeLabel":"classical","description":"concert music using acoustic ensemble or solo forms","aliases":[]},
-    {"id":"cinematic","label":"cinematic","promptSafeLabel":"cinematic","description":"cinematic score-like music shaped by dramatic texture and development","aliases":["soundtrack"]},
-    {"id":"experimental","label":"experimental","promptSafeLabel":"experimental","description":"experimental music with unconventional timbre, form, or process","aliases":[]},
-    {"id":"acoustic-songwriter","label":"acoustic singer-songwriter","promptSafeLabel":"acoustic singer-songwriter","description":"intimate acoustic songcraft with voice-forward arrangement","aliases":["singer songwriter"]},
-    {"id":"world-regional","label":"regional traditional","promptSafeLabel":"regional traditional influence","description":"music with clearly evidenced regional traditional instrumentation or rhythm","aliases":["world music"]}
+    {
+      "id": "electronic-dance",
+      "label": "electronic dance",
+      "promptSafeLabel": "electronic dance",
+      "description": "electronic dance music built around a sustained physical groove",
+      "clapDescriptions": [
+        "an electronic dance music track with a sustained club rhythm, synthesized production, and prominent low end",
+        "dance-floor electronic music driven by repeating drums, bass, and a stable physical pulse",
+        "a club-oriented electronic production whose main arrangement is organized around rhythmic momentum"
+      ],
+      "aliases": ["EDM", "club music"],
+      "compatibilityGroups": ["steady-club-groove", "synthetic-production"],
+      "incompatibilityGroups": ["free-time-acoustic"],
+      "expectedRhythmicTraits": ["sustained pulse", "repeating dance groove"],
+      "tempoPrior": {"minimumBpm": 95, "maximumBpm": 180, "note": "weak support only when a stable dance pulse is independently measured"},
+      "instrumentationPriors": ["electronic drums", "synthesized bass", "synthesizers"]
+    },
+    {
+      "id": "electronic-non-dance",
+      "label": "electronic non-dance",
+      "promptSafeLabel": "non-dance electronic",
+      "description": "electronic music whose main identity is texture rather than a continuous club groove",
+      "clapDescriptions": [
+        "an electronic music track centered on synthesized atmosphere without a sustained dance-floor rhythm",
+        "non-club electronic music shaped by evolving timbre, space, and studio processing",
+        "an electronic composition where texture and sound design matter more than a repeating physical groove"
+      ],
+      "aliases": ["electronica"],
+      "compatibilityGroups": ["synthetic-production", "atmospheric"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["optional or secondary pulse"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["synthesizers", "processed sound"]
+    },
+    {
+      "id": "hip-hop",
+      "label": "hip-hop",
+      "promptSafeLabel": "hip-hop",
+      "description": "beat-led hip-hop with space for rhythmic vocal delivery",
+      "clapDescriptions": [
+        "a hip-hop track with a beat-led groove, strong kick and snare placement, and space for rhythmic vocals",
+        "hip-hop production centered on a sampled or programmed drum pattern and low-frequency bass",
+        "a rap-oriented instrumental or song with a grounded broken-beat pocket rather than a continuous club pulse"
+      ],
+      "aliases": ["hip hop", "rap"],
+      "compatibilityGroups": ["broken-beat", "vocal-rhythm"],
+      "incompatibilityGroups": ["continuous-four-on-floor"],
+      "expectedRhythmicTraits": ["kick-snare pocket", "broken beat"],
+      "tempoPrior": {"minimumBpm": 60, "maximumBpm": 115, "note": "half-time and double-time readings make tempo weak evidence"},
+      "instrumentationPriors": ["programmed drums", "bass", "samples"]
+    },
+    {
+      "id": "r-and-b-soul",
+      "label": "R&B and soul",
+      "promptSafeLabel": "contemporary R&B and soul",
+      "description": "vocal-centered R&B and soul with expressive phrasing and groove-led harmony",
+      "clapDescriptions": [
+        "a contemporary R&B or soul song with expressive lead vocals, syncopated rhythm, and warm harmony",
+        "vocal-centered rhythm and blues with a relaxed groove, layered harmonies, and polished low end",
+        "a soul-influenced song where expressive singing and harmonic color lead the arrangement"
+      ],
+      "aliases": ["R&B", "rhythm and blues", "soul"],
+      "compatibilityGroups": ["expressive-vocals", "syncopated-groove"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["syncopated pocket", "vocal-led phrasing"],
+      "tempoPrior": {"minimumBpm": 55, "maximumBpm": 120, "note": "weak support only; faster and double-time examples exist"},
+      "instrumentationPriors": ["lead vocals", "bass", "keys", "drums"]
+    },
+    {
+      "id": "pop",
+      "label": "pop",
+      "promptSafeLabel": "pop",
+      "description": "concise melodic popular music with a hook-oriented song structure",
+      "clapDescriptions": [
+        "a polished pop song with a concise hook-led structure, clear melody, and accessible rhythm",
+        "mainstream melodic pop built around repeated hooks and a compact verse-and-chorus arrangement",
+        "a contemporary popular song with prominent melody and a controlled studio production"
+      ],
+      "aliases": [],
+      "compatibilityGroups": ["hook-led-song"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["regular song pulse"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["lead vocal or lead melody", "drums", "harmonic accompaniment"]
+    },
+    {
+      "id": "rock-metal",
+      "label": "rock and metal",
+      "promptSafeLabel": "rock and metal",
+      "description": "amplified band music led by guitars, bass, and acoustic-style drums",
+      "clapDescriptions": [
+        "a rock or metal track centered on amplified guitars, bass guitar, and forceful acoustic drums",
+        "guitar-led band music with a strong backbeat, live-performance energy, and distorted or clean amplification",
+        "an amplified rock-family arrangement where riffs and a physical drum kit define the sound"
+      ],
+      "aliases": ["rock", "metal"],
+      "compatibilityGroups": ["amplified-band"],
+      "incompatibilityGroups": ["purely-synthetic"],
+      "expectedRhythmicTraits": ["backbeat", "live drum feel"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["electric guitars", "bass guitar", "acoustic drums"]
+    },
+    {
+      "id": "jazz-blues",
+      "label": "jazz and blues",
+      "promptSafeLabel": "jazz and blues",
+      "description": "jazz- or blues-rooted music with improvisational phrasing and expressive harmony",
+      "clapDescriptions": [
+        "a jazz or blues performance with expressive instrumental phrasing, acoustic ensemble interplay, and flexible timing",
+        "improvisation-led music using jazz harmony or blues phrasing over an organic rhythm section",
+        "a jazz-family or blues-family track with conversational performance and nuanced harmonic movement"
+      ],
+      "aliases": ["jazz", "blues"],
+      "compatibilityGroups": ["improvised-ensemble"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["swing or flexible pocket"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["acoustic drums", "bass", "keys or guitar", "horns"]
+    },
+    {
+      "id": "acoustic-folk",
+      "label": "acoustic and folk",
+      "promptSafeLabel": "acoustic folk",
+      "description": "organic acoustic music rooted in folk performance and songcraft",
+      "clapDescriptions": [
+        "an acoustic folk performance led by natural strings, intimate dynamics, and human timing",
+        "organic roots music centered on acoustic instruments and direct ensemble or singer-songwriter performance",
+        "a folk-oriented track with natural room sound, acoustic timbres, and restrained production"
+      ],
+      "aliases": ["folk", "singer-songwriter", "roots"],
+      "compatibilityGroups": ["organic-acoustic"],
+      "incompatibilityGroups": ["purely-synthetic"],
+      "expectedRhythmicTraits": ["human timing", "optional light pulse"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["acoustic guitar", "natural strings", "hand percussion"]
+    },
+    {
+      "id": "orchestral-classical",
+      "label": "orchestral and classical",
+      "promptSafeLabel": "orchestral classical",
+      "description": "concert-oriented acoustic composition for orchestral, chamber, or solo forces",
+      "clapDescriptions": [
+        "an orchestral or classical composition performed by acoustic strings, winds, brass, percussion, or solo instruments",
+        "concert music with through-composed development, natural dynamics, and acoustic ensemble timbre",
+        "a classical-family performance shaped by score-based form rather than a looped popular groove"
+      ],
+      "aliases": ["classical", "orchestral", "chamber"],
+      "compatibilityGroups": ["scored-acoustic-ensemble"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["score-led timing"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["orchestral strings", "winds", "brass", "concert percussion"]
+    },
+    {
+      "id": "cinematic",
+      "label": "cinematic",
+      "promptSafeLabel": "cinematic score",
+      "description": "dramatic score-like music organized around narrative texture and development",
+      "clapDescriptions": [
+        "a cinematic score cue with dramatic textural development, dynamic contrast, and narrative pacing",
+        "soundtrack-like music shaped by evolving orchestration, atmosphere, and tension rather than a conventional song groove",
+        "a film-score-oriented composition with spacious production and a clear dramatic arc"
+      ],
+      "aliases": ["soundtrack", "score"],
+      "compatibilityGroups": ["narrative-development"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["variable or secondary pulse"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["orchestral or synthesized layers", "cinematic percussion"]
+    },
+    {
+      "id": "reggae-dub",
+      "label": "reggae and dub",
+      "promptSafeLabel": "reggae and dub",
+      "description": "reggae- or dub-rooted music with offbeat accents, deep bass, and spacious production",
+      "clapDescriptions": [
+        "a reggae or dub track with offbeat rhythmic accents, deep bass, and spacious drum placement",
+        "bass-led Jamaican-rooted music using syncopated guitar or keys and echo-rich studio processing",
+        "a reggae-family groove with a relaxed pocket, strong low end, and deliberate rhythmic space"
+      ],
+      "aliases": ["reggae", "dub"],
+      "compatibilityGroups": ["offbeat-bass-groove"],
+      "incompatibilityGroups": [],
+      "expectedRhythmicTraits": ["offbeat accents", "bass-led pocket"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["bass", "drums", "offbeat guitar or keys", "delay"]
+    },
+    {
+      "id": "experimental",
+      "label": "experimental",
+      "promptSafeLabel": "experimental music",
+      "description": "deliberately unconventional music whose defining evidence is nonstandard form, timbre, or process",
+      "clapDescriptions": [
+        "an experimental composition with unconventional form or timbre and without a stable genre-defining groove",
+        "music organized around disruptive sound design, irregular process, or nontraditional structure rather than a familiar song or dance pattern",
+        "a deliberately abstract sonic work whose unusual construction is more prominent than conventional club, band, or vocal-song traits"
+      ],
+      "aliases": ["avant-garde"],
+      "compatibilityGroups": ["unconventional-form"],
+      "incompatibilityGroups": ["steady-club-groove", "conventional-song"],
+      "expectedRhythmicTraits": ["irregular, absent, or deliberately disrupted pulse"],
+      "tempoPrior": null,
+      "instrumentationPriors": ["unconventional or processed sound sources"]
+    }
   ],
   "subgenres": [
-    {"id":"techno","parent":"electronic","label":"techno","promptSafeLabel":"techno","description":"repetitive machine-driven club music with a focused four-on-the-floor pulse","aliases":[]},
-    {"id":"house","parent":"dance","label":"house","promptSafeLabel":"house","description":"house music with a steady four-on-the-floor beat and cyclical groove","aliases":[]},
-    {"id":"progressive-house","parent":"dance","label":"progressive house","promptSafeLabel":"progressive house","description":"progressive house with long builds, layered motion, and gradual release","aliases":[]},
-    {"id":"melodic-techno","parent":"electronic","label":"melodic techno","promptSafeLabel":"melodic techno","description":"melodic techno balancing driving percussion with emotive synth development","aliases":[]},
-    {"id":"trance","parent":"dance","label":"trance","promptSafeLabel":"trance","description":"trance with propulsive pulse, luminous synths, and extended tension-release arcs","aliases":[]},
-    {"id":"drum-and-bass","parent":"electronic","label":"drum and bass","promptSafeLabel":"drum and bass","description":"fast breakbeat electronic music with prominent sub-bass","aliases":["dnb"]},
-    {"id":"breakbeat","parent":"electronic","label":"breakbeat","promptSafeLabel":"breakbeat","description":"electronic music organized around syncopated broken-beat patterns","aliases":[]},
-    {"id":"ambient","parent":"electronic","label":"ambient","promptSafeLabel":"ambient electronic","description":"ambient electronic music focused on atmosphere, sustained texture, and space","aliases":[]},
-    {"id":"dub","parent":"reggae","label":"dub","promptSafeLabel":"dub","description":"dub with bass weight, echo, space, and studio-as-instrument processing","aliases":[]},
-    {"id":"orchestral","parent":"classical","label":"orchestral","promptSafeLabel":"orchestral","description":"music led by orchestral strings, winds, brass, and percussion","aliases":[]},
-    {"id":"cinematic-orchestral","parent":"cinematic","label":"cinematic orchestral","promptSafeLabel":"cinematic orchestral","description":"dramatic orchestral score texture with evolving dynamics","aliases":[]},
-    {"id":"alternative-rock","parent":"rock","label":"alternative rock","promptSafeLabel":"alternative rock","description":"alternative rock with guitar-band texture and less conventional pop polish","aliases":[]},
-    {"id":"hard-rock","parent":"rock","label":"hard rock","promptSafeLabel":"hard rock","description":"hard rock with heavy riffs, emphatic drums, and forceful energy","aliases":[]},
-    {"id":"indie-pop","parent":"pop","label":"indie pop","promptSafeLabel":"indie pop","description":"melodic indie pop with intimate or lightly unconventional production","aliases":[]},
-    {"id":"trap","parent":"hip-hop","label":"trap","promptSafeLabel":"trap-influenced hip-hop","description":"trap-influenced hip-hop with rolling hi-hats, sparse drums, and deep bass","aliases":[]},
-    {"id":"boom-bap","parent":"hip-hop","label":"boom bap","promptSafeLabel":"boom-bap hip-hop","description":"boom-bap hip-hop with sample-like texture and pronounced kick-snare interplay","aliases":[]},
-    {"id":"neo-soul","parent":"soul","label":"neo-soul","promptSafeLabel":"neo-soul","description":"neo-soul with warm harmony, laid-back groove, and expressive vocals","aliases":[]},
-    {"id":"contemporary-r-and-b","parent":"r-and-b","label":"contemporary R&B","promptSafeLabel":"contemporary R&B","description":"contemporary R&B with polished low-end, spacious rhythm, and vocal focus","aliases":[]},
-    {"id":"bebop","parent":"jazz","label":"bebop","promptSafeLabel":"bebop jazz","description":"fast harmonically dense jazz with agile improvisational lines","aliases":[]},
-    {"id":"jazz-fusion","parent":"jazz","label":"jazz fusion","promptSafeLabel":"jazz fusion","description":"jazz fusion combining improvisation with electric rhythm-section textures","aliases":[]},
-    {"id":"acoustic-folk","parent":"folk","label":"acoustic folk","promptSafeLabel":"acoustic folk","description":"acoustic folk with natural strings, intimate dynamics, and simple arrangement","aliases":[]},
-    {"id":"experimental-electronic","parent":"experimental","label":"experimental electronic","promptSafeLabel":"experimental electronic","description":"experimental electronic music with unconventional synthesis and form","aliases":[]}
+    {
+      "id": "techno", "parent": "electronic-dance", "label": "techno", "promptSafeLabel": "techno",
+      "description": "driving machine-led club music with repetitive percussion and synthesized bass",
+      "clapDescriptions": ["a driving techno track with repetitive machine percussion, synthesized bass, and a focused four-on-the-floor club pulse", "functional techno built around a hypnotic kick-led loop, restrained harmonic movement, and continuous dance-floor momentum", "a percussion-forward techno production with repeating electronic drums and an insistent low-frequency rhythm"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "steady-club-groove"], "incompatibilityGroups": ["acoustic-band"], "expectedRhythmicTraits": ["four-on-the-floor", "hypnotic repetition"],
+      "tempoPrior": {"minimumBpm": 115, "maximumBpm": 150, "note": "weak support only after club-pulse evidence"}, "instrumentationPriors": ["electronic kick", "synthesized bass", "machine percussion"]
+    },
+    {
+      "id": "minimal-techno", "parent": "electronic-dance", "label": "minimal techno", "promptSafeLabel": "minimal techno",
+      "description": "sparse techno built from small repeating changes and restrained percussion",
+      "clapDescriptions": ["a minimal techno track with sparse machine percussion, small repeating variations, and a dry focused club groove", "restrained techno using few elements, negative space, and hypnotic micro-changes over a steady kick", "a stripped-back electronic club track whose rhythm develops through subtle repetition"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "minimal"], "incompatibilityGroups": ["dense-maximal"], "expectedRhythmicTraits": ["steady pulse", "sparse syncopation"],
+      "tempoPrior": {"minimumBpm": 115, "maximumBpm": 135, "note": "weak support only"}, "instrumentationPriors": ["electronic kick", "sparse percussion", "minimal synthesizers"]
+    },
+    {
+      "id": "deep-techno", "parent": "electronic-dance", "label": "deep techno", "promptSafeLabel": "deep techno",
+      "description": "restrained hypnotic techno with deep low-frequency motion and subtle texture",
+      "clapDescriptions": ["a deep techno track with restrained percussion, hypnotic repetition, and a warm low-frequency pulse", "subtle late-night techno centered on depth, space, and a steady machine groove", "a low-slung techno production with muted synthesis and continuous club rhythm"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "deep"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["steady pulse", "restrained repetition"],
+      "tempoPrior": {"minimumBpm": 110, "maximumBpm": 135, "note": "weak support only"}, "instrumentationPriors": ["deep kick", "sub bass", "restrained synthesizers"]
+    },
+    {
+      "id": "dub-techno", "parent": "electronic-dance", "label": "dub techno", "promptSafeLabel": "dub techno",
+      "description": "spacious techno with delayed chords and deep repetitive low-frequency rhythm",
+      "clapDescriptions": ["a dub techno track with spacious chord delays, deep bass, and a steady understated club pulse", "hypnotic techno shaped by echoing chord stabs, long reverb tails, and low-frequency repetition", "a deep electronic club groove with dub-style delay, filtered chords, and extensive sonic space"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "dub-space"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["steady pulse", "spacious repetition"],
+      "tempoPrior": {"minimumBpm": 105, "maximumBpm": 135, "note": "weak support only"}, "instrumentationPriors": ["delayed synth chords", "sub bass", "electronic drums"]
+    },
+    {
+      "id": "melodic-techno", "parent": "electronic-dance", "label": "melodic techno", "promptSafeLabel": "melodic techno",
+      "description": "driving techno rhythm combined with atmospheric melodic synthesis",
+      "clapDescriptions": ["a melodic techno track with atmospheric synthesis, emotive motifs, and a steady driving dance pulse", "club-oriented techno balancing repetitive percussion with evolving melodic arpeggios and harmonic tension", "a dark melodic electronic track whose synth development rides over continuous techno drums"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "melodic-progressive"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["four-on-the-floor", "gradual melodic development"],
+      "tempoPrior": {"minimumBpm": 115, "maximumBpm": 135, "note": "weak support only"}, "instrumentationPriors": ["melodic synthesizers", "electronic drums", "bass"]
+    },
+    {
+      "id": "progressive-house", "parent": "electronic-dance", "label": "progressive house", "promptSafeLabel": "progressive house",
+      "description": "house music with gradual arrangement development, layered builds, and club drums",
+      "clapDescriptions": ["a progressive house track with gradual arrangement development, layered builds, and steady four-on-the-floor club drums", "long-form house music that adds melodic and rhythmic layers across extended tension-and-release arcs", "a polished electronic dance track with evolving sections, broad synth textures, and a continuous house pulse"],
+      "aliases": [], "compatibilityGroups": ["house-family", "melodic-progressive"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["four-on-the-floor", "gradual build"],
+      "tempoPrior": {"minimumBpm": 118, "maximumBpm": 132, "note": "weak support only"}, "instrumentationPriors": ["club drums", "layered synthesizers", "bass"]
+    },
+    {
+      "id": "deep-house", "parent": "electronic-dance", "label": "deep house", "promptSafeLabel": "deep house",
+      "description": "warm restrained house with deep bass, soft chords, and a steady groove",
+      "clapDescriptions": ["a deep house track with warm chords, rounded bass, and a relaxed four-on-the-floor groove", "restrained house music with soulful harmonic color, soft electronic drums, and spacious low end", "a smooth late-night electronic dance track built on a steady house pulse and deep production"],
+      "aliases": [], "compatibilityGroups": ["house-family", "deep"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["relaxed four-on-the-floor"],
+      "tempoPrior": {"minimumBpm": 110, "maximumBpm": 126, "note": "weak support only"}, "instrumentationPriors": ["electronic drums", "warm chords", "bass"]
+    },
+    {
+      "id": "electro-house", "parent": "electronic-dance", "label": "electro house", "promptSafeLabel": "electro house",
+      "description": "high-impact house with aggressive synthesized bass and bright club production",
+      "clapDescriptions": ["an electro house track with a hard four-on-the-floor beat, aggressive synthesized bass, and bright club production", "high-impact electronic dance music driven by distorted bass sounds, punchy drums, and compact builds", "a dense energetic house production with sharp synthesizer hooks and forceful drops"],
+      "aliases": [], "compatibilityGroups": ["house-family", "high-impact"], "incompatibilityGroups": ["minimal"], "expectedRhythmicTraits": ["forceful four-on-the-floor"],
+      "tempoPrior": {"minimumBpm": 120, "maximumBpm": 132, "note": "weak support only"}, "instrumentationPriors": ["aggressive synth bass", "electronic drums", "bright synthesizers"]
+    },
+    {
+      "id": "trance", "parent": "electronic-dance", "label": "trance", "promptSafeLabel": "trance",
+      "description": "propulsive electronic dance music with luminous synthesis and extended tension-release arcs",
+      "clapDescriptions": ["a trance track with a propulsive four-on-the-floor pulse, luminous synthesizers, and extended tension-and-release", "uplifting or hypnotic electronic dance music with repeating arpeggios, broad pads, and long builds", "a fast melodic club track organized around continuous pulse and expansive synthesizer progression"],
+      "aliases": [], "compatibilityGroups": ["trance-family", "melodic-progressive"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["fast four-on-the-floor", "extended build"],
+      "tempoPrior": {"minimumBpm": 125, "maximumBpm": 145, "note": "weak support only"}, "instrumentationPriors": ["arpeggiated synthesizers", "pads", "electronic drums"]
+    },
+    {
+      "id": "breakbeat", "parent": "electronic-dance", "label": "breakbeat", "promptSafeLabel": "breakbeat",
+      "description": "electronic dance music organized around syncopated broken-beat drum patterns",
+      "clapDescriptions": ["an electronic breakbeat track with syncopated broken drums, bass weight, and dance-floor momentum", "club-oriented electronic music using chopped or programmed break patterns instead of a continuous kick on every beat", "a rhythmic electronic track led by staggered kick and snare figures and energetic low end"],
+      "aliases": ["breaks"], "compatibilityGroups": ["broken-beat", "electronic-club"], "incompatibilityGroups": ["continuous-four-on-floor"], "expectedRhythmicTraits": ["broken beat", "syncopation"],
+      "tempoPrior": {"minimumBpm": 95, "maximumBpm": 150, "note": "weak support only"}, "instrumentationPriors": ["programmed breaks", "synthesized bass"]
+    },
+    {
+      "id": "drum-and-bass", "parent": "electronic-dance", "label": "drum and bass", "promptSafeLabel": "drum and bass",
+      "description": "fast breakbeat electronic music with rapid drums and prominent sub-bass",
+      "clapDescriptions": ["a drum and bass track with rapid breakbeats, rolling percussion, and prominent sub-bass", "fast electronic dance music built around chopped drums, energetic syncopation, and deep low-frequency movement", "a high-tempo bass track with dense breakbeat rhythm and continuous forward momentum"],
+      "aliases": ["dnb", "D&B"], "compatibilityGroups": ["broken-beat", "bass-music"], "incompatibilityGroups": ["slow-pocket"], "expectedRhythmicTraits": ["rapid breakbeat"],
+      "tempoPrior": {"minimumBpm": 155, "maximumBpm": 185, "note": "weak support only and subject to half-time perception"}, "instrumentationPriors": ["breakbeats", "sub bass", "electronic textures"]
+    },
+    {
+      "id": "ambient-techno", "parent": "electronic-dance", "label": "ambient techno", "promptSafeLabel": "ambient techno",
+      "description": "atmospheric electronic texture retaining a restrained techno pulse",
+      "clapDescriptions": ["an ambient techno track with spacious synthesis, subtle repetition, and a restrained but audible electronic pulse", "atmospheric electronic music combining drifting pads with understated techno percussion", "a spacious hypnotic club-adjacent track where ambient texture surrounds a minimal steady rhythm"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "atmospheric"], "incompatibilityGroups": ["high-impact"], "expectedRhythmicTraits": ["subtle steady pulse"],
+      "tempoPrior": {"minimumBpm": 90, "maximumBpm": 130, "note": "weak support only"}, "instrumentationPriors": ["pads", "restrained electronic drums", "textural synthesizers"]
+    },
+    {
+      "id": "industrial-techno", "parent": "electronic-dance", "label": "industrial techno", "promptSafeLabel": "industrial techno",
+      "description": "hard techno with abrasive mechanical timbre and forceful repetitive percussion",
+      "clapDescriptions": ["an industrial techno track with abrasive mechanical textures, forceful kick drums, and relentless repetition", "hard dark club music built from distorted percussion, metallic sound design, and a driving techno pulse", "a dense machine-like techno production with aggressive low end and stark rhythmic momentum"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "high-impact"], "incompatibilityGroups": ["organic-acoustic"], "expectedRhythmicTraits": ["forceful four-on-the-floor"],
+      "tempoPrior": {"minimumBpm": 125, "maximumBpm": 155, "note": "weak support only"}, "instrumentationPriors": ["distorted kick", "metallic percussion", "industrial synthesis"]
+    },
+    {
+      "id": "vocal-techno", "parent": "electronic-dance", "label": "vocal techno", "promptSafeLabel": "vocal techno",
+      "description": "techno with sparse repeated vocal phrases integrated into the club groove",
+      "clapDescriptions": ["a vocal techno track with sparse repeated vocal phrases over a driving electronic club groove", "techno production where short processed voice fragments function as rhythmic hooks above steady percussion", "a machine-led dance track combining hypnotic drums with intermittent vocal refrains rather than a fully vocal-led song"],
+      "aliases": [], "compatibilityGroups": ["techno-family", "vocal-fragments"], "incompatibilityGroups": ["vocal-ballad"], "expectedRhythmicTraits": ["steady club pulse", "repeated vocal fragments"],
+      "tempoPrior": {"minimumBpm": 115, "maximumBpm": 145, "note": "weak support only"}, "instrumentationPriors": ["electronic drums", "synthesized bass", "processed vocal fragments"]
+    },
+    {
+      "id": "ambient-electronic", "parent": "electronic-non-dance", "label": "ambient electronic", "promptSafeLabel": "ambient electronic",
+      "description": "spacious electronic music focused on sustained texture without a necessary dance pulse",
+      "clapDescriptions": ["ambient electronic music with sustained pads, slow timbral movement, and no necessary dance-floor groove", "a spacious synthesized soundscape centered on atmosphere, resonance, and gradual change", "non-rhythmic or lightly pulsed electronic ambience with long tones and extensive sonic space"],
+      "aliases": ["ambient"], "compatibilityGroups": ["atmospheric"], "incompatibilityGroups": ["high-impact"], "expectedRhythmicTraits": ["absent or secondary pulse"],
+      "tempoPrior": null, "instrumentationPriors": ["pads", "drones", "processed textures"]
+    },
+    {
+      "id": "experimental-electronic", "parent": "electronic-non-dance", "label": "experimental electronic", "promptSafeLabel": "experimental electronic",
+      "description": "unconventional electronic composition with disrupted form or nonstandard sound design",
+      "clapDescriptions": ["experimental electronic music with unconventional synthesis, disrupted form, and no dominant familiar club pattern", "an abstract electronic composition built from unusual processing, irregular events, and exploratory sound design", "nontraditional synthesized music whose structure resists a stable dance groove or conventional song form"],
+      "aliases": [], "compatibilityGroups": ["unconventional-form", "synthetic-production"], "incompatibilityGroups": ["steady-club-groove"], "expectedRhythmicTraits": ["irregular or disrupted pulse"],
+      "tempoPrior": null, "instrumentationPriors": ["processed sound", "unconventional synthesis"]
+    },
+    {
+      "id": "boom-bap", "parent": "hip-hop", "label": "boom bap", "promptSafeLabel": "boom-bap hip-hop",
+      "description": "hip-hop with pronounced kick-snare interplay and sample-like texture",
+      "clapDescriptions": ["a boom-bap hip-hop track with pronounced kick and snare interplay, sample-like texture, and a grounded head-nod groove", "classic beat-led hip-hop using a firm backbeat, chopped harmonic material, and spacious rhythmic vocal placement"],
+      "aliases": [], "compatibilityGroups": ["broken-beat"], "incompatibilityGroups": ["continuous-four-on-floor"], "expectedRhythmicTraits": ["kick-snare pocket"],
+      "tempoPrior": {"minimumBpm": 75, "maximumBpm": 105, "note": "weak support only"}, "instrumentationPriors": ["sample-like texture", "drums", "bass"]
+    },
+    {
+      "id": "trap", "parent": "hip-hop", "label": "trap", "promptSafeLabel": "trap-influenced hip-hop",
+      "description": "hip-hop with rolling hi-hats, sparse drums, and deep bass",
+      "clapDescriptions": ["a trap-influenced hip-hop track with rolling hi-hats, sparse kick and snare placement, and deep sustained bass", "modern hip-hop production using rapid hi-hat subdivisions, heavy low end, and a spacious half-time pocket"],
+      "aliases": [], "compatibilityGroups": ["broken-beat", "bass-music"], "incompatibilityGroups": ["continuous-four-on-floor"], "expectedRhythmicTraits": ["half-time pocket", "rapid hi-hat subdivisions"],
+      "tempoPrior": {"minimumBpm": 60, "maximumBpm": 90, "note": "weak support only; double-time readings are common"}, "instrumentationPriors": ["hi-hats", "sub bass", "programmed drums"]
+    },
+    {
+      "id": "contemporary-r-and-b", "parent": "r-and-b-soul", "label": "contemporary R&B", "promptSafeLabel": "contemporary R&B",
+      "description": "polished vocal-led R&B with spacious rhythm and modern low end",
+      "clapDescriptions": ["a contemporary R&B song with expressive lead vocals, syncopated rhythm, polished low end, and spacious production", "modern rhythm and blues centered on intimate singing, layered harmonies, and a relaxed programmed groove"],
+      "aliases": ["modern R&B"], "compatibilityGroups": ["expressive-vocals"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["syncopated relaxed groove"],
+      "tempoPrior": {"minimumBpm": 55, "maximumBpm": 115, "note": "weak support only"}, "instrumentationPriors": ["lead vocals", "keys", "bass", "programmed drums"]
+    },
+    {
+      "id": "neo-soul", "parent": "r-and-b-soul", "label": "neo-soul", "promptSafeLabel": "neo-soul",
+      "description": "warm harmonically rich soul with a laid-back human groove",
+      "clapDescriptions": ["a neo-soul song with warm extended harmony, laid-back drums, expressive vocals, and organic instrumental color", "modern soul music with nuanced singing, deep pocket, electric keys, and relaxed rhythmic interplay"],
+      "aliases": [], "compatibilityGroups": ["expressive-vocals", "organic-groove"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["laid-back pocket"],
+      "tempoPrior": {"minimumBpm": 60, "maximumBpm": 110, "note": "weak support only"}, "instrumentationPriors": ["lead vocals", "electric keys", "bass", "drums"]
+    },
+    {
+      "id": "synth-pop", "parent": "pop", "label": "synth-pop", "promptSafeLabel": "synth-pop",
+      "description": "hook-led pop with prominent synthesizers and electronic rhythm",
+      "clapDescriptions": ["a synth-pop song with prominent melodic synthesizers, electronic drums, and a concise vocal hook", "polished electronic pop combining a clear song structure with bright or atmospheric synthesized production"],
+      "aliases": [], "compatibilityGroups": ["hook-led-song", "synthetic-production"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["regular pop pulse"],
+      "tempoPrior": null, "instrumentationPriors": ["synthesizers", "electronic drums", "lead melody or vocal"]
+    },
+    {
+      "id": "rock", "parent": "rock-metal", "label": "rock", "promptSafeLabel": "rock",
+      "description": "guitar-led amplified band music with bass and acoustic drums",
+      "clapDescriptions": ["a rock song centered on electric guitars, bass guitar, and acoustic drums with a strong backbeat", "amplified band music with guitar riffs, live drum energy, and a direct song arrangement"],
+      "aliases": [], "compatibilityGroups": ["amplified-band"], "incompatibilityGroups": ["purely-synthetic"], "expectedRhythmicTraits": ["backbeat"],
+      "tempoPrior": null, "instrumentationPriors": ["electric guitar", "bass guitar", "drum kit"]
+    },
+    {
+      "id": "metal", "parent": "rock-metal", "label": "metal", "promptSafeLabel": "metal",
+      "description": "heavy guitar-led band music with forceful drums and dense riffs",
+      "clapDescriptions": ["a metal track with heavily distorted guitars, forceful acoustic drums, dense riffs, and aggressive dynamics", "heavy amplified band music driven by low guitar riffs, powerful percussion, and intense performance"],
+      "aliases": [], "compatibilityGroups": ["amplified-band", "high-impact"], "incompatibilityGroups": ["minimal"], "expectedRhythmicTraits": ["forceful drum pattern"],
+      "tempoPrior": null, "instrumentationPriors": ["distorted guitars", "bass guitar", "drum kit"]
+    },
+    {
+      "id": "jazz", "parent": "jazz-blues", "label": "jazz", "promptSafeLabel": "jazz",
+      "description": "improvisation-led ensemble music with flexible phrasing and extended harmony",
+      "clapDescriptions": ["a jazz performance with improvisational phrasing, acoustic ensemble interplay, and extended harmonic movement", "instrumental or vocal jazz shaped by conversational rhythm-section playing and flexible timing"],
+      "aliases": [], "compatibilityGroups": ["improvised-ensemble"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["swing or flexible pocket"],
+      "tempoPrior": null, "instrumentationPriors": ["acoustic drums", "bass", "piano or guitar", "horns"]
+    },
+    {
+      "id": "blues", "parent": "jazz-blues", "label": "blues", "promptSafeLabel": "blues",
+      "description": "blues-rooted music with cyclical harmony and expressive bent-note phrasing",
+      "clapDescriptions": ["a blues performance with cyclical harmony, expressive bent-note phrasing, and a grounded rhythm-section groove", "roots-oriented blues music led by voice, guitar, or harmonica over a repeating harmonic form"],
+      "aliases": [], "compatibilityGroups": ["organic-groove"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["shuffle or grounded pocket"],
+      "tempoPrior": null, "instrumentationPriors": ["guitar", "voice or harmonica", "bass", "drums"]
+    },
+    {
+      "id": "folk-acoustic", "parent": "acoustic-folk", "label": "acoustic folk", "promptSafeLabel": "acoustic folk",
+      "description": "natural acoustic songcraft with intimate dynamics and restrained arrangement",
+      "clapDescriptions": ["an acoustic folk song with natural strings, intimate dynamics, and a restrained organic arrangement", "a roots-oriented acoustic performance using human timing, natural room sound, and direct songcraft"],
+      "aliases": [], "compatibilityGroups": ["organic-acoustic"], "incompatibilityGroups": ["purely-synthetic"], "expectedRhythmicTraits": ["human timing"],
+      "tempoPrior": null, "instrumentationPriors": ["acoustic guitar", "natural strings", "light percussion"]
+    },
+    {
+      "id": "orchestral", "parent": "orchestral-classical", "label": "orchestral", "promptSafeLabel": "orchestral",
+      "description": "score-based music led by orchestral strings, winds, brass, and percussion",
+      "clapDescriptions": ["an orchestral composition led by acoustic strings, winds, brass, and concert percussion", "score-based ensemble music with natural dynamics and through-composed instrumental development"],
+      "aliases": [], "compatibilityGroups": ["scored-acoustic-ensemble"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["score-led timing"],
+      "tempoPrior": null, "instrumentationPriors": ["orchestral strings", "winds", "brass", "concert percussion"]
+    },
+    {
+      "id": "cinematic-score", "parent": "cinematic", "label": "cinematic score", "promptSafeLabel": "cinematic score",
+      "description": "dramatic soundtrack music with evolving orchestration and narrative pacing",
+      "clapDescriptions": ["a cinematic score cue with evolving orchestration, dramatic dynamics, and narrative pacing", "soundtrack-oriented music that develops tension and atmosphere through layered acoustic or synthesized textures"],
+      "aliases": ["film score"], "compatibilityGroups": ["narrative-development"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["variable pulse"],
+      "tempoPrior": null, "instrumentationPriors": ["orchestral or synthesized layers", "cinematic percussion"]
+    },
+    {
+      "id": "reggae", "parent": "reggae-dub", "label": "reggae", "promptSafeLabel": "reggae",
+      "description": "bass-led groove music with offbeat accents and spacious rhythm",
+      "clapDescriptions": ["a reggae track with offbeat guitar or keyboard accents, deep bass, and a relaxed drum groove", "Jamaican-rooted band music using syncopated skank accents, spacious rhythm, and strong low end"],
+      "aliases": [], "compatibilityGroups": ["offbeat-bass-groove"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["offbeat accents"],
+      "tempoPrior": null, "instrumentationPriors": ["bass", "drums", "offbeat guitar or keys"]
+    },
+    {
+      "id": "dub", "parent": "reggae-dub", "label": "dub", "promptSafeLabel": "dub",
+      "description": "spacious bass-led reggae-derived production shaped by echo and studio processing",
+      "clapDescriptions": ["a dub track with deep bass, sparse drums, echo, and spacious studio processing", "reggae-derived instrumental music where delay, reverb, bass weight, and rhythmic negative space define the arrangement"],
+      "aliases": [], "compatibilityGroups": ["offbeat-bass-groove", "dub-space"], "incompatibilityGroups": [], "expectedRhythmicTraits": ["spacious bass-led pocket"],
+      "tempoPrior": null, "instrumentationPriors": ["bass", "drums", "delay effects"]
+    }
   ],
   "descriptiveTags": [
-    {"id":"club-driven","label":"club-driven","description":"club-driven rhythmic emphasis"},
-    {"id":"atmospheric","label":"atmospheric","description":"spacious atmospheric texture"},
-    {"id":"organic","label":"organic","description":"predominantly organic acoustic timbre"},
-    {"id":"synthetic","label":"synthetic","description":"predominantly synthetic electronic timbre"},
-    {"id":"percussive","label":"percussive","description":"strongly percussive transient-led texture"},
-    {"id":"harmonic","label":"harmonic","description":"sustained tonal and harmonic emphasis"},
-    {"id":"dark","label":"dark-toned","description":"dark low-centered tonal color"},
-    {"id":"bright","label":"bright-toned","description":"bright high-frequency tonal color"},
-    {"id":"cinematic-texture","label":"cinematic texture","description":"dramatic cinematic textural development"},
-    {"id":"minimal","label":"minimal","description":"minimal arrangement with sparse elements"},
-    {"id":"dense","label":"dense","description":"dense layered arrangement"}
+    {"id":"club-driven","label":"club-driven","description":"continuous dance-floor rhythmic emphasis","clapDescriptions":["club-driven production with a sustained physical groove","music organized around continuous dance-floor momentum"]},
+    {"id":"hypnotic","label":"hypnotic","description":"focused repetition with gradual small changes","clapDescriptions":["hypnotic repetition with small evolving details","a focused looping texture that creates trance-like continuity"]},
+    {"id":"atmospheric","label":"atmospheric","description":"spacious sustained texture and environmental depth","clapDescriptions":["atmospheric music with sustained texture and spatial depth","an immersive layered sound with drifting ambience"]},
+    {"id":"melodic","label":"melodic","description":"clear pitched motifs lead the musical identity","clapDescriptions":["music led by clear melodic motifs and pitched development","a strongly melodic arrangement with memorable tonal phrases"]},
+    {"id":"percussive","label":"percussive","description":"transient-led texture with prominent rhythmic attacks","clapDescriptions":["strongly percussive music with prominent rhythmic transients","a drum-forward texture led by repeated attacks and physical rhythm"]},
+    {"id":"sparse","label":"sparse","description":"few simultaneous elements and substantial negative space","clapDescriptions":["a sparse arrangement with few simultaneous elements and substantial negative space","restrained production with isolated musical events and open space"]},
+    {"id":"dense","label":"dense","description":"many layered elements with little negative space","clapDescriptions":["a dense layered arrangement with many simultaneous musical elements","full production with continuous overlapping texture and limited negative space"]},
+    {"id":"vocal-led","label":"vocal-led","description":"lead singing or rhythmic voice dominates the arrangement","clapDescriptions":["a vocal-led song where expressive lead voice dominates the arrangement","music centered on continuous intelligible singing or rhythmic vocal delivery"]},
+    {"id":"instrumental","label":"instrumental","description":"no dominant intelligible lead vocal","clapDescriptions":["instrumental music without a dominant intelligible lead vocal","a track led by instruments and production rather than sung words"]},
+    {"id":"dark","label":"dark-toned","description":"low-centered tense or shadowed tonal color","clapDescriptions":["dark-toned music with low-centered tense harmonic color","a shadowed moody production emphasizing depth and tension"]},
+    {"id":"euphoric","label":"euphoric","description":"uplifting high-energy emotional release","clapDescriptions":["euphoric music with uplifting high-energy emotional release","an expansive celebratory sound with bright tension-and-release"]},
+    {"id":"spacious","label":"spacious","description":"wide open production with audible depth and decay","clapDescriptions":["spacious production with wide depth, long decay, and clear negative space","an open three-dimensional mix shaped by reverb or delay"]},
+    {"id":"synthetic","label":"synthetic","description":"predominantly synthesized or electronically processed timbre","clapDescriptions":["predominantly synthetic electronic timbre and programmed production","music built mainly from synthesizers, electronic drums, and processed sound"]},
+    {"id":"organic","label":"organic","description":"predominantly acoustic natural-performance timbre","clapDescriptions":["predominantly organic acoustic timbre and natural performance","music led by acoustic instruments, human articulation, and room sound"]},
+    {"id":"cinematic","label":"cinematic","description":"dramatic narrative texture and score-like development","clapDescriptions":["cinematic texture with dramatic narrative development","score-like music shaped by evolving tension, atmosphere, and dynamic contrast"]},
+    {"id":"repetitive","label":"repetitive","description":"persistent recurring musical pattern","clapDescriptions":["persistent musical repetition with a clearly recurring pattern","a loop-oriented arrangement built around repeated rhythm or harmony"]},
+    {"id":"progressive-arrangement","label":"progressive arrangement","description":"gradual addition and transformation of layers over time","clapDescriptions":["a progressive arrangement that gradually adds and transforms musical layers","long-form development with staged builds, transitions, and evolving density"]}
   ],
   "compatibleBlends": [
-    ["techno","progressive house"],
-    ["melodic techno","progressive house"],
-    ["ambient electronic","cinematic"],
-    ["soul","contemporary R&B"],
-    ["jazz","funk"],
-    ["reggae","dub"],
-    ["classical","cinematic orchestral"]
+    ["techno", "minimal-techno"],
+    ["techno", "deep-techno"],
+    ["techno", "melodic-techno"],
+    ["techno", "progressive-house"],
+    ["melodic-techno", "progressive-house"],
+    ["deep-techno", "dub-techno"],
+    ["ambient-techno", "deep-techno"],
+    ["deep-house", "progressive-house"],
+    ["breakbeat", "drum-and-bass"],
+    ["contemporary-r-and-b", "neo-soul"],
+    ["reggae", "dub"]
   ]
 }

@@ -30,7 +30,8 @@ The configured `TRACKPROMPT_DATA_DIR` contains:
   but no audio or derived analysis;
 - `.cancellations/<uuid>.cancel`: transient cancellation markers without audio;
 - `jobs/<uuid>/`: `source.bin`, editable and detected analysis JSON, the latest
-  prompt/preferences JSON, and temporary decoded/derived files;
+  prompt/preferences JSON, private `lyrics.json`/`detected-lyrics.json`, a
+  text-free lyrics summary, and temporary decoded/derived files;
 - `models/` by default: reserved for optional explicitly managed model files and
   their `demucs-models.json` checksum manifest.
 
@@ -113,6 +114,33 @@ stem/download service. Direct Vite and uvicorn commands, as well as published
 Compose ports, bind to `127.0.0.1` by default; that loopback bind is part of this
 privacy boundary.
 
+The visualizer adds one private, versioned `visual-features.json` artifact to a
+completed job directory. It contains bounded normalized numbers and method
+metadata only—never audio/stem samples, a source name/path, media tags, lyrics,
+transcript, prompts, or model paths. Deep stem curves are calculated before the
+temporary stems are deleted. Explicit deletion and TTL expiry remove the
+artifact with the entire UUID job directory; cancellation and processing failure
+remove an incomplete artifact with other partial derivatives.
+
+The public Blender cue sheet is compiled locally without rereading audio,
+loading a model, using a GPU, or contacting a network. Its privacy validator
+rejects private field names and absolute filesystem paths. The browser download
+uses only the job UUID in its name. The user supplies an audio file separately
+to Blender, and Blender writes only to caller-approved output locations.
+
+The private singing transcript keeps accepted, uncertain, likely-hallucinated,
+and non-lexical detections so users can review or delete the actual local model
+artifact. Standard job responses and JSON/Markdown analysis exports contain only
+aggregate lyric status, usable-segment counts, section IDs, and approved abstract
+themes; they never merge segment text. Rejected/non-lexical text is not supplied
+to the local theme writer. Generated themes remain disabled as prompt evidence
+until the user explicitly approves them. The explicit transcript export endpoint
+is the only standard route that returns the raw private text as a download.
+User-approved abstract themes can use ordinary open-vocabulary concepts, but
+the approval path rejects prompt-injection wording, URLs/handles, private paths,
+imitation requests, and four-word-or-longer fragments copied from the private
+transcript before a theme can enter prompt evidence.
+
 Generated prompts exclude:
 
 - source filenames and internal paths;
@@ -123,6 +151,33 @@ Generated prompts exclude:
 
 User-provided overrides and exclusions are treated as data. They do not become
 backend instructions or shell fragments.
+
+Creative and Experimental prompt writing is local to the internal-only Ollama
+service. It receives bounded derived evidence, never audio or the private
+transcript. Generated candidate packages are private job artifacts; selecting an
+existing candidate persists that generated text, while freeform editor changes
+remain in the browser unless the user copies or exports them separately.
+The sampled-writer contract permits reviewed selected genre labels, an eligible
+layered production/vocal blend when `detected_layered` is selected, or a
+sanitized explicit target genre. Known taxonomy/detected labels outside the
+active mode's set and named-reference terms such as
+`artist`, `clone`, `copy`, `imitate`, `in the style of`, and `sounds like` are
+forbidden even in negative wording. Prompt diagnostics report bounded reason
+codes, counts, and booleans only; they never report generated candidate text or
+private transcript text. Candidate and approved-theme validation scans the
+timestamp-ordered transcript across decoder boundaries, not just one segment at
+time. Candidate titles and creative-direction metadata pass the same private
+transcript, source-identity, path, and instruction-language screens as prompt
+text; requested transformations must be exact members of the server allowlist.
+The sampled writer's provenance metadata is advisory. The server records a
+structured fact only when its approved aggregate value is actually expressed in
+the validated prompt. Values come from an explicit path resolver that has no raw
+transcript, filename, source-path, melody, or complete-chord-sequence route. After
+the single model repair, a bounded deterministic repair may insert only those
+reviewed literals and must still pass the standard privacy, contradiction,
+diversity, and length checks. If the private transcript artifact is missing,
+prompt and export boundaries clear transcript-derived themes and invalidate the
+stale generated package before returning a durable result.
 
 ## Logging
 
@@ -165,6 +220,11 @@ For Docker, after verifying that the current directory is this repository:
 ```bash
 docker compose down --volumes
 ```
+
+This is an intentional complete-deletion command. Ordinary full-GPU shutdown,
+setup, and recovery use `docker compose ... down` or `setup-full-gpu.ps1` without
+`--volumes`, preserving both the private data/model volume and the Ollama model
+volume. Neither canonical full-GPU script deletes a named volume.
 
 For the documented direct-start configuration, stop the servers and remove the
 literal repository-local directory:

@@ -1,5 +1,15 @@
 # Implementation plan
 
+> Historical Fast-baseline delivery plan. For the current hierarchical genre,
+> private lyrics, and sampled local-writer architecture, use
+> [full-feature-implementation-plan.md](full-feature-implementation-plan.md).
+
+> The Blender Visualizer Milestones 1–4 are implemented as a later vertical
+> slice. Its current contracts and operator flow live in
+> [blender-visualizer-mvp.md](blender-visualizer-mvp.md),
+> [blender-visual-cue-sheet.md](blender-visual-cue-sheet.md), and
+> [codex-blender-mcp-preview.md](codex-blender-mcp-preview.md).
+
 ## Outcome
 
 Deliver one local-first application in which a permitted audio upload becomes a transparent, editable analysis, an editable and playable section timeline, deterministic Suno-ready prompt variants, and JSON/Markdown exports. Fast mode is the production baseline; Deep mode advertises only installed adapters and falls back visibly.

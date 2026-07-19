@@ -230,7 +230,7 @@ export function UploadPanel({
           {[capabilities.genreTagger, capabilities.lyricsAdapter, capabilities.promptWriter].filter((item) => item != null).map((adapter) => (
             <div key={adapter?.id} className="capability-row">
               <span className={`status-dot ${adapter?.available ? 'status-dot--on' : ''}`} />
-              <span><strong>{adapter?.name}</strong><small>{adapter?.available ? 'Ready' : adapter?.reason}{adapter?.modelId ? ` Â· ${adapter.modelId}` : ''}{adapter?.effectiveDevice ? ` Â· ${adapter.effectiveDevice}` : ''}{adapter?.diskImpactMb ? ` Â· about ${adapter.diskImpactMb} MB` : ''}</small></span>
+              <span><strong>{adapter?.name}</strong><small>{adapter?.available ? 'Ready' : adapter?.reason}{adapter?.modelId ? ` · ${adapter.modelId}` : ''}{adapter?.effectiveDevice ? ` · ${adapter.effectiveDevice}` : ''}{adapter?.diskImpactMb ? ` · about ${adapter.diskImpactMb} MB` : ''}</small></span>
             </div>
           ))}
           <Toggle
@@ -246,7 +246,7 @@ export function UploadPanel({
             label="Allow explicit optional-feature fallback"
             description="Continue with working core features if a selected optional adapter becomes unavailable. Every fallback is shown."
           />
-          <p className="muted">GPU queue: {capabilities.gpuTaskQueue?.active ?? 0} active, {capabilities.gpuTaskQueue?.waiting ?? 0} waiting Â· {capabilities.gpuTaskQueue?.policy ?? 'single-heavy-task'}.</p>
+          <p className="muted">GPU queue: {capabilities.gpuTaskQueue?.active ?? 0} active, {capabilities.gpuTaskQueue?.waiting ?? 0} waiting · {capabilities.gpuTaskQueue?.policy ?? 'single-heavy-task'}.</p>
         </div>
 
         <label className="permission-check">

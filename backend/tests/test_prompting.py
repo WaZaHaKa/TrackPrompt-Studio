@@ -578,8 +578,8 @@ def test_json_and_markdown_exports_include_versions_and_escape_html(click_analys
     malicious = package.model_copy(update={"primary_prompt": "<script>alert(1)</script>"})
     json_bytes = analysis_json_export(analysis, package)
     markdown = analysis_markdown_export(analysis, malicious).decode("utf-8")
-    assert b'"schemaVersion": "1.2.0"' in json_bytes
-    assert b'"analysisVersion": "0.3.0"' in json_bytes
+    assert b'"schemaVersion": "1.4.0"' in json_bytes
+    assert b'"analysisVersion": "0.5.0"' in json_bytes
     assert "<script>" not in markdown
     assert "&lt;script>" in markdown
 
@@ -611,7 +611,7 @@ def test_no_genre_fallback_uses_measured_attributes_and_warns(click_analysis) ->
     package = compose_prompt(analysis, PromptPreferences())
     assert "genre-fluid" not in package.primary_prompt
     assert "measured groove, timbre, and arrangement" in package.detailed_prompt
-    assert any("Genre tagging is unavailable" in warning for warning in package.warnings)
+    assert any("genre adapter is unavailable" in warning.casefold() for warning in package.warnings)
 
 
 def test_deep_section_vocal_changes_influence_arrangement_phrase(click_analysis) -> None:

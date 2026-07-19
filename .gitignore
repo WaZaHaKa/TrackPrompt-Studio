@@ -6,6 +6,15 @@
 # TrackPrompt runtime state (uploads, derived audio, SQLite, model cache)
 .trackprompt-data/
 
+# Reviewed model seeds/caches stay local and are provisioned into Docker volumes.
+deep-models/
+model-checkpoints/
+
+# Setup/repair by-products are never source.
+*.bak-*
+full-gpu-setup-*.log
+repair-*.tmp/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -31,6 +40,9 @@ frontend/.e2e-data/
 # Generated synthetic fixtures stay local; the generator and README are tracked.
 test-fixtures/*
 !test-fixtures/README.md
+
+# Blender visualizer smoke outputs are generated locally and may include media.
+test-output/
 
 # Editors and operating systems
 .DS_Store

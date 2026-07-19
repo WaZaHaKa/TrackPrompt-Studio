@@ -12,11 +12,13 @@ from ..schemas import (
     GenreInterpretationMode,
     LyricsInfluenceMode,
     OmittedFact,
+    PromptFact,
     PromptLength,
     PromptPackage,
     PromptPreferences,
     PromptRationale,
 )
+from ..taxonomies.music_styles import load_music_style_taxonomy
 
 ORIGINALITY_CLAUSE = (
     "Create an original melody, arrangement, and any lyrics rather than reproducing the reference recording."
@@ -106,6 +108,28 @@ def _clean_user_key(value: str, *, maximum: int = 20) -> str | None:
     if re.fullmatch(r"[A-Ga-g](?:[#b♯♭]|-flat|-sharp)?", cleaned) is None:
         return None
     return cleaned
+
+
+def _clean_reviewed_genre_candidate(candidate: Any, *, maximum: int = 100) -> str | None:
+    """Keep exact taxonomy labels authoritative while sanitizing edited labels.
+
+    Taxonomy labels are reviewed application data, not open-vocabulary user
+    input. A custom or changed label still goes through the closed user-text
+    vocabulary used by the genre PATCH boundary.
+    """
+
+    taxonomy = load_music_style_taxonomy()
+    reviewed = {
+        item.id: item.prompt_safe_label
+        for item in [*taxonomy.broad_genres, *taxonomy.subgenres]
+    }.get(candidate.id)
+    if (
+        reviewed is not None
+        and not candidate.custom
+        and candidate.label == candidate.canonical_label == reviewed
+    ):
+        return _clean_text(reviewed, maximum=maximum)
+    return _clean_user_text(candidate.label, maximum=maximum)
 
 
 def _is_eligible(
@@ -205,45 +229,103 @@ def _build_phrases(
     target_genre = _clean_user_text(preferences.target_genre or "", maximum=100)
     if preferences.target_genre and target_genre is None:
         warnings.append("A named-style or unsafe target-genre reference was omitted.")
+    genre = analysis.genre_analysis
     if target_genre:
         phrases.append(Phrase(target_genre, ("preferences.targetGenre",), 100, "style"))
     elif (
-        analysis.genre_analysis is not None
-        and not analysis.genre_analysis.disabled_for_prompt
+        genre is not None
+        and not genre.disabled_for_prompt
+        and preferences.include_detected_genre
+        and preferences.genre_interpretation_mode == GenreInterpretationMode.DETECTED_LAYERED
+    ):
+        layered = genre.overall_genre_blend
+        layered_text = (
+            _clean_text(str(layered.value), maximum=220)
+            if layered is not None and isinstance(layered.value, str)
+            else None
+        )
+        if layered_text and layered_text != "genre blend unavailable":
+            layer_paths = ["genreAnalysis.overallGenreBlend"]
+            if genre.primary_production_genre is not None:
+                layer_paths.append("genreAnalysis.primaryProductionGenre")
+            if genre.secondary_production_genres is not None and genre.secondary_production_genres.value:
+                layer_paths.append("genreAnalysis.secondaryProductionGenres")
+            if genre.vocal_delivery_style is not None and genre.vocal_delivery_style.value:
+                layer_paths.append("genreAnalysis.vocalDeliveryStyle")
+            if genre.vocal_genre_influences is not None and genre.vocal_genre_influences.value:
+                layer_paths.append("genreAnalysis.vocalGenreInfluences")
+            phrases.append(Phrase(layered_text, tuple(layer_paths), 94, "style"))
+            if genre.ambiguity:
+                warnings.append(
+                    "Genre analysis is available but ambiguous; the eligible layered blend was included with explicit uncertainty."
+                )
+        else:
+            warnings.append("Genre analysis is available, but no eligible layered blend could be constructed.")
+    elif (
+        genre is not None
+        and not genre.disabled_for_prompt
+        and preferences.include_detected_genre
         and preferences.genre_interpretation_mode != GenreInterpretationMode.DISABLED
     ):
         detected_candidates = [
             candidate
-            for candidate in (
-                analysis.genre_analysis.broad_candidates
-                + analysis.genre_analysis.subgenre_candidates
-            )
-            if not candidate.rejected
-            and (candidate.accepted or candidate.id in preferences.accepted_genre_ids)
+            for candidate in (genre.broad_candidates + genre.subgenre_candidates)
+            if not candidate.rejected and candidate.accepted
         ]
+        if preferences.accepted_genre_ids:
+            accepted_id_filter = set(preferences.accepted_genre_ids)
+            detected_candidates = [
+                candidate for candidate in detected_candidates if candidate.id in accepted_id_filter
+            ]
         if preferences.genre_interpretation_mode == GenreInterpretationMode.USER_SELECTED_ONLY:
-            detected_candidates = [candidate for candidate in detected_candidates if candidate.user_edited or candidate.custom]
-        detected_candidates = detected_candidates[:2 if preferences.genre_interpretation_mode == GenreInterpretationMode.BLEND else 1]
-        safe_detected: list[str] = []
+            detected_candidates = [
+                candidate for candidate in detected_candidates if candidate.user_edited or candidate.custom
+            ]
+        elif preferences.genre_interpretation_mode == GenreInterpretationMode.BLEND:
+            detected_candidates = detected_candidates[:2]
+        else:
+            detected_candidates = detected_candidates[:1]
+        safe_detected: list[tuple[Any, str]] = []
         for candidate in detected_candidates:
-            cleaned_candidate = _clean_user_text(candidate.label, maximum=100)
+            cleaned_candidate = _clean_reviewed_genre_candidate(candidate, maximum=100)
             if cleaned_candidate is not None:
-                safe_detected.append(cleaned_candidate)
+                safe_detected.append((candidate, cleaned_candidate))
         if safe_detected:
-            style_text = (
-                f"{safe_detected[0]} with {safe_detected[1]} influence"
-                if len(safe_detected) == 2
-                else safe_detected[0]
-            )
-            phrases.append(
-                Phrase(
-                    style_text,
-                    tuple(f"genreAnalysis.accepted.{candidate.id}" for candidate in detected_candidates),
-                    92,
-                    "style",
+            if (
+                preferences.genre_interpretation_mode == GenreInterpretationMode.BLEND
+                and genre.overall_genre_blend is not None
+                and isinstance(genre.overall_genre_blend.value, str)
+            ):
+                style_text = _clean_text(genre.overall_genre_blend.value, maximum=220) or safe_detected[0][1]
+                facts = (
+                    *(f"genreAnalysis.accepted.{candidate.id}" for candidate, _ in safe_detected),
+                    "genreAnalysis.overallGenreBlend",
                 )
+                if genre.vocal_genre_influences is not None and genre.vocal_genre_influences.value:
+                    facts = (*facts, "genreAnalysis.vocalGenreInfluences")
+            else:
+                style_text = (
+                    safe_detected[0][1]
+                    if len(safe_detected) == 1
+                    else f"{safe_detected[0][1]} with {' and '.join(label for _, label in safe_detected[1:])} influence"
+                )
+                facts = tuple(f"genreAnalysis.accepted.{candidate.id}" for candidate, _ in safe_detected)
+            phrases.append(Phrase(style_text, facts, 92, "style"))
+        else:
+            warnings.append(
+                "Detected genre candidates were not included because none were accepted for prompt use."
             )
-    elif _is_eligible(analysis.style_and_mood.broad_style, "styleAndMood.broadStyle", disabled, omitted):
+    elif (
+        analysis.genre_analysis is None
+        and preferences.include_detected_genre
+        and preferences.genre_interpretation_mode != GenreInterpretationMode.DISABLED
+        and _is_eligible(
+            analysis.style_and_mood.broad_style,
+            "styleAndMood.broadStyle",
+            disabled,
+            omitted,
+        )
+    ):
         values = _descriptors(
             [str(value) for value in analysis.style_and_mood.broad_style.value or []],
             user_supplied=analysis.style_and_mood.broad_style.user_edited,
@@ -255,6 +337,40 @@ def _build_phrases(
                 phrases.append(Phrase(text, ("styleAndMood.broadStyle",), 90, "style"))
             else:
                 omitted.append(OmittedFact(path="styleAndMood.broadStyle", reason="matched private source identity"))
+    if genre is not None and not target_genre:
+        selected_genre_ids = {
+            fact.rsplit(".", 1)[-1]
+            for phrase in phrases
+            for fact in phrase.facts
+            if fact.startswith("genreAnalysis.accepted.")
+        }
+        layered_values: set[str] = set()
+        if (
+            preferences.genre_interpretation_mode == GenreInterpretationMode.DETECTED_LAYERED
+            and not genre.disabled_for_prompt
+            and preferences.include_detected_genre
+        ):
+            for layer in (
+                genre.primary_production_genre,
+                genre.secondary_production_genres,
+                genre.vocal_genre_influences,
+            ):
+                if layer is None:
+                    continue
+                values = [layer.value] if isinstance(layer.value, str) else layer.value
+                layered_values.update(str(value).casefold() for value in values)
+        for candidate in genre.broad_candidates + genre.subgenre_candidates:
+            if candidate.id in selected_genre_ids or candidate.label.casefold() in layered_values:
+                continue
+            if genre.disabled_for_prompt or preferences.genre_interpretation_mode == GenreInterpretationMode.DISABLED:
+                reason = "genre evidence was disabled for prompt use"
+            elif candidate.rejected:
+                reason = "genre candidate was rejected by the user"
+            elif preferences.genre_interpretation_mode != GenreInterpretationMode.DETECTED_LAYERED and not candidate.accepted:
+                reason = "detected genre candidate was not accepted for this prompt mode"
+            else:
+                reason = "lower-ranked genre alternative was not selected by the active prompt mode"
+            omitted.append(OmittedFact(path=f"genreAnalysis.candidates.{candidate.id}", reason=reason))
     if not any(phrase.group == "style" for phrase in phrases):
         phrases.append(
             Phrase(
@@ -264,9 +380,14 @@ def _build_phrases(
                 "style",
             )
         )
-        warnings.append(
-            "Genre tagging is unavailable, so the prompt opens with defensible musical attributes instead of an invented genre."
-        )
+        if genre is not None and genre.disabled_for_prompt:
+            warnings.append("Genre analysis is available but disabled for prompt use.")
+        elif preferences.genre_interpretation_mode == GenreInterpretationMode.DISABLED or not preferences.include_detected_genre:
+            warnings.append("Genre analysis was not used because detected genre evidence is disabled in prompt preferences.")
+        elif genre is None and any("adapter failed" in warning.casefold() for warning in analysis.warnings):
+            warnings.append("Genre analysis is unavailable because the enabled adapter did not return a usable result.")
+        elif genre is None:
+            warnings.append("The local genre adapter is unavailable; measured non-genre evidence was used instead.")
 
     rhythm_parts: list[str] = []
     rhythm_facts: list[str] = []
@@ -425,6 +546,7 @@ def _build_phrases(
         elif (
             preferences.lyrics_influence_mode == LyricsInfluenceMode.ABSTRACT_THEMES
             and preferences.include_lyrical_themes
+            and analysis.lyrics_summary.themes_user_approved
         ):
             themes = _descriptors(analysis.lyrics_summary.abstract_themes)[:3]
             if themes:
@@ -515,6 +637,22 @@ def _build_phrases(
                         "deep-arrangement",
                     )
                 )
+        if _is_eligible(
+            analysis.structure.repetition_summary,
+            "structure.repetitionSummary",
+            disabled,
+            omitted,
+        ):
+            repetition = str(analysis.structure.repetition_summary.value or "").casefold()
+            if "repeat" in repetition:
+                phrases.append(
+                    Phrase(
+                        "Use a deliberately repetitive sectional framework",
+                        ("structure.repetitionSummary",),
+                        62,
+                        "repetition",
+                    )
+                )
 
     production_parts: list[str] = []
     production_facts: list[str] = []
@@ -536,6 +674,21 @@ def _build_phrases(
             )[:2]
         )
         production_facts.append("timbre.descriptors")
+    if _is_eligible(analysis.production.low_end_weight, "production.lowEndWeight", disabled, omitted):
+        low_end = _clean_text(str(analysis.production.low_end_weight.value), maximum=60)
+        if low_end:
+            production_parts.append(f"{low_end} low end")
+            production_facts.append("production.lowEndWeight")
+    if _is_eligible(
+        analysis.production.spaciousness_proxy,
+        "production.spaciousnessProxy",
+        disabled,
+        omitted,
+    ):
+        stereo = _clean_text(str(analysis.production.spaciousness_proxy.value), maximum=60)
+        if stereo:
+            production_parts.append(f"{stereo} stereo image")
+            production_facts.append("production.spaciousnessProxy")
     if production_parts:
         phrases.append(Phrase(f"{', '.join(_descriptors(production_parts))} production", tuple(production_facts), 64, "production"))
 
@@ -689,6 +842,139 @@ def _arrangement_blueprint(
     return blueprint
 
 
+def _feature_fact(value: FeatureValue[Any], path: str) -> PromptFact:
+    role = "user-entered" if value.user_edited else "user-accepted" if value.user_accepted else "observed"
+    return PromptFact(path=path, value=value.value, role=role)
+
+
+def _genre_layer_fact(analysis: AnalysisResult, path: str) -> PromptFact | None:
+    genre = analysis.genre_analysis
+    if genre is None:
+        return None
+    mapping = {
+        "genreAnalysis.primaryProductionGenre": genre.primary_production_genre,
+        "genreAnalysis.secondaryProductionGenres": genre.secondary_production_genres,
+        "genreAnalysis.vocalDeliveryStyle": genre.vocal_delivery_style,
+        "genreAnalysis.vocalGenreInfluences": genre.vocal_genre_influences,
+        "genreAnalysis.overallGenreBlend": genre.overall_genre_blend,
+        "genreAnalysis.sectionGenreEvidence": genre.section_genre_evidence,
+    }
+    layer = mapping.get(path)
+    if layer is None:
+        return None
+    if isinstance(layer, list):
+        value: Any = [item.value for item in layer]
+        ambiguous = any(item.ambiguity for item in layer)
+        accepted = any(item.accepted for item in layer)
+    else:
+        value = layer.value
+        ambiguous = bool(layer.ambiguity) or layer.confidence in {Confidence.LOW, Confidence.UNKNOWN}
+        accepted = layer.accepted
+    if accepted:
+        role = "user-accepted"
+    elif path in {"genreAnalysis.vocalDeliveryStyle", "genreAnalysis.vocalGenreInfluences"}:
+        role = "detected-component-influence"
+    else:
+        role = "detected-ambiguous" if ambiguous else "detected"
+    return PromptFact(path=path, value=value, role=role)
+
+
+def resolve_prompt_facts(
+    analysis: AnalysisResult,
+    preferences: PromptPreferences,
+    paths: list[str],
+) -> list[PromptFact]:
+    """Resolve only approved prompt paths to bounded, non-private structured values."""
+
+    feature_mapping: dict[str, FeatureValue[Any]] = {
+        "rhythm.bpm": analysis.rhythm.bpm,
+        "rhythm.meter": analysis.rhythm.meter,
+        "rhythm.grooveDescriptors": analysis.rhythm.groove_descriptors,
+        "styleAndMood.mood": analysis.style_and_mood.mood,
+        "styleAndMood.energy": analysis.style_and_mood.energy,
+        "instrumentation.candidates": analysis.instrumentation.candidates,
+        "vocals.presence": analysis.vocals.presence,
+        "vocals.density": analysis.vocals.density,
+        "vocals.delivery": analysis.vocals.delivery,
+        "production.productionCharacter": analysis.production.production_character,
+        "production.lowEndWeight": analysis.production.low_end_weight,
+        "production.spaciousnessProxy": analysis.production.spaciousness_proxy,
+        "timbre.descriptors": analysis.timbre.descriptors,
+        "harmony.character": analysis.harmony.character,
+        "structure.energyArc": analysis.structure.energy_arc,
+        "structure.repetitionSummary": analysis.structure.repetition_summary,
+    }
+    preference_values: dict[str, Any] = {
+        "preferences.targetGenre": preferences.target_genre,
+        "preferences.targetMood": preferences.target_mood,
+        "preferences.targetDuration": preferences.target_duration,
+        "preferences.creativity": preferences.creativity,
+        "preferences.generationIntent": str(preferences.generation_intent),
+        "preferences.instrumental": preferences.instrumental,
+        "preferences.userWrittenLyricalDirection": preferences.user_written_lyrical_direction,
+    }
+    facts: list[PromptFact] = []
+    for path in dict.fromkeys(paths):
+        if path.startswith("genreAnalysis.accepted.") and analysis.genre_analysis is not None:
+            candidate_id = path.rsplit(".", 1)[-1]
+            candidate = next(
+                (
+                    item
+                    for item in analysis.genre_analysis.broad_candidates
+                    + analysis.genre_analysis.subgenre_candidates
+                    + analysis.genre_analysis.descriptive_tags
+                    if item.id == candidate_id and item.accepted and not item.rejected
+                ),
+                None,
+            )
+            if candidate is not None:
+                facts.append(
+                    PromptFact(
+                        path=path,
+                        value=candidate.label,
+                        role="user-entered" if candidate.custom else "user-accepted",
+                    )
+                )
+            continue
+        layer_fact = _genre_layer_fact(analysis, path)
+        if layer_fact is not None:
+            facts.append(layer_fact)
+            continue
+        feature_value = feature_mapping.get(path)
+        if feature_value is not None and feature_value.value is not None:
+            facts.append(_feature_fact(feature_value, path))
+            continue
+        if path == "structure.sections":
+            facts.append(
+                PromptFact(
+                    path=path,
+                    value=[
+                        {
+                            "id": section.id,
+                            "startSeconds": section.start_seconds,
+                            "endSeconds": section.end_seconds,
+                            "label": section.inferred_label or section.neutral_label,
+                        }
+                        for section in analysis.structure.sections[:10]
+                    ],
+                    role="observed",
+                )
+            )
+            continue
+        if path == "lyricsSummary.abstractThemes" and analysis.lyrics_summary is not None:
+            facts.append(
+                PromptFact(
+                    path=path,
+                    value=analysis.lyrics_summary.abstract_themes,
+                    role="user-accepted" if analysis.lyrics_summary.themes_user_approved else "observed",
+                )
+            )
+            continue
+        if path in preference_values and preference_values[path] is not None:
+            facts.append(PromptFact(path=path, value=preference_values[path], role="preference"))
+    return facts
+
+
 def compose_prompt(analysis: AnalysisResult, preferences: PromptPreferences) -> PromptPackage:
     if (
         str(preferences.generation_intent) == "instrumental_reinterpretation"
@@ -712,8 +998,9 @@ def compose_prompt(analysis: AnalysisResult, preferences: PromptPreferences) -> 
     else:
         primary, primary_used = balanced, balanced_used
     rationale = [PromptRationale(phrase=phrase.text, fact_paths=list(phrase.facts)) for phrase in primary_used]
-    facts_used = list(dict.fromkeys(fact for phrase in primary_used for fact in phrase.facts))
-    selected_facts = set(facts_used)
+    fact_paths_used = list(dict.fromkeys(fact for phrase in primary_used for fact in phrase.facts))
+    facts_used = resolve_prompt_facts(analysis, preferences, fact_paths_used)
+    selected_facts = set(fact_paths_used)
     for phrase in detailed_used:
         for fact in phrase.facts:
             if fact not in selected_facts and not any(item.path == fact for item in omitted):

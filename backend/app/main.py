@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Annotated, Any
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -18,10 +18,20 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__
 from .adapters import get_capabilities
+from .analysis.sanity import validate_analysis_result
 from .config import Settings
 from .editing import PatchError, apply_analysis_patch
 from .exports import analysis_json_export, analysis_markdown_export
 from .jobs import JobManager
+from .lyrics.quality import (
+    active_transcript_section_ids,
+    contains_private_lyrics_fragment,
+    map_transcript_to_sections,
+    normalize_lyrics_text,
+    quality_decision_counts,
+    sanitize_user_approved_theme,
+    usable_transcript_segments,
+)
 from .media import MediaValidationError, probe_media, sanitize_display_name
 from .privacy import secure_private_file
 from .prompting import generate_prompt_package
@@ -42,14 +52,30 @@ from .schemas import (
     JobStatus,
     LyricsAnalysisSummary,
     LyricsPatch,
+    LyricsSegmentQualityDecision,
     PrivateLyricsTranscript,
     PromptPackage,
     PromptPreferences,
+    PromptRationale,
+    PromptSelection,
 )
 from .security import LocalRequestBoundaryMiddleware
 from .store import DeletionError, JobStore
+from .visualizer.compiler import VisualCueCompilationError, compile_visual_cues
+from .visualizer.schemas import (
+    ALLOWED_FPS,
+    CuePreferences,
+    CurveDetail,
+    TrackPromptVisualCueSheet,
+    VisualFeatureArtifact,
+)
 
 LOGGER = logging.getLogger("trackprompt.api")
+_DYNAMIC_LYRICS_WARNING = re.compile(
+    r"^(?:\d+ (?:likely hallucinated|non-lexical vocal|uncertain) segment\(s\)|"
+    r"Repeated hallucination-like transcript evidence)",
+    re.IGNORECASE,
+)
 
 
 class APIError(RuntimeError):
@@ -71,6 +97,89 @@ def _state(request: Request) -> tuple[Settings, JobStore, JobManager]:
 
 def _not_found() -> APIError:
     return APIError(404, "job_not_found", "Analysis job was not found or has expired.")
+
+
+def _synchronize_private_lyrics(
+    analysis: AnalysisResult,
+    transcript: PrivateLyricsTranscript,
+    *,
+    clear_themes: bool,
+) -> PrivateLyricsTranscript:
+    mapped = map_transcript_to_sections(
+        transcript,
+        analysis.structure.sections,
+        analysis.file.duration_seconds,
+    )
+    usable_segments = usable_transcript_segments(mapped)
+    summary = analysis.lyrics_summary or LyricsAnalysisSummary(enabled=True)
+    decision_counts = quality_decision_counts(mapped)
+    rejected_count = decision_counts[
+        LyricsSegmentQualityDecision.REJECTED_AS_LIKELY_HALLUCINATION.value
+    ]
+    non_lexical_count = decision_counts[LyricsSegmentQualityDecision.NON_LEXICAL.value]
+    uncertain_count = decision_counts[LyricsSegmentQualityDecision.UNCERTAIN.value]
+
+    def synchronized_warnings(existing: list[str]) -> list[str]:
+        warnings = [
+            warning
+            for warning in existing
+            if _DYNAMIC_LYRICS_WARNING.search(warning) is None
+        ]
+        if rejected_count:
+            warnings.append(
+                f"{rejected_count} likely hallucinated segment(s) remain private and were excluded from ordinary analysis and themes."
+            )
+        if any("repeated" in flag for segment in mapped.segments for flag in segment.quality_flags):
+            warnings.append(
+                "Repeated hallucination-like transcript evidence was excluded or marked uncertain."
+            )
+        if non_lexical_count:
+            warnings.append(
+                f"{non_lexical_count} non-lexical vocal segment(s) remain private and were excluded from text evidence."
+            )
+        if uncertain_count:
+            warnings.append(
+                f"{uncertain_count} uncertain segment(s) remain private and are not eligible for abstract-theme generation."
+            )
+        return list(dict.fromkeys(warnings))
+
+    mapped.warnings = synchronized_warnings(mapped.warnings)
+    summary.warnings = synchronized_warnings(summary.warnings)
+    summary.status = "completed" if usable_segments else "no_reliable_words"
+    summary.segment_count = len(usable_segments)
+    summary.transcript_available = bool(usable_segments)
+    summary.active_section_ids = active_transcript_section_ids(mapped)
+    summary.non_lexical_vocalization_tendency = (
+        "possible" if non_lexical_count else "unknown"
+    )
+    if usable_segments:
+        total_span = max(segment.end_seconds for segment in usable_segments)
+        word_count = sum(
+            len(normalize_lyrics_text(segment.text).split())
+            for segment in usable_segments
+        )
+        words_per_minute = word_count * 60 / max(total_span, 1.0)
+        summary.vocal_word_density = (
+            "dense" if words_per_minute >= 110 else "moderate" if words_per_minute >= 45 else "sparse"
+        )
+    else:
+        summary.vocal_word_density = "unknown"
+    if clear_themes:
+        had_approved_themes = summary.themes_user_approved or bool(summary.abstract_themes)
+        summary.abstract_themes = []
+        summary.theme_confidence = Confidence.UNKNOWN
+        summary.themes_user_approved = False
+        if had_approved_themes:
+            summary.warnings = list(
+                dict.fromkeys(
+                    [
+                        *summary.warnings,
+                        "Approved abstract themes were cleared because the private transcript changed.",
+                    ]
+                )
+            )
+    analysis.lyrics_summary = summary
+    return mapped
 
 
 async def _require_job(store: JobStore, job_id: str) -> None:
@@ -274,7 +383,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return HealthResponse(
             status="ok" if capabilities.ffmpeg.available and capabilities.ffprobe.available and database_available else "degraded",
             service_version=__version__,
-            schema_version="1.2.0",
+            schema_version="1.4.0",
             ffmpeg=capabilities.ffmpeg,
             ffprobe=capabilities.ffprobe,
             database_available=database_available,
@@ -389,6 +498,119 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except KeyError as exc:
             raise _not_found() from exc
 
+    async def compile_job_visual_cues(
+        job_id: str,
+        request: Request,
+        preferences: CuePreferences,
+    ) -> TrackPromptVisualCueSheet:
+        _settings, store, manager = _state(request)
+        try:
+            async with manager.job_lock(job_id):
+                record = await asyncio.to_thread(store.get_job, job_id)
+                if record is None:
+                    raise _not_found()
+                if record.status != JobStatus.COMPLETED:
+                    raise APIError(409, "analysis_not_ready", "Analysis must complete before visual cues can be exported.")
+                analysis_payload = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
+                if analysis_payload is None:
+                    raise APIError(409, "analysis_not_ready", "Analysis must complete before visual cues can be exported.")
+                artifact_payload = await asyncio.to_thread(store.read_json, job_id, "visual-features.json")
+                analysis = AnalysisResult.model_validate(analysis_payload)
+                try:
+                    artifact = (
+                        VisualFeatureArtifact.model_validate(artifact_payload)
+                        if artifact_payload is not None
+                        else None
+                    )
+                except ValueError as exc:
+                    raise APIError(422, "invalid_curves", "Stored visual curves failed validation.") from exc
+                try:
+                    return await asyncio.to_thread(
+                        compile_visual_cues,
+                        analysis,
+                        artifact,
+                        preferences,
+                    )
+                except VisualCueCompilationError as exc:
+                    status = 409 if exc.code == "visual_features_unavailable" else 422
+                    raise APIError(status, exc.code, exc.safe_message) from exc
+                except ValueError as exc:
+                    raise APIError(422, "cue_compilation_failed", "Visual cues could not be compiled safely.") from exc
+        except KeyError as exc:
+            raise _not_found() from exc
+
+    @application.post(
+        "/api/analyses/{job_id}/visual-cues",
+        response_model=TrackPromptVisualCueSheet,
+    )
+    async def create_visual_cues(
+        job_id: str,
+        preferences: CuePreferences,
+        request: Request,
+    ) -> TrackPromptVisualCueSheet:
+        return await compile_job_visual_cues(job_id, request, preferences)
+
+    @application.get(
+        "/api/analyses/{job_id}/visual-cues/export",
+        response_model=TrackPromptVisualCueSheet,
+        responses={
+            200: {
+                "description": "A minimized visual cue sheet downloaded under a UUID-derived filename.",
+                "headers": {
+                    "Content-Disposition": {
+                        "description": "Attachment filename derived only from the canonical job UUID.",
+                        "schema": {"type": "string"},
+                    },
+                    "Cache-Control": {
+                        "description": "Prevents storage of the private local export by intermediaries.",
+                        "schema": {"type": "string", "example": "no-store"},
+                    },
+                },
+            }
+        },
+    )
+    async def export_visual_cues(
+        job_id: str,
+        request: Request,
+        fps: Annotated[
+            int,
+            Query(
+                description="Output frames per second.",
+                json_schema_extra={"enum": sorted(ALLOWED_FPS)},
+            ),
+        ] = 30,
+        include_beats: Annotated[bool, Query(alias="includeBeats")] = True,
+        include_onsets: Annotated[bool, Query(alias="includeOnsets")] = True,
+        include_stem_evidence: Annotated[bool, Query(alias="includeStemEvidence")] = True,
+        include_curves: Annotated[bool, Query(alias="includeCurves")] = True,
+        curve_detail: Annotated[CurveDetail, Query(alias="curveDetail")] = CurveDetail.BALANCED,
+    ) -> Response:
+        try:
+            preferences = CuePreferences(
+                fps=fps,
+                include_beats=include_beats,
+                include_onsets=include_onsets,
+                include_stem_evidence=include_stem_evidence,
+                include_curves=include_curves,
+                curve_detail=curve_detail,
+            )
+        except ValueError as exc:
+            raise APIError(422, "invalid_visual_cue_preferences", "Visual cue preferences are invalid.") from exc
+        cue_sheet = await compile_job_visual_cues(job_id, request, preferences)
+        content = json.dumps(
+            cue_sheet.model_dump(mode="json", by_alias=True),
+            ensure_ascii=False,
+            indent=2,
+            allow_nan=False,
+        ).encode("utf-8")
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="trackprompt-{job_id}-visual-cues.json"'
+            },
+        )
+
     @application.get("/api/analyses/{job_id}/events")
     async def analysis_events(job_id: str, request: Request) -> StreamingResponse:
         _settings, _store, manager = _state(request)
@@ -438,10 +660,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                 except PatchError as exc:
                     raise APIError(422, "invalid_analysis_edit", str(exc)) from exc
+                transcript_data = await asyncio.to_thread(store.read_json, job_id, "lyrics.json")
+                synchronized_transcript: PrivateLyricsTranscript | None = None
+                if transcript_data is not None:
+                    synchronized_transcript = _synchronize_private_lyrics(
+                        edited,
+                        PrivateLyricsTranscript.model_validate(transcript_data),
+                        clear_themes=False,
+                    )
                 # A prompt package is a snapshot of the analysis. Invalidate it
                 # before edits so no response/export can report a stale prompt.
                 try:
                     await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
+                    if synchronized_transcript is not None:
+                        await asyncio.to_thread(
+                            store.write_json,
+                            job_id,
+                            "lyrics.json",
+                            synchronized_transcript.model_dump(mode="json", by_alias=True),
+                        )
+                        if edited.lyrics_summary is not None:
+                            await asyncio.to_thread(
+                                store.write_json,
+                                job_id,
+                                "lyrics-summary.json",
+                                edited.lyrics_summary.model_dump(mode="json", by_alias=True),
+                            )
                     await asyncio.to_thread(
                         store.write_json,
                         job_id,
@@ -471,7 +715,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 analysis_data = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
                 if analysis_data is None:
                     raise APIError(409, "analysis_not_ready", "The prompt cannot be generated before analysis completes.")
-                analysis = AnalysisResult.model_validate(analysis_data)
+                stored_analysis = AnalysisResult.model_validate(analysis_data)
+                stored_analysis_dump = stored_analysis.model_dump(mode="json", by_alias=True)
+                transcript_data = await asyncio.to_thread(store.read_json, job_id, "lyrics.json")
+                analysis = validate_analysis_result(
+                    stored_analysis,
+                    private_lyrics_artifact_available=transcript_data is not None,
+                )
+                if analysis.model_dump(mode="json", by_alias=True) != stored_analysis_dump:
+                    await asyncio.to_thread(
+                        store.write_json,
+                        job_id,
+                        "analysis.json",
+                        analysis.model_dump(mode="json", by_alias=True),
+                    )
+                    if analysis.lyrics_summary is not None:
+                        await asyncio.to_thread(
+                            store.write_json,
+                            job_id,
+                            "lyrics-summary.json",
+                            analysis.lyrics_summary.model_dump(mode="json", by_alias=True),
+                        )
+                    await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
                 if preferences.user_overrides:
                     try:
                         analysis = apply_analysis_patch(
@@ -490,7 +755,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 preferences = preferences.model_copy(
                     update={"disabled_feature_paths": merged_disabled}
                 )
-                transcript_data = await asyncio.to_thread(store.read_json, job_id, "lyrics.json")
                 transcript = PrivateLyricsTranscript.model_validate(transcript_data) if transcript_data else None
                 if preferences.prompt_engine_mode.value == "reliable":
                     package = await asyncio.to_thread(
@@ -525,6 +789,79 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except KeyError as exc:
             raise _not_found() from exc
 
+    @application.patch("/api/analyses/{job_id}/prompt", response_model=PromptPackage)
+    async def select_prompt_candidate(
+        job_id: str,
+        selection: PromptSelection,
+        request: Request,
+    ) -> PromptPackage:
+        _settings, store, manager = _state(request)
+        try:
+            async with manager.job_lock(job_id):
+                await _require_job(store, job_id)
+                prompt_data = await asyncio.to_thread(
+                    store.read_json,
+                    job_id,
+                    "prompt.json",
+                )
+                if prompt_data is None:
+                    raise APIError(
+                        409,
+                        "prompt_not_generated",
+                        "Generate prompt candidates before selecting one.",
+                    )
+                package = PromptPackage.model_validate(prompt_data)
+                selected = next(
+                    (
+                        candidate
+                        for candidate in package.candidates
+                        if candidate.id == selection.candidate_id
+                    ),
+                    None,
+                )
+                if selected is None:
+                    raise APIError(
+                        422,
+                        "prompt_candidate_not_found",
+                        "The requested prompt candidate is not part of the persisted package.",
+                    )
+                updated_data = package.model_dump(mode="json", by_alias=True)
+                updated_data.update(
+                    {
+                        "primaryPrompt": selected.prompt,
+                        "compactPrompt": selected.prompt,
+                        "detailedPrompt": selected.prompt,
+                        "arrangementBlueprint": package.arrangement_blueprint,
+                        "rationale": [
+                            PromptRationale(
+                                phrase=(
+                                    "Selected local-writer candidate grounded in eligible measured "
+                                    "and reviewed evidence."
+                                ),
+                                fact_paths=[fact.path for fact in selected.facts_used],
+                            ).model_dump(mode="json", by_alias=True)
+                        ],
+                        "selectedCandidateId": selected.id,
+                        "modelId": selected.model_id,
+                        "seed": selected.seed,
+                        "generationParameters": selected.generation_parameters.model_dump(
+                            mode="json",
+                            by_alias=True,
+                        ),
+                        "factsUsed": selected.facts_used,
+                    }
+                )
+                updated = PromptPackage.model_validate(updated_data)
+                await asyncio.to_thread(
+                    store.write_json,
+                    job_id,
+                    "prompt.json",
+                    updated.model_dump(mode="json", by_alias=True),
+                )
+                return updated
+        except KeyError as exc:
+            raise _not_found() from exc
+
     @application.get("/api/analyses/{job_id}/lyrics", response_model=PrivateLyricsTranscript)
     async def get_lyrics(job_id: str, request: Request) -> PrivateLyricsTranscript:
         _settings, store, _manager = _state(request)
@@ -546,6 +883,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     raise APIError(404, "lyrics_not_found", "The private approximate transcript is unavailable or was deleted.")
                 transcript = PrivateLyricsTranscript.model_validate(payload)
                 detected = PrivateLyricsTranscript.model_validate(detected_payload)
+                segments_changed = bool(patch.updates)
                 current = {segment.id: segment for segment in transcript.segments}
                 originals = {segment.id: segment for segment in detected.segments}
                 for update in patch.updates:
@@ -563,41 +901,91 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         continue
                     if update.text is not None:
                         text = re.sub(r"\s+", " ", "".join(character for character in update.text if character.isprintable())).strip()
-                        segment = segment.model_copy(update={"text": text, "user_edited": True})
+                        has_lexical_text = bool(normalize_lyrics_text(text))
+                        flags = list(
+                            dict.fromkeys(
+                                [
+                                    *segment.quality_flags,
+                                    "user_edited_text" if has_lexical_text else "user_edited_empty_text",
+                                ]
+                            )
+                        )
+                        segment = segment.model_copy(
+                            update={
+                                "text": text,
+                                "confidence": Confidence.LOW,
+                                "quality_decision": (
+                                    LyricsSegmentQualityDecision.UNCERTAIN
+                                    if has_lexical_text
+                                    else LyricsSegmentQualityDecision.NON_LEXICAL
+                                ),
+                                "quality_flags": flags,
+                                "user_edited": True,
+                            }
+                        )
                     if update.mark_uncertain:
                         flags = list(dict.fromkeys([*segment.quality_flags, "user_marked_uncertain"]))
-                        segment = segment.model_copy(update={"confidence": "low", "quality_flags": flags, "user_edited": True})
+                        segment = segment.model_copy(
+                            update={
+                                "confidence": Confidence.LOW,
+                                "quality_decision": LyricsSegmentQualityDecision.UNCERTAIN,
+                                "quality_flags": flags,
+                                "user_edited": True,
+                            }
+                        )
                     current[update.segment_id] = segment
                 transcript = transcript.model_copy(
-                    update={"segments": sorted(current.values(), key=lambda item: item.start_seconds), "user_edited": True}
+                    update={
+                        "segments": sorted(current.values(), key=lambda item: item.start_seconds),
+                        "user_edited": transcript.user_edited or segments_changed,
+                    }
                 )
+                analysis_payload = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
+                if analysis_payload is None:
+                    raise APIError(409, "analysis_not_ready", "Lyrics cannot be edited before analysis completes.")
+                analysis = AnalysisResult.model_validate(analysis_payload)
+                transcript = _synchronize_private_lyrics(
+                    analysis,
+                    transcript,
+                    clear_themes=segments_changed,
+                )
+                summary = analysis.lyrics_summary or LyricsAnalysisSummary(enabled=True)
+                if patch.abstract_themes is not None:
+                    approved_themes: list[str] = []
+                    seen_themes: set[str] = set()
+                    for item in patch.abstract_themes:
+                        cleaned = sanitize_user_approved_theme(item)
+                        normalized = cleaned.casefold() if cleaned is not None else ""
+                        if (
+                            cleaned is not None
+                            and normalized not in seen_themes
+                            and not contains_private_lyrics_fragment(cleaned, transcript)
+                        ):
+                            approved_themes.append(cleaned)
+                            seen_themes.add(normalized)
+                    summary.abstract_themes = approved_themes
+                    summary.theme_confidence = Confidence.MEDIUM if summary.abstract_themes else Confidence.UNKNOWN
+                    summary.themes_user_approved = bool(summary.abstract_themes)
+                analysis.lyrics_summary = summary
+                await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
                 await asyncio.to_thread(
                     store.write_json,
                     job_id,
                     "lyrics.json",
                     transcript.model_dump(mode="json", by_alias=True),
                 )
-                analysis_payload = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
-                if analysis_payload is not None:
-                    analysis = AnalysisResult.model_validate(analysis_payload)
-                    summary = analysis.lyrics_summary or LyricsAnalysisSummary(enabled=True)
-                    summary.segment_count = len(transcript.segments)
-                    summary.transcript_available = bool(transcript.segments)
-                    if patch.abstract_themes is not None:
-                        summary.abstract_themes = [
-                            cleaned
-                            for item in patch.abstract_themes
-                            if (cleaned := _clean_user_text(item, maximum=120)) is not None
-                        ]
-                        summary.theme_confidence = Confidence.MEDIUM if summary.abstract_themes else Confidence.UNKNOWN
-                    analysis.lyrics_summary = summary
-                    await asyncio.to_thread(
-                        store.write_json,
-                        job_id,
-                        "analysis.json",
-                        analysis.model_dump(mode="json", by_alias=True),
-                    )
-                    await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
+                await asyncio.to_thread(
+                    store.write_json,
+                    job_id,
+                    "lyrics-summary.json",
+                    summary.model_dump(mode="json", by_alias=True),
+                )
+                await asyncio.to_thread(
+                    store.write_json,
+                    job_id,
+                    "analysis.json",
+                    analysis.model_dump(mode="json", by_alias=True),
+                )
                 return transcript
         except KeyError as exc:
             raise _not_found() from exc
@@ -684,11 +1072,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             raise APIError(422, "unsafe_genre_label", "The genre label is not in the prompt-safe musical vocabulary.")
                         changes.update({"label": safe_label, "user_edited": True})
                     if update.accepted is not None:
-                        changes.update({"accepted": update.accepted, "rejected": False if update.accepted else candidate.rejected})
+                        changes.update(
+                            {
+                                "accepted": update.accepted,
+                                "rejected": False if update.accepted else candidate.rejected,
+                                "user_edited": True,
+                            }
+                        )
                     if update.rejected is not None:
-                        changes.update({"rejected": update.rejected, "accepted": False if update.rejected else candidate.accepted})
+                        changes.update(
+                            {
+                                "rejected": update.rejected,
+                                "accepted": False if update.rejected else candidate.accepted,
+                                "user_edited": True,
+                            }
+                        )
                     if update.locked is not None:
-                        changes["locked"] = update.locked
+                        changes.update({"locked": update.locked, "user_edited": True})
                     replacement = candidate.model_copy(update=changes)
                     for group in candidate_lists:
                         group[:] = [replacement if item.id == update.candidate_id else item for item in group]
@@ -711,11 +1111,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                 if patch.disabled_for_prompt is not None:
                     genre.disabled_for_prompt = patch.disabled_for_prompt
-                genre.user_edited = True
+                genre.user_edited = genre.disabled_for_prompt or any(
+                    candidate.user_edited
+                    or candidate.accepted
+                    or candidate.rejected
+                    or candidate.locked
+                    or candidate.custom
+                    for group in candidate_lists
+                    for candidate in group
+                )
                 genre.user_accepted = any(
                     candidate.accepted for group in candidate_lists for candidate in group
                 )
                 analysis.genre_analysis = genre
+                analysis = validate_analysis_result(analysis)
                 await asyncio.to_thread(
                     store.write_json,
                     job_id,
@@ -723,7 +1132,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     analysis.model_dump(mode="json", by_alias=True),
                 )
                 await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
-                return genre
+                if analysis.genre_analysis is None:
+                    raise APIError(409, "genre_not_ready", "Genre results are not ready to edit.")
+                return analysis.genre_analysis
         except KeyError as exc:
             raise _not_found() from exc
 
@@ -739,18 +1150,46 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return Response(status_code=204)
 
     async def _export_parts(job_id: str, request: Request) -> tuple[AnalysisResult, PromptPackage | None]:
-        _settings, store, _manager = _state(request)
+        _settings, store, manager = _state(request)
         await _require_job(store, job_id)
-        analysis_data = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
-        prompt_data = await asyncio.to_thread(store.read_json, job_id, "prompt.json")
-        if analysis_data is None:
-            if await asyncio.to_thread(store.get_job, job_id) is None:
-                raise _not_found()
-            raise APIError(409, "analysis_not_ready", "Analysis is not ready to export.")
-        return (
-            AnalysisResult.model_validate(analysis_data),
-            PromptPackage.model_validate(prompt_data) if prompt_data else None,
-        )
+        try:
+            async with manager.job_lock(job_id):
+                await _require_job(store, job_id)
+                analysis_data = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
+                prompt_data = await asyncio.to_thread(store.read_json, job_id, "prompt.json")
+                transcript_data = await asyncio.to_thread(store.read_json, job_id, "lyrics.json")
+                if analysis_data is None:
+                    if await asyncio.to_thread(store.get_job, job_id) is None:
+                        raise _not_found()
+                    raise APIError(409, "analysis_not_ready", "Analysis is not ready to export.")
+                stored_analysis = AnalysisResult.model_validate(analysis_data)
+                stored_analysis_dump = stored_analysis.model_dump(mode="json", by_alias=True)
+                analysis = validate_analysis_result(
+                    stored_analysis,
+                    private_lyrics_artifact_available=transcript_data is not None,
+                )
+                if analysis.model_dump(mode="json", by_alias=True) != stored_analysis_dump:
+                    await asyncio.to_thread(
+                        store.write_json,
+                        job_id,
+                        "analysis.json",
+                        analysis.model_dump(mode="json", by_alias=True),
+                    )
+                    if analysis.lyrics_summary is not None:
+                        await asyncio.to_thread(
+                            store.write_json,
+                            job_id,
+                            "lyrics-summary.json",
+                            analysis.lyrics_summary.model_dump(mode="json", by_alias=True),
+                        )
+                    await asyncio.to_thread(store.delete_json, job_id, "prompt.json")
+                    prompt_data = None
+                return (
+                    analysis,
+                    PromptPackage.model_validate(prompt_data) if prompt_data else None,
+                )
+        except KeyError as exc:
+            raise _not_found() from exc
 
     @application.get("/api/analyses/{job_id}/export.json")
     async def export_json(job_id: str, request: Request) -> Response:

@@ -27,6 +27,7 @@ export type AnalysisStage =
   | 'analyzing_harmony'
   | 'segmenting_structure'
   | 'analyzing_production'
+  | 'extracting_visual_features'
   | 'separating_stems'
   | 'running_enhanced_taggers'
   | 'transcribing_lyrics'
@@ -147,9 +148,127 @@ export interface AnalysisResult {
   [key: string]: unknown
 }
 
+export type VisualCurveDetail = 'compact' | 'balanced' | 'detailed'
+
+export interface VisualCuePreferences {
+  fps: 24 | 25 | 30 | 50 | 60
+  includeBeats: boolean
+  includeOnsets: boolean
+  includeStemEvidence: boolean
+  includeCurves: boolean
+  curveDetail: VisualCurveDetail
+}
+
+export interface VisualCueEvent {
+  index: number
+  timeSeconds: number
+  frame: number
+  confidence: Confidence
+  strength: number | null
+  sourcePath: string
+}
+
+export interface VisualCueSection {
+  id: string
+  neutralLabel: string
+  inferredLabel: string | null
+  startSeconds: number
+  endSeconds: number
+  startFrame: number
+  endFrame: number
+  energy: number | null
+  loudness: number | null
+  confidence: Confidence
+  boundaryConfidence: Confidence
+  repetitionGroup: string | null
+  vocalActivity: string | null
+  instruments: string[]
+  stemActivity: Record<string, string>
+  stemRelativeRms: Record<string, number>
+  sourcePath: string
+}
+
+export interface VisualCueTransition {
+  id: string
+  timeSeconds: number
+  frame: number
+  fromSectionId: string
+  toSectionId: string
+  energyBefore: number | null
+  energyAfter: number | null
+  energyDelta: number | null
+  direction: 'rising' | 'falling' | 'stable' | 'unknown'
+  confidence: Confidence
+  sourcePaths: string[]
+}
+
+export interface VisualCueCurve {
+  pointFormat: ['frame', 'value']
+  points: Array<[number, number]>
+  interpolation: 'linear'
+  sourceSampleRateHz: number
+  originalPointCount: number
+  exportedPointCount: number
+  simplification: {
+    method: string
+    tolerance: number
+    maximumError: number
+    maximumPointCount: number
+  }
+  normalization: {
+    method: string
+    lowerPercentile: number
+    upperPercentile: number
+    normalizationGroup: string
+  }
+  smoothing: {
+    method: string
+    attackSeconds: number
+    releaseSeconds: number
+    sourceSampleRateHz: number
+    outputSampleRateHz: number
+  }
+}
+
+export interface TrackPromptVisualCueSheet {
+  schemaVersion: '1.1.0'
+  source: {
+    analysisSchemaVersion: string
+    analysisVersion: string
+    jobId: string
+    requestedMode: AnalysisMode
+    effectiveMode: AnalysisMode
+  }
+  timeline: {
+    durationSeconds: number
+    fps: number
+    frameStart: number
+    frameEnd: number
+    framePolicy: 'nearest-half-up-clamped'
+  }
+  musicalGrid: {
+    bpm: { value: number | null; confidence: Confidence }
+    secondsPerBeat: number | null
+    meter: { value: string | null; confidence: Confidence }
+    downbeatsAvailable: false
+  }
+  beats: VisualCueEvent[]
+  onsets: VisualCueEvent[]
+  sections: VisualCueSection[]
+  transitions: VisualCueTransition[]
+  curves: Record<string, VisualCueCurve>
+  warnings: string[]
+}
+
 export interface PromptRationale {
   phrase: string
   factPaths: string[]
+}
+
+export interface PromptFact {
+  path: string
+  value: unknown
+  role: 'observed' | 'user-entered' | 'user-accepted' | 'preference' | 'detected' | 'detected-ambiguous' | 'detected-component-influence'
 }
 
 export interface OmittedFact {
@@ -164,7 +283,7 @@ export interface PromptPackage {
   exclusions: string[]
   arrangementBlueprint: string[]
   rationale: PromptRationale[]
-  factsUsed: string[]
+  factsUsed: PromptFact[]
   factsOmitted: OmittedFact[]
   warnings: string[]
   engineMode: PromptEngineMode
@@ -178,7 +297,7 @@ export interface PromptPackage {
 }
 
 export type PromptEngineMode = 'reliable' | 'creative' | 'experimental'
-export type GenreInterpretationMode = 'strict_top' | 'blend' | 'user_selected_only' | 'disabled'
+export type GenreInterpretationMode = 'strict_top' | 'blend' | 'detected_layered' | 'user_selected_only' | 'disabled'
 export type LyricsInfluenceMode = 'none' | 'prosody_only' | 'abstract_themes' | 'user_written_direction'
 
 export interface PromptGenerationParameters {
@@ -198,7 +317,7 @@ export interface LocalPromptCandidate {
   seed?: number | null
   modelId: string
   generationParameters: PromptGenerationParameters
-  factsUsed: string[]
+  factsUsed: PromptFact[]
   creativeDirectionsUsed: string[]
   warnings: string[]
 }
@@ -309,6 +428,10 @@ export interface Capabilities {
     jobTtlMinutes: number
     maxPendingJobs: number
   }
+  visualCueExportAvailable: boolean
+  visualCueSheetSchemaVersion: string
+  visualFeatureArtifactSchemaVersion: string
+  blenderVisualizerPreset: string
   networkFeaturesEnabled: boolean
 }
 
@@ -341,6 +464,25 @@ export interface GenreWindowEvidence {
   endSeconds: number
   topLabels: string[]
   similarities: Record<string, number>
+  weight: number
+  representativeness: number
+  vocalDominant: boolean
+  percussionDominant: boolean
+  sectionIds: string[]
+  analysisView: string
+}
+
+export interface GenreLayerEvidence {
+  value: string | string[]
+  confidence: Confidence
+  method: string
+  supportingWindowIds: string[]
+  supportingSectionIds: string[]
+  alternatives: string[]
+  ambiguity?: string | null
+  source: 'detected' | 'user_entered'
+  accepted: boolean
+  enabledForPrompt: boolean
 }
 
 export interface GenreAnalysis {
@@ -350,6 +492,12 @@ export interface GenreAnalysis {
   descriptiveTags: GenreCandidate[]
   windowEvidence: GenreWindowEvidence[]
   sectionEvidence: Record<string, string[]>
+  primaryProductionGenre?: GenreLayerEvidence | null
+  secondaryProductionGenres?: GenreLayerEvidence | null
+  vocalDeliveryStyle?: GenreLayerEvidence | null
+  vocalGenreInfluences?: GenreLayerEvidence | null
+  sectionGenreEvidence: GenreLayerEvidence[]
+  overallGenreBlend?: GenreLayerEvidence | null
   confidence: Confidence
   ambiguity?: string | null
   method: string
@@ -378,9 +526,16 @@ export interface LyricsAnalysisSummary {
   nonLexicalVocalizationTendency?: string | null
   abstractThemes: string[]
   themeConfidence: Confidence
+  themesUserApproved: boolean
   warnings: string[]
   createdAt?: string | null
 }
+
+export type LyricsSegmentQualityDecision =
+  | 'accepted'
+  | 'uncertain'
+  | 'rejected_as_likely_hallucination'
+  | 'non_lexical'
 
 export interface LyricsSegment {
   id: string
@@ -388,7 +543,12 @@ export interface LyricsSegment {
   endSeconds: number
   text: string
   confidence: Confidence
+  qualityDecision: LyricsSegmentQualityDecision
+  avgLogProbability?: number | null
   noSpeechScore?: number | null
+  compressionRatio?: number | null
+  repeatedTokenRatio?: number | null
+  activeSectionIds: string[]
   qualityFlags: string[]
   userEdited: boolean
 }
@@ -560,5 +720,9 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
   ffmpeg: { available: false },
   ffprobe: { available: false },
   limits: { maxUploadMb: 200, maxDurationSeconds: 1200, jobTtlMinutes: 60, maxPendingJobs: 2 },
+  visualCueExportAvailable: false,
+  visualCueSheetSchemaVersion: 'unknown',
+  visualFeatureArtifactSchemaVersion: 'unknown',
+  blenderVisualizerPreset: '',
   networkFeaturesEnabled: false,
 }

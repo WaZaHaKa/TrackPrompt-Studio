@@ -1,21 +1,31 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { LockKeyhole, RotateCcw, Tag, TriangleAlert } from 'lucide-react'
 import { patchGenre } from '../api'
-import type { GenreAnalysis, GenreCandidate, GenrePatch } from '../types'
+import type { GenreAnalysis, GenreCandidate, GenreLayerEvidence, GenrePatch } from '../types'
 import { Button, ConfidenceBadge, InlineNotice, Toggle } from './ui'
 
 interface GenrePanelProps {
   jobId: string
   initialGenre: GenreAnalysis | null | undefined
+  usedGenreIds: ReadonlySet<string>
   onChange: (genre: GenreAnalysis) => void
+}
+
+function layerValue(layer: GenreLayerEvidence | null | undefined): string {
+  if (!layer) return 'not available'
+  return Array.isArray(layer.value) ? layer.value.join(', ') || 'none detected' : layer.value
 }
 
 function CandidateRow({
   candidate,
+  promptEnabled,
+  usedInPrompt,
   busy,
   onPatch,
 }: {
   candidate: GenreCandidate
+  promptEnabled: boolean
+  usedInPrompt: boolean
   busy: boolean
   onPatch: (patch: GenrePatch) => Promise<void>
 }) {
@@ -26,8 +36,14 @@ function CandidateRow({
         <input aria-label={`Genre label for ${candidate.canonicalLabel}`} value={label} onChange={(event) => setLabel(event.target.value)} />
         <ConfidenceBadge confidence={candidate.confidence} />
         <span className="similarity-chip">similarity {candidate.similarity.toFixed(3)}</span>
+        <span className="similarity-chip">{candidate.custom ? 'User-entered' : 'Detected'}</span>
+        {candidate.accepted ? <span className="accepted-chip">Accepted</span> : null}
+        {candidate.rejected ? <span className="edited-chip">Rejected</span> : null}
+        {candidate.accepted && promptEnabled ? <span className="similarity-chip">Prompt-eligible</span> : null}
+        {usedInPrompt ? <span className="accepted-chip">Used in prompt</span> : null}
+        {candidate.locked ? <span className="similarity-chip">Locked</span> : null}
       </div>
-      <small>{candidate.parent ? `Parent: ${candidate.parent} Â· ` : ''}{candidate.custom ? 'Custom label' : 'Audio-text similarity, not probability'}</small>
+      <small>{candidate.parent ? `Parent: ${candidate.parent} · ` : ''}{candidate.custom ? 'Custom label' : 'Audio-text similarity, not probability'}</small>
       <div className="candidate-actions">
         <Button disabled={busy || candidate.accepted} onClick={() => void onPatch({ updates: [{ candidateId: candidate.id, accepted: true }] })}>Accept</Button>
         <Button variant="ghost" disabled={busy || candidate.rejected} onClick={() => void onPatch({ updates: [{ candidateId: candidate.id, rejected: true }] })}>Reject</Button>
@@ -39,12 +55,15 @@ function CandidateRow({
   )
 }
 
-export function GenrePanel({ jobId, initialGenre, onChange }: GenrePanelProps) {
+export function GenrePanel({ jobId, initialGenre, usedGenreIds, onChange }: GenrePanelProps) {
   const [genre, setGenre] = useState(initialGenre)
   const [custom, setCustom] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const candidates = useMemo(() => genre ? [...genre.broadCandidates, ...genre.subgenreCandidates] : [], [genre])
+  useEffect(() => {
+    setGenre(initialGenre)
+  }, [initialGenre])
 
   const apply = async (patch: GenrePatch): Promise<void> => {
     setBusy(true)
@@ -71,14 +90,21 @@ export function GenrePanel({ jobId, initialGenre, onChange }: GenrePanelProps) {
       </div>
       {genre.ambiguity ? <InlineNotice tone="warning">{genre.ambiguity}</InlineNotice> : null}
       {error ? <InlineNotice tone="error">{error}</InlineNotice> : null}
+      <dl className="analysis-metadata-grid">
+        <div><dt>Primary production</dt><dd>{layerValue(genre.primaryProductionGenre)}</dd></div>
+        <div><dt>Production alternatives</dt><dd>{layerValue(genre.secondaryProductionGenres)}</dd></div>
+        <div><dt>Vocal delivery</dt><dd>{layerValue(genre.vocalDeliveryStyle)}</dd></div>
+        <div><dt>Vocal genre influence</dt><dd>{layerValue(genre.vocalGenreInfluences)}</dd></div>
+        <div><dt>Overall blend</dt><dd>{layerValue(genre.overallGenreBlend)}</dd></div>
+      </dl>
       <div className="genre-candidate-list">
-        {candidates.map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} busy={busy} onPatch={apply} />)}
+        {candidates.map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} promptEnabled={!genre.disabledForPrompt} usedInPrompt={usedGenreIds.has(candidate.id)} busy={busy} onPatch={apply} />)}
       </div>
       <div className="custom-genre-row">
         <label>Custom genre<input value={custom} onChange={(event) => setCustom(event.target.value)} placeholder="e.g. ambient electronic" /></label>
         <Button disabled={busy || !custom.trim()} onClick={() => { void apply({ customGenre: custom.trim() }); setCustom('') }}>Add and accept</Button>
       </div>
-      <Toggle checked={!genre.disabledForPrompt} onChange={(checked) => void apply({ disabledForPrompt: !checked })} label="Use accepted genre in prompt" description="The separate prompt selector controls strict top, compatible blend, user-selected only, or disabled behavior." />
+      <Toggle checked={!genre.disabledForPrompt} onChange={(checked) => void apply({ disabledForPrompt: !checked })} label="Enable genre evidence for prompts" description="Acceptance-required modes use reviewed candidates; Layered detected evidence can use eligible detections with uncertainty." />
       <Button variant="ghost" disabled={busy} onClick={() => void apply({ restoreAll: true })} icon={<RotateCcw aria-hidden="true" />}>Restore all detected genre values</Button>
       <details className="prompt-details">
         <summary>Genre evidence and method</summary>
@@ -90,8 +116,16 @@ export function GenrePanel({ jobId, initialGenre, onChange }: GenrePanelProps) {
           <div><dt>Method</dt><dd>{genre.method}</dd></div>
         </dl>
         {genre.blendCandidates.length > 0 ? <p><strong>Compatible blend:</strong> {genre.blendCandidates.join(', ')}</p> : null}
+        {genre.sectionGenreEvidence.length > 0 ? <div><strong>Section-level influences:</strong><ul>{genre.sectionGenreEvidence.map((layer) => <li key={layer.supportingSectionIds.join('-')}>{layer.supportingSectionIds.join(', ')}: {layerValue(layer)}{layer.ambiguity ? ` — ${layer.ambiguity}` : ''}</li>)}</ul></div> : null}
         {genre.descriptiveTags.length > 0 ? <p><strong>Descriptive tags:</strong> {genre.descriptiveTags.map((item) => `${item.label} (${item.similarity.toFixed(3)})`).join(', ')}</p> : null}
-        <ol>{genre.windowEvidence.map((window) => <li key={window.id}>{window.kind}: {window.startSeconds.toFixed(1)}-{window.endSeconds.toFixed(1)}s Â· {window.topLabels.join(', ')}</li>)}</ol>
+        <ol>{genre.windowEvidence.map((window) => (
+          <li key={window.id}>
+            {window.analysisView} / {window.kind}: {window.startSeconds.toFixed(1)}-{window.endSeconds.toFixed(1)}s · weight {window.weight.toFixed(2)} · representative {Math.round(window.representativeness * 100)}% · {window.topLabels.join(', ')}
+            {window.sectionIds.length > 0 ? ` · sections ${window.sectionIds.join(', ')}` : ''}
+            {window.vocalDominant ? ' · vocal-dominant' : ''}
+            {window.percussionDominant ? ' · percussion-dominant' : ''}
+          </li>
+        ))}</ol>
       </details>
     </section>
   )

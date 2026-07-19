@@ -2381,6 +2381,65 @@ code {
   color: var(--mint);
 }
 
+.visualizer-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(420px, 1.2fr);
+  gap: 1.2rem;
+  margin: 1rem 0;
+  padding: clamp(1rem, 2vw, 1.4rem);
+  border: 1px solid rgba(189, 173, 255, 0.25);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(28, 24, 48, 0.72), rgba(11, 27, 21, 0.9));
+  box-shadow: var(--shadow);
+}
+
+.visualizer-panel__intro h2 {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 1.35rem;
+}
+
+.visualizer-panel__intro p {
+  max-width: 560px;
+  color: var(--muted-strong);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.visualizer-panel__intro .local-chip {
+  margin-top: 0.35rem;
+}
+
+.visualizer-panel__controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.visualizer-panel__controls > .button,
+.visualizer-panel__controls > .notice,
+.visualizer-panel__toggles {
+  grid-column: 1 / -1;
+}
+
+.visualizer-panel__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.visualizer-panel__toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted-strong);
+  font-size: 0.7rem;
+}
+
+.visualizer-panel__toggles input {
+  accent-color: var(--mint-strong);
+}
+
 .privacy-footer span {
   display: flex;
   flex: 1;
@@ -2541,6 +2600,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .visualizer-panel {
+    grid-template-columns: 1fr;
+  }
+
   .prompt-controls {
     position: static;
     display: grid;
@@ -2680,6 +2743,14 @@ code {
 
   .two-fields {
     grid-template-columns: 1fr;
+  }
+
+  .visualizer-panel__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .visualizer-panel__controls > * {
+    grid-column: auto;
   }
 
   .prompt-textarea {

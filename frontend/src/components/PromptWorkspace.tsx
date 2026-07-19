@@ -77,11 +77,15 @@ interface PromptWorkspaceProps {
   promptPackage?: PromptPackage
   capabilities: Capabilities
   onGenerate: (preferences: PromptPreferences) => Promise<PromptPackage>
+  onSelectCandidate: (candidateId: string) => Promise<PromptPackage>
 }
 
-type PendingReplacement = { kind: 'generate' | 'variation' } | { kind: 'alternative'; text: string; label: string }
+type PendingReplacement =
+  | { kind: 'generate' | 'variation' }
+  | { kind: 'alternative'; text: string; label: string }
+  | { kind: 'candidate'; candidateId: string; label: string }
 
-export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, onGenerate }: PromptWorkspaceProps) {
+export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, onGenerate, onSelectCandidate }: PromptWorkspaceProps) {
   const [preferences, setPreferences] = useState<PromptPreferences>({
     outputLanguage: 'English',
     generationIntent: 'preserve_core_character',
@@ -100,7 +104,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
     promptEngineMode: promptPackage?.engineMode ?? 'reliable',
     genreInterpretationMode: 'strict_top',
     lyricsInfluenceMode: 'none',
-    candidateCount: 3,
+    candidateCount: promptPackage?.engineMode === 'reliable' ? 1 : (promptPackage?.candidates.length === 1 ? 1 : 3),
     lockSeed: false,
     lockedFeaturePaths: [],
     includeDetectedGenre: true,
@@ -116,6 +120,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
   const [manualDirty, setManualDirty] = useState(false)
   const [packageInvalidated, setPackageInvalidated] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [selectingCandidateId, setSelectingCandidateId] = useState<string>()
   const [generationError, setGenerationError] = useState<string>()
   const [variationIndex, setVariationIndex] = useState(1)
   const [pending, setPending] = useState<PendingReplacement>()
@@ -127,6 +132,22 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
   useEffect(() => {
     setPreferences((current) => ({ ...current, disabledFeaturePaths: analysis.disabledFeaturePaths }))
   }, [analysis.disabledFeaturePaths])
+
+  useEffect(() => {
+    const acceptedGenreIds = analysis.genreAnalysis
+      ? [...analysis.genreAnalysis.broadCandidates, ...analysis.genreAnalysis.subgenreCandidates]
+        .filter((item) => item.accepted && !item.rejected)
+        .map((item) => item.id)
+      : []
+    setPreferences((current) => ({ ...current, acceptedGenreIds }))
+  }, [analysis.genreAnalysis])
+
+  useEffect(() => {
+    if (analysis.lyricsSummary?.themesUserApproved) return
+    setPreferences((current) => current.lyricsInfluenceMode === 'abstract_themes'
+      ? { ...current, lyricsInfluenceMode: 'none', includeLyricalThemes: false }
+      : current)
+  }, [analysis.lyricsSummary?.themesUserApproved])
 
   useEffect(() => {
     if (promptPackage === lastPackage.current) return
@@ -251,15 +272,43 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
       return
     }
     setEditor(text)
-    setManualDirty(false)
+    setManualDirty(text !== currentPackage?.primaryPrompt)
+  }
+
+  const applyCandidateSelection = async (candidateId: string): Promise<void> => {
+    setSelectingCandidateId(candidateId)
+    setGenerationError(undefined)
+    setPending(undefined)
+    try {
+      const next = await onSelectCandidate(candidateId)
+      setCurrentPackage(next)
+      setEditor(next.primaryPrompt)
+      setExclusionsDraft(next.exclusions.join('\n'))
+      setManualDirty(false)
+      setPackageInvalidated(false)
+    } catch (caught) {
+      setGenerationError(caught instanceof Error ? caught.message : 'The selected candidate could not be saved.')
+    } finally {
+      setSelectingCandidateId(undefined)
+    }
+  }
+
+  const requestCandidateSelection = (candidateId: string, label: string): void => {
+    if (manualDirty) {
+      setPending({ kind: 'candidate', candidateId, label })
+      return
+    }
+    void applyCandidateSelection(candidateId)
   }
 
   const confirmReplacement = (): void => {
     if (!pending) return
     if (pending.kind === 'alternative') {
       setEditor(pending.text)
-      setManualDirty(false)
+      setManualDirty(pending.text !== currentPackage?.primaryPrompt)
       setPending(undefined)
+    } else if (pending.kind === 'candidate') {
+      void applyCandidateSelection(pending.candidateId)
     } else {
       void runGenerate(pending.kind === 'variation')
     }
@@ -294,7 +343,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
     <section className="prompt-workspace" aria-labelledby="prompt-title">
       <div className="section-heading">
         <div><span className="eyebrow"><Sparkles aria-hidden="true" /> Local prompt engines</span><h2 id="prompt-title">Shape your generation prompt</h2><p>Analysis remains stable; interpretation may be creative. Manual edits are always protected.</p></div>
-        <span className="local-chip">{preferences.promptEngineMode === 'reliable' ? 'No LLM required' : writerReady ? `Local GPU Â· ${capabilities.promptWriter?.modelId ?? 'ready'}` : 'Reliable fallback'}</span>
+        <span className="local-chip">{preferences.promptEngineMode === 'reliable' ? 'No LLM required' : writerReady ? `Local GPU · ${capabilities.promptWriter?.modelId ?? 'ready'}` : 'Reliable fallback'}</span>
       </div>
 
       <div className="prompt-layout">
@@ -307,7 +356,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
                 const unavailable = engine.requiresLlm && !writerReady
                 return (
                   <label key={engine.value} className={`mode-option ${preferences.promptEngineMode === engine.value ? 'mode-option--active' : ''} ${unavailable ? 'mode-option--disabled' : ''}`}>
-                    <input type="radio" name="prompt-engine" value={engine.value} checked={preferences.promptEngineMode === engine.value} disabled={unavailable} onChange={() => updatePreference('promptEngineMode', engine.value)} />
+                    <input type="radio" name="prompt-engine" value={engine.value} checked={preferences.promptEngineMode === engine.value} disabled={unavailable} onChange={() => setPreferences((current) => ({ ...current, promptEngineMode: engine.value, candidateCount: engine.value === 'reliable' ? 1 : current.candidateCount }))} />
                     <span className="mode-option__check"><Check aria-hidden="true" /></span>
                     <span><strong>{engine.label}</strong><small>{engine.detail} {engine.requiresLlm ? 'Requires the local LLM; failures use Reliable.' : 'Works offline without a GPU and does not vary unless a seed changes.'}</small></span>
                     <span className="mode-option__meta">{unavailable ? 'Unavailable' : engine.requiresLlm ? 'GPU sampled' : 'Always ready'}</span>
@@ -377,6 +426,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
               <select id="genre-use" value={preferences.genreInterpretationMode} onChange={(event) => updatePreference('genreInterpretationMode', event.target.value as GenreInterpretationMode)}>
                 <option value="strict_top">Strict top accepted genre</option>
                 <option value="blend">Compatible accepted blend</option>
+                <option value="detected_layered">Layered detected evidence</option>
                 <option value="user_selected_only">User-selected only</option>
                 <option value="disabled">Disabled</option>
               </select>
@@ -390,10 +440,10 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
               }}>
                 <option value="none">None</option>
                 <option value="prosody_only">Prosody only</option>
-                <option value="abstract_themes">Approved abstract themes</option>
+                <option value="abstract_themes" disabled={!analysis.lyricsSummary?.themesUserApproved}>Approved abstract themes</option>
                 <option value="user_written_direction">My written direction</option>
               </select>
-              <small>Raw transcript lines are never inserted or sent as prompt evidence.</small>
+              <small>{analysis.lyricsSummary?.themesUserApproved ? 'Approved themes are available. ' : 'Approved themes are unavailable. '}Raw transcript lines are never inserted or sent as prompt evidence.</small>
             </div>
             {preferences.lyricsInfluenceMode === 'user_written_direction' && !preferences.instrumental ? <div className="field-stack"><label htmlFor="lyrical-direction">Your lyrical direction</label><input id="lyrical-direction" maxLength={240} value={preferences.userWrittenLyricalDirection ?? ''} onChange={(event) => updatePreference('userWrittenLyricalDirection', event.target.value || undefined)} /></div> : null}
           </div>
@@ -439,7 +489,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
           <div className="prompt-actions">
             <Button variant="primary" icon={<RefreshCcw aria-hidden="true" />} busy={generating} onClick={() => requestGenerate(false)}>Generate candidates</Button>
             <Button icon={<Dice5 aria-hidden="true" />} busy={generating} onClick={() => requestGenerate(true)}>Generate another set</Button>
-            <span className="seed-note">{preferences.variationSeed == null ? 'A seed will be returned' : `Seed ${preferences.variationSeed} Â· best-effort reproduction`}</span>
+            <span className="seed-note">{preferences.variationSeed == null ? 'A seed will be returned' : `Seed ${preferences.variationSeed} · best-effort reproduction`}</span>
           </div>
 
           {generationError ? <InlineNotice tone="error">{generationError}</InlineNotice> : null}
@@ -488,8 +538,8 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
                       <article key={candidate.id} className={currentPackage.selectedCandidateId === candidate.id ? 'candidate-card candidate-card--selected' : 'candidate-card'}>
                         <span className="eyebrow">{candidate.shortTitle}</span>
                         <p>{candidate.prompt}</p>
-                        <div className="candidate-actions"><Button variant="primary" onClick={() => selectAlternative(candidate.prompt, candidate.shortTitle)}>Use this prompt</Button><Button variant="ghost" icon={<Copy aria-hidden="true" />} onClick={() => void copy(candidate.prompt, `${candidate.shortTitle} copied`)}>Copy</Button></div>
-                        <details><summary>Facts used ({candidate.factsUsed.length})</summary><div>{candidate.factsUsed.map((fact) => <code key={fact}>{fact}</code>)}</div></details>
+                        <div className="candidate-actions"><Button variant="primary" busy={selectingCandidateId === candidate.id} aria-pressed={currentPackage.selectedCandidateId === candidate.id} onClick={() => requestCandidateSelection(candidate.id, candidate.shortTitle)}>Use this prompt</Button><Button variant="ghost" icon={<Copy aria-hidden="true" />} onClick={() => void copy(candidate.prompt, `${candidate.shortTitle} copied`)}>Copy</Button></div>
+                        <details><summary>Facts used ({candidate.factsUsed.length})</summary><div>{candidate.factsUsed.map((fact) => <code key={fact.path}>{fact.path}: {JSON.stringify(fact.value)} ({fact.role})</code>)}</div></details>
                         {candidate.warnings.map((warning) => <small key={warning}>{warning}</small>)}
                       </article>
                     ))}
@@ -524,7 +574,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
               </details>
               <details className="prompt-details">
                 <summary>Facts used <span>{currentPackage.factsUsed.length}</span></summary>
-                <div className="rationale-list"><article><div>{currentPackage.factsUsed.map((path) => <code key={path}>{path}</code>)}</div></article></div>
+                <div className="rationale-list"><article><div>{currentPackage.factsUsed.map((fact) => <code key={fact.path}>{fact.path}: {JSON.stringify(fact.value)} ({fact.role})</code>)}</div></article></div>
               </details>
               <details className="prompt-details">
                 <summary>Prompt-engine diagnostics</summary>
@@ -534,7 +584,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
                   <div><dt>Seed</dt><dd>{currentPackage.seed ?? 'not used'}</dd></div>
                   <div><dt>Sampling</dt><dd>{currentPackage.generationParameters.sampling ? 'enabled' : 'disabled'}</dd></div>
                   <div><dt>Temperature / top-p</dt><dd>{currentPackage.generationParameters.temperature} / {currentPackage.generationParameters.topP}</dd></div>
-                  <div><dt>GPU queue</dt><dd>{capabilities.gpuTaskQueue?.active ?? 0} active Â· {capabilities.gpuTaskQueue?.waiting ?? 0} waiting</dd></div>
+                  <div><dt>GPU queue</dt><dd>{capabilities.gpuTaskQueue?.active ?? 0} active · {capabilities.gpuTaskQueue?.waiting ?? 0} waiting</dd></div>
                 </dl>
               </details>
             </>
@@ -549,7 +599,7 @@ export function PromptWorkspace({ jobId, analysis, promptPackage, capabilities, 
       <Modal
         open={Boolean(pending)}
         title="Replace your manual edits?"
-        description={`Your edited prompt will be replaced${pending?.kind === 'alternative' ? ` by the ${pending.label}` : ' by newly generated text'}. This cannot be undone.`}
+        description={`Your edited prompt will be replaced${pending?.kind === 'alternative' || pending?.kind === 'candidate' ? ` by the ${pending.label}` : ' by newly generated text'}. This cannot be undone.`}
         onClose={() => setPending(undefined)}
         footer={<><Button variant="ghost" onClick={() => setPending(undefined)}>Keep my edits</Button><Button variant="primary" onClick={confirmReplacement}>Replace prompt</Button></>}
       >

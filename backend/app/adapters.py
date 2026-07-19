@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.metadata
 import importlib.util
-import json
 import os
-import re
 import shutil
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
 
 from .config import Settings
 from .lyrics import create_lyrics_adapter
+from .model_cache import verify_demucs_model_manifest
 from .privacy import secure_private_directory
 from .prompting.local_writer import create_prompt_writer
 from .schemas import (
@@ -27,7 +24,7 @@ from .schemas import (
     OptionalAnalyzerCapability,
 )
 from .subprocess_utils import ProcessTimedOut, ProcessWasCancelled, run_process_bounded
-from .tagging import create_music_tagger
+from .tagging.music import create_music_tagger
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,88 +93,12 @@ def inspect_tool(executable: str) -> ToolStatus:
     return ToolStatus(True, first_line[:160] if first_line else None)
 
 
-@lru_cache(maxsize=64)
-def _sha256_at_signature(
-    path_text: str,
-    _size: int,
-    _mtime_ns: int,
-    _ctime_ns: int,
-) -> str:
-    """Hash a stable local file signature once, avoiding repeated GB-scale reads."""
-    digest = hashlib.sha256()
-    with Path(path_text).open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _reviewed_demucs_weights(settings: Settings) -> list[Path]:
-    """Return verified files only when the selected repository is fully manifested."""
-    cache_root = settings.demucs_model_dir.resolve()
-    manifest_path = cache_root / "demucs-models.json"
-    try:
-        if (
-            not manifest_path.is_file()
-            or manifest_path.resolve().parent != cache_root
-            or manifest_path.stat().st_size > 1_000_000
-        ):
-            return []
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    models = payload.get("models") if isinstance(payload, dict) else None
-    model = models.get(settings.demucs_model_name) if isinstance(models, dict) else None
-    files = model.get("files") if isinstance(model, dict) else None
-    if not isinstance(files, dict) or not files:
-        return []
-    verified: list[Path] = []
-    listed_paths: set[Path] = set()
-    for relative_name, expected_hash in files.items():
-        if (
-            not isinstance(relative_name, str)
-            or not isinstance(expected_hash, str)
-            or re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash) is None
-        ):
-            return []
-        relative = Path(relative_name)
-        if relative.is_absolute() or ".." in relative.parts:
-            return []
-        candidate = (cache_root / relative).resolve()
-        if not candidate.is_relative_to(cache_root) or candidate == manifest_path.resolve():
-            return []
-        try:
-            before = candidate.stat()
-            digest = _sha256_at_signature(
-                str(candidate),
-                before.st_size,
-                before.st_mtime_ns,
-                before.st_ctime_ns,
-            )
-            after = candidate.stat()
-        except OSError:
-            return []
-        if (
-            not candidate.is_file()
-            or (before.st_size, before.st_mtime_ns, before.st_ctime_ns)
-            != (after.st_size, after.st_mtime_ns, after.st_ctime_ns)
-            or digest.casefold() != expected_hash.casefold()
-        ):
-            return []
-        verified.append(candidate)
-        listed_paths.add(candidate)
-    try:
-        repository_files = {
-            path.resolve()
-            for path in cache_root.rglob("*")
-            if path.is_file() and path.resolve() != manifest_path.resolve()
-        }
-    except OSError:
-        return []
-    # Demucs receives the repository root. Requiring completeness prevents it
-    # from resolving an unreviewed checkpoint or config that was not hashed.
-    if repository_files != listed_paths:
-        return []
-    return verified
+    files, _reason = verify_demucs_model_manifest(
+        settings.demucs_model_dir,
+        settings.demucs_model_name,
+    )
+    return files
 
 
 def demucs_ready(settings: Settings) -> bool:
@@ -333,6 +254,11 @@ def run_demucs(
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
             "TORCH_HOME": str(settings.demucs_model_dir),
+            # PyTorch 2.6+ defaults torch.load to weights_only=True, while
+            # Demucs 4.0.1 loads its own model class from the checkpoint. This
+            # override is scoped to the subprocess after the exact repository
+            # has passed the complete SHA-256 allowlist above.
+            "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1",
             "NO_PROXY": "*",
         }
     )

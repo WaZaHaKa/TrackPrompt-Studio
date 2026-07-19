@@ -11,6 +11,7 @@ from typing import Any
 from ..adapters import demucs_ready, inspect_torch_device, run_demucs
 from ..config import Settings
 from ..lyrics import create_lyrics_adapter
+from ..lyrics.quality import active_transcript_section_ids, map_transcript_to_sections
 from ..privacy import secure_private_file
 from ..schemas import (
     AnalysisResult,
@@ -32,7 +33,9 @@ from ..schemas import (
     TimbreAnalysis,
     VocalsAnalysis,
 )
-from ..tagging import create_music_tagger
+from ..tagging.layers import build_layered_genre_analysis
+from ..tagging.music import create_music_tagger
+from ..visualizer.features import extract_full_mix_features, extract_stem_features
 from .core import (
     AudioData,
     analyze_harmony,
@@ -51,6 +54,7 @@ from .core import (
     waveform_peaks,
     with_failure_isolation,
 )
+from .layered_views import analyze_vocal_delivery_view, create_temporary_accompaniment_view
 from .sanity import validate_analysis_result
 
 WORKER_STAGE_PROGRESS = {
@@ -59,6 +63,7 @@ WORKER_STAGE_PROGRESS = {
     "analyzing_harmony": 50,
     "segmenting_structure": 62,
     "analyzing_production": 75,
+    "extracting_visual_features": 79,
     "separating_stems": 82,
     "running_enhanced_taggers": 87,
     "transcribing_lyrics": 88,
@@ -370,8 +375,17 @@ def analyze_audio(
             warnings,
         )
 
+    _check_cancel(cancel_file)
+    _write_progress(
+        progress_file,
+        "extracting_visual_features",
+        "Extracting bounded continuous visual-control curves",
+        WORKER_STAGE_PROGRESS["extracting_visual_features"],
+    )
+    visual_features = extract_full_mix_features(audio, job_id)
     effective_mode = "fast"
     capabilities = ["fast-core", "deterministic-prompting"]
+    temporary_accompaniment_view: Path | None = None
     if requested_mode == "deep":
         if demucs_ready(settings) and not insufficient:
             _check_cancel(cancel_file)
@@ -411,6 +425,7 @@ def analyze_audio(
                     structure,
                     stems,
                 )
+                visual_features = extract_stem_features(visual_features, stems)
                 instrumentation = InstrumentationAnalysis(
                     candidates=feature(
                         candidates,
@@ -422,6 +437,7 @@ def analyze_audio(
                 )
                 vocal_ratio = stem_ratios.get("vocals", 0.0)
                 vocal_label = "present" if vocal_ratio >= 0.08 else "weak or absent"
+                delivery, phrasing = analyze_vocal_delivery_view(stems["vocals"])
                 vocals = vocals.model_copy(
                     update={
                         "presence": feature(
@@ -441,8 +457,21 @@ def analyze_audio(
                             "fraction of structural sections with active private vocal-stem energy",
                             score=round(vocal_active_fraction, 3),
                         ),
+                        "delivery": delivery,
+                        "phrasing": phrasing,
                     }
                 )
+                try:
+                    temporary_accompaniment_view = create_temporary_accompaniment_view(
+                        stems,
+                        Path(decoded_path).resolve().parent / ".genre-accompaniment-view.wav",
+                    )
+                except Exception:
+                    temporary_accompaniment_view = None
+                    warnings.append(
+                        "The private accompaniment genre view could not be constructed; "
+                        "full-mix window weighting remained available."
+                    )
                 if enable_lyrics_analysis:
                     if not lyrics_consent_confirmed:
                         lyrics_summary.status = "consent_missing"
@@ -472,6 +501,12 @@ def analyze_audio(
                                     job_id,
                                     cancel_requested=cancel_file.exists,
                                 )
+                                transcript = map_transcript_to_sections(
+                                    transcript,
+                                    structure.sections,
+                                    audio.duration,
+                                )
+                                lyrics_summary.active_section_ids = active_transcript_section_ids(transcript)
                                 _check_cancel(cancel_file)
                                 job_directory = Path(decoded_path).resolve().parent
                                 transcript_payload = transcript.model_dump(mode="json", by_alias=True)
@@ -555,39 +590,64 @@ def analyze_audio(
         deep_diagnostics=deep_diagnostics,
         warnings=warnings,
         analyzer_versions={
-            "trackprompt-core": "0.2.0",
+            "trackprompt-core": "0.5.0",
             "activity-detector": "2.0.0",
             "rhythm-grid": "2.0.0",
             "tonal-confidence": "2.0.0",
             "structure-segmenter": "2.0.0",
-            "analysis-sanity": "1.0.0",
+            "analysis-sanity": "2.0.0",
             "numpy": __import__("numpy").__version__,
             "scipy": __import__("scipy").__version__,
             "soundfile": __import__("soundfile").__version__,
         },
         created_at=datetime.now(UTC),
     )
-    if enable_genre_analysis:
-        _check_cancel(cancel_file)
-        genre_adapter = create_music_tagger(settings)
-        capability = genre_adapter.capability()
-        if capability.available:
-            _write_progress(
-                progress_file,
-                "tagging_genre",
-                "Ranking genre and music-description similarities over bounded local windows",
-                WORKER_STAGE_PROGRESS["tagging_genre"],
-            )
-            try:
-                result.genre_analysis = genre_adapter.analyze_windows(Path(decoded_path), result)
-                result.capabilities.append("clap-music-tagging")
-            except Exception:
-                _check_cancel(cancel_file)
-                result.warnings.append(
-                    "The local genre adapter failed safely; no genre result was fabricated."
+    try:
+        if enable_genre_analysis:
+            _check_cancel(cancel_file)
+            genre_adapter = create_music_tagger(settings)
+            capability = genre_adapter.capability()
+            if capability.available:
+                _write_progress(
+                    progress_file,
+                    "tagging_genre",
+                    "Ranking production, full-mix, and vocal-component genre evidence over bounded local windows",
+                    WORKER_STAGE_PROGRESS["tagging_genre"],
                 )
-            finally:
-                genre_adapter.cleanup()
-        else:
-            result.warnings.append(f"Genre tagging was requested but unavailable: {capability.reason}")
-    return validate_analysis_result(result).model_dump_json(by_alias=True)
+                try:
+                    full_mix_genre = genre_adapter.analyze_windows(Path(decoded_path), result)
+                    production_genre = (
+                        genre_adapter.analyze_windows(temporary_accompaniment_view, result)
+                        if temporary_accompaniment_view is not None
+                        else None
+                    )
+                    result.genre_analysis = build_layered_genre_analysis(
+                        full_mix_genre,
+                        result,
+                        production_genre,
+                    )
+                    result.capabilities.append("clap-music-tagging")
+                except Exception:
+                    _check_cancel(cancel_file)
+                    result.warnings.append(
+                        "The local genre adapter failed safely; no genre result was fabricated."
+                    )
+                finally:
+                    genre_adapter.cleanup()
+            else:
+                result.warnings.append(f"Genre tagging was requested but unavailable: {capability.reason}")
+        validated = validate_analysis_result(result)
+        visual_features = visual_features.model_copy(
+            update={"effective_mode": validated.effective_mode}
+        )
+        _write_private_json(
+            Path(decoded_path).resolve().parent / "visual-features.json",
+            visual_features.model_dump(mode="json", by_alias=True),
+        )
+        return validated.model_dump_json(by_alias=True)
+    finally:
+        if temporary_accompaniment_view is not None:
+            resolved_view = temporary_accompaniment_view.resolve()
+            resolved_job = Path(decoded_path).resolve().parent
+            if resolved_view.parent == resolved_job and resolved_view.name == ".genre-accompaniment-view.wav":
+                resolved_view.unlink(missing_ok=True)

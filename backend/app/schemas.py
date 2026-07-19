@@ -10,6 +10,10 @@ from pydantic.alias_generators import to_camel
 
 T = TypeVar("T")
 
+VISUAL_CUE_SHEET_SCHEMA_VERSION = "1.1.0"
+VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION = "1.0.0"
+BLENDER_VISUALIZER_PRESET = "abstract-geometry"
+
 
 class APIModel(BaseModel):
     model_config = ConfigDict(
@@ -24,6 +28,13 @@ class Confidence(StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
     UNKNOWN = "unknown"
+
+
+class LyricsSegmentQualityDecision(StrEnum):
+    ACCEPTED = "accepted"
+    UNCERTAIN = "uncertain"
+    REJECTED_AS_LIKELY_HALLUCINATION = "rejected_as_likely_hallucination"
+    NON_LEXICAL = "non_lexical"
 
 
 class EvidenceKind(StrEnum):
@@ -159,6 +170,10 @@ class CapabilitiesResponse(APIModel):
     lyrics_adapter: ModelAdapterCapability | None = None
     prompt_writer: PromptWriterCapability | None = None
     gpu_task_queue: GPUTaskQueueCapability | None = None
+    visual_cue_export_available: bool = True
+    visual_cue_sheet_schema_version: str = VISUAL_CUE_SHEET_SCHEMA_VERSION
+    visual_feature_artifact_schema_version: str = VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION
+    blender_visualizer_preset: str = BLENDER_VISUALIZER_PRESET
     network_features_enabled: bool = False
 
 
@@ -174,6 +189,10 @@ class HealthResponse(APIModel):
     genre_tagger_available: bool = False
     lyrics_adapter_available: bool = False
     local_prompt_writer_available: bool = False
+    visual_cue_export_available: bool = True
+    visual_cue_sheet_schema_version: str = VISUAL_CUE_SHEET_SCHEMA_VERSION
+    visual_feature_artifact_schema_version: str = VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION
+    blender_visualizer_preset: str = BLENDER_VISUALIZER_PRESET
     network_features_enabled: bool = False
 
 
@@ -313,11 +332,18 @@ class VocalsAnalysis(APIModel):
     presence: FeatureValue[str]
     register_value: FeatureValue[str] = Field(alias="register", serialization_alias="register")
     delivery: FeatureValue[list[str]]
-    phrasing: FeatureValue[str]
+    phrasing: FeatureValue[list[str]]
     density: FeatureValue[str]
     layering: FeatureValue[str]
     processing: FeatureValue[list[str]]
     mix_placement: FeatureValue[str]
+
+    @field_validator("phrasing", mode="before")
+    @classmethod
+    def migrate_legacy_phrasing(cls, value: Any) -> Any:
+        if isinstance(value, dict) and isinstance(value.get("value"), str):
+            return {**value, "value": [value["value"]]}
+        return value
 
 
 class ProductionAnalysis(APIModel):
@@ -376,6 +402,12 @@ class GenreWindowEvidence(APIModel):
     end_seconds: float = Field(gt=0)
     top_labels: list[str] = Field(default_factory=list, max_length=8)
     similarities: dict[str, float] = Field(default_factory=dict)
+    weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    representativeness: float = Field(default=1.0, ge=0.0, le=1.0)
+    vocal_dominant: bool = False
+    percussion_dominant: bool = False
+    section_ids: list[str] = Field(default_factory=list)
+    analysis_view: str = Field(default="full_mix", max_length=40)
 
     @model_validator(mode="after")
     def ordered_window(self) -> GenreWindowEvidence:
@@ -386,13 +418,32 @@ class GenreWindowEvidence(APIModel):
         return self
 
 
+class GenreLayerEvidence(APIModel):
+    value: str | list[str]
+    confidence: Confidence = Confidence.UNKNOWN
+    method: str = Field(min_length=1, max_length=500)
+    supporting_window_ids: list[str] = Field(default_factory=list, max_length=24)
+    supporting_section_ids: list[str] = Field(default_factory=list, max_length=24)
+    alternatives: list[str] = Field(default_factory=list, max_length=12)
+    ambiguity: str | None = Field(default=None, max_length=300)
+    source: str = Field(default="detected", pattern=r"^(detected|user_entered)$")
+    accepted: bool = False
+    enabled_for_prompt: bool = True
+
+
 class GenreAnalysis(APIModel):
     broad_candidates: list[GenreCandidate] = Field(default_factory=list, max_length=8)
     subgenre_candidates: list[GenreCandidate] = Field(default_factory=list, max_length=12)
     blend_candidates: list[str] = Field(default_factory=list, max_length=4)
     descriptive_tags: list[GenreCandidate] = Field(default_factory=list, max_length=12)
-    window_evidence: list[GenreWindowEvidence] = Field(default_factory=list, max_length=12)
+    window_evidence: list[GenreWindowEvidence] = Field(default_factory=list, max_length=24)
     section_evidence: dict[str, list[str]] = Field(default_factory=dict)
+    primary_production_genre: GenreLayerEvidence | None = None
+    secondary_production_genres: GenreLayerEvidence | None = None
+    vocal_delivery_style: GenreLayerEvidence | None = None
+    vocal_genre_influences: GenreLayerEvidence | None = None
+    section_genre_evidence: list[GenreLayerEvidence] = Field(default_factory=list, max_length=24)
+    overall_genre_blend: GenreLayerEvidence | None = None
     confidence: Confidence = Confidence.UNKNOWN
     ambiguity: str | None = Field(default=None, max_length=240)
     method: str
@@ -421,6 +472,7 @@ class LyricsAnalysisSummary(APIModel):
     non_lexical_vocalization_tendency: str | None = None
     abstract_themes: list[str] = Field(default_factory=list, max_length=8)
     theme_confidence: Confidence = Confidence.UNKNOWN
+    themes_user_approved: bool = False
     warnings: list[str] = Field(default_factory=list)
     created_at: datetime | None = None
 
@@ -431,7 +483,12 @@ class LyricsSegment(APIModel):
     end_seconds: float = Field(gt=0)
     text: str = Field(max_length=1000)
     confidence: Confidence = Confidence.UNKNOWN
+    quality_decision: LyricsSegmentQualityDecision = LyricsSegmentQualityDecision.UNCERTAIN
+    avg_log_probability: float | None = Field(default=None, ge=-100.0, le=10.0)
     no_speech_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    compression_ratio: float | None = Field(default=None, ge=0.0, le=100.0)
+    repeated_token_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+    active_section_ids: list[str] = Field(default_factory=list, max_length=4)
     quality_flags: list[str] = Field(default_factory=list, max_length=12)
     user_edited: bool = False
 
@@ -443,7 +500,7 @@ class LyricsSegment(APIModel):
 
 
 class PrivateLyricsTranscript(APIModel):
-    schema_version: str = "1.0.0"
+    schema_version: str = "1.1.0"
     job_id: str
     language: str | None = None
     segments: list[LyricsSegment] = Field(default_factory=list, max_length=5000)
@@ -468,8 +525,8 @@ class DeepDiagnostics(APIModel):
 
 
 class AnalysisResult(APIModel):
-    schema_version: str = "1.2.0"
-    analysis_version: str = "0.3.0"
+    schema_version: str = "1.4.0"
+    analysis_version: str = "0.5.0"
     job_id: str
     capabilities: list[str]
     requested_mode: str
@@ -572,6 +629,7 @@ class PromptEngineMode(StrEnum):
 class GenreInterpretationMode(StrEnum):
     STRICT_TOP = "strict_top"
     BLEND = "blend"
+    DETECTED_LAYERED = "detected_layered"
     USER_SELECTED_ONLY = "user_selected_only"
     DISABLED = "disabled"
 
@@ -645,6 +703,8 @@ class PromptPreferences(APIModel):
             raise ValueError("genre_transfer requires a nonblank targetGenre")
         if self.candidate_count not in {1, 3}:
             raise ValueError("candidateCount must be 1 or 3")
+        if self.prompt_engine_mode == PromptEngineMode.RELIABLE:
+            self.candidate_count = 1
         if self.instrumental:
             self.lyrics_influence_mode = LyricsInfluenceMode.NONE
             self.include_lyrical_themes = False
@@ -666,6 +726,17 @@ class OmittedFact(APIModel):
     reason: str
 
 
+class PromptFact(APIModel):
+    path: str = Field(min_length=1, max_length=160)
+    value: Any
+    role: str = Field(
+        pattern=(
+            r"^(observed|user-entered|user-accepted|preference|detected|"
+            r"detected-ambiguous|detected-component-influence)$"
+        )
+    )
+
+
 class PromptGenerationParameters(APIModel):
     sampling: bool = False
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
@@ -683,9 +754,21 @@ class LocalPromptCandidate(APIModel):
     seed: int | None = None
     model_id: str
     generation_parameters: PromptGenerationParameters
-    facts_used: list[str] = Field(default_factory=list, max_length=100)
+    facts_used: list[PromptFact] = Field(default_factory=list, max_length=100)
     creative_directions_used: list[str] = Field(default_factory=list, max_length=20)
     warnings: list[str] = Field(default_factory=list, max_length=20)
+
+    @field_validator("facts_used", mode="before")
+    @classmethod
+    def migrate_legacy_fact_paths(cls, values: Any) -> Any:
+        if isinstance(values, list):
+            return [
+                {"path": value, "value": None, "role": "observed"}
+                if isinstance(value, str)
+                else value
+                for value in values
+            ]
+        return values
 
 
 class PromptEvidence(APIModel):
@@ -700,9 +783,15 @@ class PromptEvidence(APIModel):
     vocal_presence: str | None = Field(default=None, max_length=60)
     vocal_density: str | None = Field(default=None, max_length=60)
     approved_vocal_descriptors: list[str] = Field(default_factory=list, max_length=6)
+    vocal_genre_influences: list[str] = Field(default_factory=list, max_length=6)
+    overall_genre_blend: str | None = Field(default=None, max_length=240)
     structure_summary: list[str] = Field(default_factory=list, max_length=10)
     section_energy_summary: list[str] = Field(default_factory=list, max_length=10)
     production_descriptors: list[str] = Field(default_factory=list, max_length=8)
+    low_end_weight: str | None = Field(default=None, max_length=80)
+    stereo_character: str | None = Field(default=None, max_length=80)
+    energy_arc: str | None = Field(default=None, max_length=80)
+    repetition_character: str | None = Field(default=None, max_length=120)
     harmonic_character: list[str] = Field(default_factory=list, max_length=6)
     target_genre: str | None = Field(default=None, max_length=120)
     target_mood: str | None = Field(default=None, max_length=120)
@@ -725,7 +814,7 @@ class PromptPackage(APIModel):
     exclusions: list[str]
     arrangement_blueprint: list[str]
     rationale: list[PromptRationale]
-    facts_used: list[str]
+    facts_used: list[PromptFact]
     facts_omitted: list[OmittedFact]
     warnings: list[str] = Field(default_factory=list)
     engine_mode: PromptEngineMode = PromptEngineMode.RELIABLE
@@ -736,6 +825,57 @@ class PromptPackage(APIModel):
     generation_parameters: PromptGenerationParameters = Field(default_factory=PromptGenerationParameters)
     validation_warnings: list[str] = Field(default_factory=list)
     deterministic_fallback_used: bool = False
+
+    @field_validator("facts_used", mode="before")
+    @classmethod
+    def migrate_legacy_fact_paths(cls, values: Any) -> Any:
+        if isinstance(values, list):
+            return [
+                {"path": value, "value": None, "role": "observed"}
+                if isinstance(value, str)
+                else value
+                for value in values
+            ]
+        return values
+
+    @model_validator(mode="after")
+    def selected_candidate_is_consistent(self) -> PromptPackage:
+        if not self.candidates:
+            if self.selected_candidate_id is not None:
+                raise ValueError("selectedCandidateId requires a prompt candidate")
+            return self
+        candidate_ids = [candidate.id for candidate in self.candidates]
+        if len(set(candidate_ids)) != len(candidate_ids):
+            raise ValueError("prompt candidate IDs must be unique")
+        if self.selected_candidate_id is None:
+            raise ValueError("a generated prompt package requires a selected candidate")
+        selected = next(
+            (
+                candidate
+                for candidate in self.candidates
+                if candidate.id == self.selected_candidate_id
+            ),
+            None,
+        )
+        if selected is None:
+            raise ValueError("selectedCandidateId must reference a prompt candidate")
+        if self.primary_prompt != selected.prompt:
+            raise ValueError("primaryPrompt must match the selected prompt candidate")
+        if self.engine_mode == PromptEngineMode.RELIABLE:
+            if any(candidate.engine_mode != PromptEngineMode.RELIABLE for candidate in self.candidates):
+                raise ValueError("Reliable packages may contain only Reliable candidates")
+        elif self.deterministic_fallback_used:
+            if any(candidate.engine_mode != PromptEngineMode.RELIABLE for candidate in self.candidates):
+                raise ValueError("A deterministic fallback may contain only Reliable candidates")
+            if not any("fallback" in warning.casefold() for warning in self.validation_warnings):
+                raise ValueError("A deterministic fallback must be declared in validationWarnings")
+        elif any(candidate.engine_mode != self.engine_mode for candidate in self.candidates):
+            raise ValueError("A local-writer package must contain candidates from its reported engine mode")
+        return self
+
+
+class PromptSelection(APIModel):
+    candidate_id: str = Field(min_length=1, max_length=160)
 
 
 class GenreCandidateUpdate(APIModel):

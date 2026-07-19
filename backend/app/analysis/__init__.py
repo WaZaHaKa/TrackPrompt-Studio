@@ -1,5 +1,7 @@
-"""Deterministic, CPU-oriented audio analyzers."""
+"""Leaf analysis modules; orchestration lives in :mod:`app.analysis.pipeline`.
 
-from .pipeline import AnalysisCancelled, analyze_audio
-
-__all__ = ["AnalysisCancelled", "analyze_audio"]
+This initializer intentionally has no re-exports. Importing ``app.analysis.core``
+must not initialize the orchestration pipeline, optional adapters, or FastAPI
+application. Callers that need orchestration symbols import them directly from
+``app.analysis.pipeline``.
+"""

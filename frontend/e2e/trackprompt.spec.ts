@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
@@ -26,6 +27,20 @@ test('analyzes, corrects a section, composes a prompt, copies, and deletes', asy
   await expect(completed).toBeVisible()
   await expect(page.getByText('Tempo', { exact: true }).locator('..')).toContainText('BPM')
   await expect(page.getByRole('tab', { name: 'Timeline' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Blender Visualizer' })).toBeVisible()
+  const cueDownload = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export cue sheet' }).click()
+  const downloadedCue = await cueDownload
+  expect(downloadedCue.suggestedFilename()).toMatch(/^trackprompt-[0-9a-f-]+-visual-cues\.json$/)
+  const cuePath = await downloadedCue.path()
+  expect(cuePath).not.toBeNull()
+  if (cuePath === null) {
+    throw new Error('Playwright did not retain the downloaded cue sheet.')
+  }
+  const cuePayload = JSON.parse(await readFile(cuePath, 'utf8')) as Record<string, unknown>
+  expect(cuePayload.schemaVersion).toBe('1.1.0')
+  expect(JSON.stringify(cuePayload)).not.toContain('120bpm_click.wav')
+  await expect(page.getByText(/Exported \d+ beats, \d+ onsets/)).toBeVisible()
 
   await page.getByRole('tab', { name: 'Timeline' }).click()
   await page.getByRole('button', { name: /Edit section/ }).first().click()
@@ -36,7 +51,7 @@ test('analyzes, corrects a section, composes a prompt, copies, and deletes', asy
   await page.getByRole('tab', { name: 'Prompt' }).click()
   const editor = page.getByLabel('Editable primary prompt')
   if ((await editor.inputValue()).length === 0) {
-    await page.getByRole('button', { name: 'Generate prompt' }).click()
+    await page.getByRole('button', { name: 'Generate candidates', exact: true }).click()
   }
   await expect(editor).not.toHaveValue('')
   await page.getByRole('button', { name: 'Copy prompt' }).click()

@@ -9,6 +9,7 @@ import {
   getAnalysis,
   getCapabilities,
   patchAnalysis,
+  selectPromptCandidate,
   subscribeToAnalysisEvents,
 } from './api'
 import { ProgressPanel } from './components/ProgressPanel'
@@ -177,6 +178,13 @@ export default function App() {
     return next
   }
 
+  const persistPromptCandidate = async (candidateId: string): Promise<PromptPackage> => {
+    if (!job) throw new Error('The analysis job is no longer available.')
+    const next = await selectPromptCandidate(job.jobId, candidateId)
+    setJob((current) => current ? { ...current, promptPackage: next } : current)
+    return next
+  }
+
   const removeAnalysis = async (): Promise<void> => {
     if (!job) return
     setDeleting(true)
@@ -242,6 +250,8 @@ export default function App() {
           onUpdateFact={updateFact}
           onUpdateFacts={updateFacts}
           onGeneratePrompt={requestPrompt}
+          onSelectPromptCandidate={persistPromptCandidate}
+          onRefreshAnalysis={async () => Boolean(await refreshJob(job.jobId))}
           onDelete={removeAnalysis}
         />
       ) : (

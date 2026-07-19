@@ -21,25 +21,17 @@ WORKDIR /app
 
 COPY requirements.lock.txt ./
 RUN python -m pip install --no-cache-dir --upgrade pip==25.1.1 \
-    && python -m pip install --no-cache-dir -r requirements.lock.txt \
-    && python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu128 \
-         torch==2.7.1 torchaudio==2.7.1 \
-    && python -m pip install --no-cache-dir \
-         demucs==4.0.1 \
-         transformers==4.53.2 \
-         tokenizers==0.21.2 \
-         huggingface-hub==0.33.4 \
-         safetensors==0.5.3 \
-         sentencepiece==0.2.0 \
-         librosa==0.11.0 \
-         scikit-learn==1.7.0 \
-         faster-whisper==1.2.1 \
-         ctranslate2==4.6.0
+    && python -m pip install --no-cache-dir -r requirements.lock.txt
+RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu128 \
+         torch==2.7.1 torchaudio==2.7.1
+COPY requirements.full-gpu.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.full-gpu.txt \
+    && python -m pip check
 
 COPY app ./app
 RUN mkdir -p /data/models/demucs /data/models/genre /data/models/lyrics \
     && chown -R trackprompt:trackprompt /app /data \
-    && python -c "import torch,transformers,faster_whisper,ctranslate2,demucs; print(torch.__version__, torch.version.cuda, transformers.__version__, ctranslate2.__version__)"
+    && python -m app.diagnostics.dependencies
 
 USER trackprompt
 EXPOSE 8000

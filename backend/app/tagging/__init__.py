@@ -1,3 +1,5 @@
-from .music import FakeMusicTaggerAdapter, TransformersClapMusicTagger, create_music_tagger
+"""Optional music-tagging adapters.
 
-__all__ = ["FakeMusicTaggerAdapter", "TransformersClapMusicTagger", "create_music_tagger"]
+Concrete implementations are imported from :mod:`app.tagging.music` so package
+initialization remains independent of analysis orchestration.
+"""

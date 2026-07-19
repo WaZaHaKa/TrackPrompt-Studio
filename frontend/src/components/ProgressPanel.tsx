@@ -26,6 +26,7 @@ const CORE_STAGES: Array<{ key: AnalysisStage; label: string; detail: string }> 
   { key: 'analyzing_harmony', label: 'Analyzing harmony', detail: 'Estimating tonal center, mode, and harmonic character.' },
   { key: 'segmenting_structure', label: 'Mapping the arrangement', detail: 'Finding repeated regions, transitions, and the energy arc.' },
   { key: 'analyzing_production', label: 'Reading the production', detail: 'Measuring dynamics, spectral balance, width, and texture.' },
+  { key: 'extracting_visual_features', label: 'Preparing visual controls', detail: 'Extracting bounded continuous curves for local Blender animation.' },
 ]
 
 const DEEP_STAGES: Array<{ key: AnalysisStage; label: string; detail: string }> = [

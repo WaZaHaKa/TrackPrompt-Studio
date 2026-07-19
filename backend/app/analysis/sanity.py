@@ -80,7 +80,113 @@ def _sanitize_features(model: BaseModel) -> bool:
     return changed
 
 
-def validate_analysis_result(result: AnalysisResult) -> AnalysisResult:
+def _genre_edit_evidence(result: AnalysisResult) -> bool:
+    genre = result.genre_analysis
+    if genre is None:
+        return False
+    candidates = [
+        *genre.broad_candidates,
+        *genre.subgenre_candidates,
+        *genre.descriptive_tags,
+    ]
+    return genre.disabled_for_prompt or any(
+        candidate.user_edited
+        or candidate.accepted
+        or candidate.rejected
+        or candidate.locked
+        or candidate.custom
+        for candidate in candidates
+    )
+
+
+def _project_authoritative_genre(result: AnalysisResult) -> None:
+    """Derive compatibility style fields from the authoritative genre object."""
+    genre = result.genre_analysis
+    if genre is None:
+        return
+    candidate_groups = [
+        genre.broad_candidates,
+        genre.subgenre_candidates,
+        genre.descriptive_tags,
+    ]
+    candidates = [candidate for group in candidate_groups for candidate in group]
+    for candidate in candidates:
+        if candidate.accepted and candidate.rejected:
+            candidate.accepted = False
+            _record(result, "genre_candidate_review_state", "a rejected genre candidate was unaccepted")
+    expected_edited = _genre_edit_evidence(result)
+    if genre.user_edited != expected_edited:
+        genre.user_edited = expected_edited
+        _record(result, "genre_edit_state", "the aggregate genre edit marker was reconciled")
+    genre.user_accepted = any(candidate.accepted for candidate in candidates)
+    accepted_labels = {
+        candidate.label
+        for candidate in candidates
+        if candidate.accepted and not candidate.rejected
+    }
+    custom_labels = {candidate.label for candidate in candidates if candidate.custom}
+    for layer in (
+        genre.primary_production_genre,
+        genre.secondary_production_genres,
+        genre.vocal_delivery_style,
+        genre.vocal_genre_influences,
+        genre.overall_genre_blend,
+        *genre.section_genre_evidence,
+    ):
+        if layer is None:
+            continue
+        values = [layer.value] if isinstance(layer.value, str) else layer.value
+        layer.accepted = any(value in accepted_labels for value in values)
+        layer.source = "user_entered" if any(value in custom_labels for value in values) else "detected"
+        layer.enabled_for_prompt = not genre.disabled_for_prompt
+    if genre.overall_genre_blend is not None and genre.primary_production_genre is not None:
+        genre.overall_genre_blend.accepted = genre.primary_production_genre.accepted
+
+    usable_broad = [candidate for candidate in genre.broad_candidates if not candidate.rejected]
+    top_broad = usable_broad[:3]
+    style = result.style_and_mood
+    style.broad_style = FeatureValue[list[str]](
+        value=[candidate.label for candidate in top_broad],
+        confidence=genre.confidence if top_broad else Confidence.UNKNOWN,
+        score=top_broad[0].similarity if top_broad else None,
+        method=(
+            "compatibility projection from authoritative genreAnalysis; "
+            "ranked audio-text similarity, not probability"
+        ),
+        alternatives=[candidate.label for candidate in usable_broad[1:5]],
+        warning=genre.ambiguity,
+        evidence_kind=(
+            EvidenceKind.AMBIGUOUS
+            if genre.ambiguity
+            else EvidenceKind.STRONG_ESTIMATE
+            if top_broad
+            else EvidenceKind.UNAVAILABLE
+        ),
+        user_edited=genre.user_edited,
+        user_accepted=genre.user_accepted,
+    )
+    style.genre_blend = FeatureValue[list[str]](
+        value=list(genre.blend_candidates),
+        confidence=genre.confidence if genre.blend_candidates else Confidence.UNKNOWN,
+        method="compatibility projection from authoritative genreAnalysis blend candidates",
+        warning=genre.ambiguity,
+        evidence_kind=(
+            EvidenceKind.AMBIGUOUS
+            if genre.ambiguity
+            else EvidenceKind.STRONG_ESTIMATE
+            if genre.blend_candidates
+            else EvidenceKind.UNAVAILABLE
+        ),
+        user_edited=genre.user_edited,
+        user_accepted=genre.user_accepted,
+    )
+
+
+def validate_analysis_result(
+    result: AnalysisResult,
+    *,
+    private_lyrics_artifact_available: bool | None = None,
+) -> AnalysisResult:
     """Downgrade contradictory fields before API serialization."""
     duration = max(0.0, float(result.file.duration_seconds))
     leading = result.signal_quality.leading_silence_seconds
@@ -157,6 +263,51 @@ def validate_analysis_result(result: AnalysisResult) -> AnalysisResult:
                     "deep_sections_match_adapter",
                     "missing section-level Deep evidence was marked unavailable",
                 )
+
+    _project_authoritative_genre(result)
+
+    if result.lyrics_summary is not None:
+        summary = result.lyrics_summary
+        valid_section_ids = {section.id for section in result.structure.sections}
+        active_ids = list(
+            dict.fromkeys(
+                section_id
+                for section_id in summary.active_section_ids
+                if section_id in valid_section_ids
+            )
+        )
+        if active_ids != summary.active_section_ids:
+            summary.active_section_ids = active_ids
+            _record(result, "lyrics_active_sections_exist", "invalid transcript section references were omitted")
+        if summary.segment_count == 0 and summary.transcript_available:
+            summary.transcript_available = False
+            summary.active_section_ids = []
+            _record(result, "lyrics_segment_count_matches_availability", "empty transcript availability was corrected")
+        if private_lyrics_artifact_available is False and (
+            summary.status == "completed" or summary.transcript_available
+        ):
+            summary.status = "artifact_missing"
+            summary.transcript_available = False
+            summary.segment_count = 0
+            summary.active_section_ids = []
+            summary.language = None
+            summary.language_confidence = Confidence.UNKNOWN
+            summary.vocal_word_density = None
+            summary.non_lexical_vocalization_tendency = None
+            summary.abstract_themes = []
+            summary.theme_confidence = Confidence.UNKNOWN
+            summary.themes_user_approved = False
+            artifact_warning = (
+                "The private transcript artifact is unavailable; transcript-derived lyrics "
+                "evidence was disabled."
+            )
+            if artifact_warning not in summary.warnings:
+                summary.warnings.append(artifact_warning)
+            _record(
+                result,
+                "lyrics_completed_requires_private_artifact",
+                "lyrics evidence was marked unavailable because its private artifact was missing",
+            )
 
     key = result.harmony.key
     alternative_fits = [

@@ -1,5 +1,9 @@
 # Analysis quality audit
 
+> Historical `0.2.0` audit retained for traceability. Current behavior and
+> verification are documented in [analysis-methods.md](analysis-methods.md) and
+> [full-feature-implementation-plan.md](full-feature-implementation-plan.md).
+
 ## Scope and traced path
 
 This audit covers analysis/schema version `0.2.0` / `1.1.0`. The reviewed path

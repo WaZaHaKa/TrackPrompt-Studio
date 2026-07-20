@@ -652,6 +652,27 @@ prompt text was printed or added to the repository.
 | Repository root | permitted real-track quality verifier | A 262.031-second local track completed in effective Deep mode with CUDA Demucs, six genre windows, honest low-confidence genre ambiguity, private lyrics review and section mapping, and all four exercised prompt configurations: Reliable strict, Reliable blend, Creative, and Experimental. Every selected candidate persisted identically through reload and both exports, no mode fell back, safety repairs were declared where exact reviewed evidence was initially omitted, and deletion was confirmed. Output remained sanitized. |
 | `frontend/` | `npm.cmd run test:e2e` | One Chromium scenario passed in 10.2 s: upload, analysis, section correction, prompt composition, copy, and complete deletion. |
 
+## Calibrated local and NVIDIA Brev rendering
+
+Run `WZHK-Media-Launcher.cmd` for calibrated profile creation, local
+preflight/dry-run/render controls, safe stop-after-current-chunk, and the
+provider-neutral cloud workflow. Generated profiles, render packages, image
+sequences, logs, and private media remain local and ignored by Git.
+
+The cloud path targets full NVIDIA Brev GPU VMs for Blender 5.2 headless
+rendering; it does not use NVIDIA NIM inference containers. Brev readiness is
+offline and provisioning fails closed until the installed CLI schema has been
+inspected, a bounded one-worker benchmark plan is hash/budget bound, and the
+operator supplies both confirmations. Private source audio is excluded from
+cloud packages and muxed locally after video-only output is verified.
+
+See [render calibration](docs/render-calibration.md),
+[render profiles](docs/render-profiles.md),
+[local performance mode](docs/local-performance-mode.md),
+[cloud rendering](docs/cloud-rendering.md), and
+[NVIDIA Brev rendering](docs/nvidia-brev-rendering.md) for the exact workflows
+and safety gates.
+
 ## Completely delete local data
 
 The UI's **Delete analysis** action is the preferred per-job deletion path. It

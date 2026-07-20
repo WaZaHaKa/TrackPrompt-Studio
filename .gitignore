@@ -44,6 +44,18 @@ test-fixtures/*
 # Blender visualizer smoke outputs are generated locally and may include media.
 test-output/
 
+# Authorized production image sequences and final media stay local.
+final-output/
+
+# Provider-neutral remote render packages may contain the scene and assets.
+render-packages/
+
+# Render profiles bind local approved-scene paths and hashes; keep generated profiles local.
+render-profiles/**/*.json
+render-profiles/**/*.txt
+render-profiles/**/*.md
+!render-profiles/README.md
+
 # Editors and operating systems
 .DS_Store
 Thumbs.db

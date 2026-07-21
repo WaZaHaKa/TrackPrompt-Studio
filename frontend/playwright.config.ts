@@ -4,6 +4,7 @@ const npmDevCommand = process.platform === 'win32' ? 'npm.cmd run dev' : 'npm ru
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: '**/mission-control/**',
   globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,

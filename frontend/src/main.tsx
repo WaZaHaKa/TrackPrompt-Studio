@@ -1,13 +1,26 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App'
-import './styles.css'
+import { MissionControlApp } from './mission-control'
+
+const AnalysisApp = lazy(async () => {
+  await import('./styles.css')
+  return import('./App')
+})
 
 const root = document.getElementById('root')
 if (!root) throw new Error('TrackPrompt Studio could not find its application root.')
 
+const workspace = new URLSearchParams(window.location.search).get('workspace')
+const showAnalysisWorkspace = workspace === 'analysis'
+document.title = showAnalysisWorkspace ? 'TrackPrompt Studio' : 'WZHK Media Mission Control'
+document.documentElement.dataset.workspace = showAnalysisWorkspace ? 'analysis' : 'mission-control'
+
 createRoot(root).render(
   <StrictMode>
-    <App />
+    {showAnalysisWorkspace ? (
+      <Suspense fallback={<main aria-busy="true">Loading TrackPrompt Studio…</main>}>
+        <AnalysisApp />
+      </Suspense>
+    ) : <MissionControlApp />}
   </StrictMode>,
 )

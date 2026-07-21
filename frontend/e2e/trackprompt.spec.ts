@@ -14,7 +14,7 @@ test('analyzes, corrects a section, composes a prompt, copies, and deletes', asy
   expect(existsSync(fixturePath), `Synthetic E2E fixture missing at ${fixturePath}. Run tools/generate_test_audio.py first.`).toBe(true)
 
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.goto('/')
+  await page.goto('/?workspace=analysis')
   await expect(page.getByRole('heading', { name: 'Choose your track' })).toBeVisible()
 
   await page.getByLabel('Audio file').setInputFiles(fixturePath)

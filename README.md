@@ -1,5 +1,25 @@
 # TrackPrompt Studio
 
+## WZHK Media Mission Control
+
+The primary local production-render interface is the modern React Mission
+Control. Double-click `WZHK-Media-Launcher.cmd`; it reuses a healthy local
+instance or starts the loopback-only backend on an available port, waits for
+health, and opens the browser. The render process continues when the tab closes.
+
+The React render flow is **Start a new render -> recommended profile -> output
+folder -> preflight -> Authorize now -> two confirmations -> Start render ->
+reconnectable live progress -> Open output**. Hashes, JSON, PowerShell commands,
+and authorization tokens stay under Advanced details. The Encode page reports
+verified-sequence readiness honestly; starting the reviewed encode/mux remains
+in the legacy interface until its React backend adapter is connected.
+
+- [React interface and architecture](docs/mission-control-react-ui.md)
+- [Casual-user guide](docs/mission-control-user-guide.md)
+- [Real-time event contract](docs/mission-control-realtime-events.md)
+- [Troubleshooting](docs/mission-control-troubleshooting.md)
+- Legacy fallback: `WZHK-Media-Launcher-Legacy.cmd`
+
 TrackPrompt Studio is a local-first web application that turns a permitted audio
 file into a transparent music-analysis report, an editable arrangement timeline,
 and validated local prompt candidates suitable for pasting into Suno, with a

@@ -1,0 +1,101 @@
+# WZHK Media Mission Control user guide
+
+Mission Control is designed so the normal local workflow does not require a
+PowerShell command, JSON edit, hash, Blender command, or authorization token.
+
+## Launch
+
+Double-click `WZHK-Media-Launcher.cmd`.
+
+The launcher reopens a healthy existing instance when possible. Otherwise it
+selects an available local port, starts the backend, waits for it to become
+ready, and opens the app. You can close the browser and return with the same
+launcher; an active render continues in the backend.
+
+![Mission Control home](images/mission-control-home.png)
+
+## Start a render
+
+1. Choose **Start a new render** on Home.
+2. Confirm **Trip to Andromeda** and its approved scene.
+3. Keep **720p Hyper Optimized** for the fastest calibrated local result, or
+   choose another measured saved profile.
+4. Choose **Browse**, select a destination, and review its classification.
+   - An empty folder can be used directly.
+   - A matching prior render can resume.
+   - When files conflict, Mission Control lists them and offers **Create a new
+     render folder here**.
+5. Choose **Run preflight**. Resolve any red check; amber authorization status
+   is handled in the next step.
+6. Choose **Authorize now** if shown.
+   - First choose **Review and continue** after checking the summary.
+   - Select **I understand this authorizes a full production render**, then
+     choose **Authorize render**.
+7. Choose **Start render**. Use **Run dry-run** instead when you only want to
+   inspect the resume plan.
+
+Mission Control creates the exact authorization record; do not copy the token
+from Advanced details into another profile or scene.
+
+## Follow progress
+
+![Mission Control live render](images/mission-control-render-progress.png)
+
+The live view shows percent, the exact frame when reported, ETA, active chunk,
+safe frame count, storage, and the newest valid preview. **In progress** frames
+belong to the active unpublished chunk. **Safe** frames were validated and
+published, so a resume will not render them again.
+
+During a long frame the heartbeat continues with current-frame elapsed time and
+renderer status. **Reconnecting** means the browser is restoring its stream;
+the last known state stays visible and the render is not restarted.
+
+Choose **Request stop after current chunk** for a recoverable stop. The renderer
+finishes, validates, and publishes that chunk before pausing. You may cancel the
+request before it is honored. A safely paused job appears under Jobs with
+**Resume**.
+
+## Encode and open the result
+
+After all expected frames are verified, choose **Encode video** to review the
+sequence and local FFmpeg readiness. In this migration increment the React
+backend does not yet start the reviewed encoder or private-audio mux, so its
+encode action remains disabled instead of simulating success. Use **Open
+frames** or the preserved legacy interface for the existing reviewed
+encode/mux workflow. The image sequence remains the master clock.
+
+## Calibration
+
+The existing measured profiles do not require another 73-candidate run. The
+Calibration page shows the machine, latest evidence, recommendation, finalist
+comparison, and documented caveats. It can save a new bounded offline plan.
+Candidate execution and review persistence are intentionally reported as
+unavailable until their existing tooling is connected to the local API; use
+the preserved legacy interface for those actions. A missing historical plan
+is shown as a recoverable error rather than closing Mission Control.
+
+## Maximize local render performance
+
+Settings offers **Maximize local render performance**. After explicit
+confirmation it uses the Windows High Performance plan, prevents sleep, and
+uses High (never Realtime) Blender priority. Review AC power and temperature.
+Mission Control records and restores the previous state afterward; **Restore
+now** is available when manual recovery is needed.
+
+## Cloud rendering
+
+The Cloud page is inspection-only until its local package registry and a live
+Brev environment are verified. It reports local tooling, CLI readiness,
+sanitized-package status, and the offline planning boundary. Package creation,
+validation, provisioning, and fleet actions are disabled; none of these
+states represents a running cloud job or contacts a billable service.
+
+## Advanced details and legacy fallback
+
+Enable Advanced details only when diagnosing a problem or confirming an exact
+identity. It reveals hashes, local paths, process identity, raw logs, and the
+authorization token without changing safety.
+
+If the React launcher cannot be repaired immediately, use
+`WZHK-Media-Launcher-Legacy.cmd`. The legacy PowerShell TUI remains a fallback,
+not the preferred workflow.

@@ -1,247 +1,152 @@
-# WZHK Media — TrackPrompt Mission Control
+# WZHK Media Mission Control
 
-A modular, keypad-driven PowerShell wrapper around the existing
-`render-trackprompt-final.ps1`.
+Mission Control is TrackPrompt Studio's modern local production-render
+interface. It keeps the validated PowerShell/Python/Blender engine authoritative
+while presenting profiles, preflight, authorization, progress, safe stop, and
+resume as a guided React workflow.
 
-## Install
+## Launch
 
-Extract this package into the root of:
-
-```text
-C:\Users\theon\GitHub\TrackPrompt-Studio
-```
-
-The resulting paths should include:
+Double-click:
 
 ```text
 WZHK-Media-Launcher.cmd
-wzhk-media-control-center.ps1
-tools\watch-trackprompt-final-render.ps1
-tools\test-wzhk-mission-control.ps1
-tools\wzhk-launcher\WZHK.UI.psm1
-tools\wzhk-launcher\WZHK.Discovery.psm1
-tools\wzhk-launcher\WZHK.Profiles.psm1
-tools\wzhk-launcher\WZHK.ProfileBuilder.psm1
-tools\wzhk-launcher\WZHK.Execution.psm1
-tools\wzhk-launcher\WZHK.Calibration.psm1
-tools\wzhk-launcher\WZHK.Performance.psm1
-tools\wzhk-launcher\WZHK.Outsource.psm1
-tools\wzhk-launcher\WZHK.Cloud.psm1
-tools\wzhk-launcher\WZHK.Brev.psm1
-cloud_render\cli.py
-render-profiles\README.md
 ```
 
-The package does not replace `render-trackprompt-final.ps1`. It wraps it.
+The launcher:
 
-## Start with one command
+1. serializes concurrent launcher attempts;
+2. reopens a healthy existing Mission Control instance;
+3. rebuilds the ignored local React bundle when its content fingerprint changes,
+   including source deletion, root configuration, and public assets;
+4. selects port 8765 or the next available loopback port;
+5. starts the backend independently of the browser;
+6. waits for `/api/mission-control/health`;
+7. opens the correct local URL;
+8. shows a native Windows error only when startup genuinely fails.
 
-From the repository root:
+Runtime descriptors and logs stay under the ignored
+`.trackprompt-data\mission-control\` directory. The API binds to `127.0.0.1`
+and is not intended for LAN or public exposure.
 
-```powershell
-.\WZHK-Media-Launcher.cmd
-```
-
-From anywhere:
-
-```text
-C:\Users\theon\GitHub\TrackPrompt-Studio\WZHK-Media-Launcher.cmd
-```
-
-You may pin the CMD file to Start or create a desktop shortcut.
-
-## Noninteractive validation
-
-To validate parser compatibility, module imports, required files, and read-only
-package/profile discovery without opening a browser or starting Blender, run:
+Validate startup without opening the browser or starting Blender:
 
 ```powershell
 .\WZHK-Media-Launcher.cmd -ValidateOnly
 ```
 
-The automated Windows PowerShell 5.1 regression suite also exercises synthetic
-profile, hash, authorization-token, output-progress, and CMD-forwarding cases:
+Validation executes each Python candidate until one can import the Mission
+Control server and print its CLI help without starting it. It also requires
+either an exact current React build fingerprint or a discoverable npm command
+that can be used by normal startup to rebuild the interface. It does not run
+the frontend build itself.
+
+## Normal workflow
+
+```text
+Double-click WZHK-Media-Launcher.cmd
+-> START A NEW RENDER
+-> choose the recommended saved profile
+-> browse for an output folder
+-> review preflight
+-> AUTHORIZE NOW when required
+-> complete both confirmations
+-> START RENDER
+-> follow reconnectable live progress
+-> OPEN OUTPUT
+```
+
+After a complete sequence, **Encode video** opens an honest readiness view. The
+React encode/mux adapter is not connected in this increment, so the production
+encode action stays disabled and the legacy interface remains the path for the
+reviewed encoder. Calibration candidate run/review and cloud package mutations
+have the same explicit unavailable boundary.
+
+Simple mode hides file hashes, local paths, JSON, authorization token, process
+identity, and raw logs. Advanced details makes those available without changing
+the underlying safety rules.
+
+## Preserved render contract
+
+The React interface does not replace or weaken:
+
+- exact frozen scene and saved-file profile SHA-256 binding;
+- separate two-confirmation authorization records;
+- renderer preflight and storage policy;
+- one-GPU mutex and one full Blender process by default;
+- resumable calibrated chunks and in-flight checkpoints;
+- validation and atomic frame publication;
+- no-overwrite policy for valid frames;
+- identity-bound stop after the current chunk;
+- exact frame-sequence encoding and local private-audio mux;
+- calibration evidence and reversible Exclusive Performance Mode;
+- provider-neutral/offline cloud preparation boundaries.
+
+An unauthorized valid profile is presented as **Authorization required** with
+an inline **Authorize now** action. The backend writes the exact sibling record
+only after both confirmations; the user never types the token.
+
+## Primary sections
+
+- **Home:** readiness, current work, recommendation, time, and storage.
+- **Render:** guided setup and live progress.
+- **Profiles:** discovered saved JSON profiles and authorization state.
+- **Calibration:** measured evidence and bounded offline plan creation; candidate run/review unavailable in React.
+- **Jobs:** persisted history, safe stop, and exact resume.
+- **Encode:** verified sequence/readiness view; production encode/mux disabled until its adapter is connected.
+- **Cloud:** honest offline readiness; package and live actions disabled until connected and verified.
+- **Settings:** local paths, diagnostics, theme, and reversible performance mode.
+
+## Legacy fallback
+
+The former keypad-driven PowerShell interface remains available at:
+
+```text
+WZHK-Media-Launcher-Legacy.cmd
+```
+
+It is a temporary fallback, not the preferred workflow. Its underlying modules
+remain in `tools\wzhk-launcher\`, and `wzhk-media-control-center.ps1
+-ValidateOnly` continues to validate those modules and the render engine.
+
+## Tests
+
+The implementation has separate backend state/event/authorization tests,
+React workflow tests, launcher tests, and a fake-renderer Playwright flow. The
+launcher suite covers unusable-Python fallback and content-addressed rebuild
+invalidation for source deletion, root entry files, and public assets. The fake
+renderer covers heartbeat, atomic preview publication, safe stop, browser
+reload, exact resume, and completion without launching a complete Blender
+timeline; the browser test also verifies that unsupported encode is labelled
+and disabled honestly.
+
+Relevant commands:
 
 ```powershell
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\test-wzhk-react-launcher.ps1
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
   -File .\tools\test-wzhk-mission-control.ps1
+
+cd backend
+.\.venv\Scripts\python.exe -m pytest
+
+cd ..\frontend
+npm test -- --run
+npm run test:e2e
 ```
 
-## Controls
+Automated workflows do not provision Brev, contact billable services, or start
+the full production frame range.
 
-- Numpad `1`–`9`: select a menu item.
-- Arrow keys: move selection.
-- Page Up/Page Down or Left/Right: move between pages when a menu has more
-  than nine actions.
-- Enter: confirm the highlighted item.
-- Escape: return.
-- First confirmation: `Y` locks the selected mode; `N` returns to fix it.
-- Final confirmation: `Y` executes; `N` cancels.
+## Documentation
 
-Pressing a digit only moves the highlight. Mission Control never executes that
-item until Enter confirms it.
-
-## Reusable render profiles
-
-Choose `CREATE NEW RENDER PROFILE` to start from FULL HD FAST, 1440P BALANCED,
-4K BALANCED, 4K HIGH, 4K ULTRA, or CUSTOM. The 13 keyboard-driven stages expose
-identity, frozen scene, resolved resolution, timeline, quality, supported
-Blender 5.2 EEVEE settings, image sequence, color management, chunk/resume
-safety, output policy, encoding, dashboard preferences, and final review.
-
-Generated profiles are valid schema 1.1.0 JSON stored beneath
-`render-profiles\<project>\`. Each save is atomic and has a sibling
-`.summary.txt`. Generated profiles and authorization records stay local and are
-ignored by Git because they contain absolute local scene paths and hashes.
-Final-media encoding stays disabled until the profile binds an exact approved
-audio SHA-256 and the full approved timeline clock. Pixel aspect and the safe
-published-frame subdirectory are included in resume compatibility.
-
-`LOAD / EDIT SAVED PROFILE` supports inspect, edit, duplicate, rename, compare,
-summary export, preflight, dry-run, render, authorization, and explicitly
-confirmed deletion. Editing or renaming changes the exact saved-file SHA-256,
-so an older authorization record or output manifest no longer matches. Parseable
-invalid profiles remain selectable only in this manager for validation-error
-inspection, repair through the builder, or two-confirmation deletion; render,
-preflight, dry-run, compare, and authorization selectors keep them disabled.
-Saved-profile workflows use the scene identity stored in the profile and do not
-require choosing a preparation package at startup. Preparation selection is
-requested lazily when creating a new profile.
-
-The authorization request records only the token hash and exact scene/profile
-hash preview. Mission Control creates the local authorization record only after
-two explicit Y confirmations. There is no wildcard authorization.
-
-Saved profiles also have command-line entry points:
-
-```powershell
-.\WZHK-Media-Launcher.cmd -ListProfiles
-
-.\WZHK-Media-Launcher.cmd -ValidateProfile `
-  -ProfilePath ".\render-profiles\trip-to-andromeda\4k-balanced.json"
-
-.\WZHK-Media-Launcher.cmd -RenderProfile `
-  -ProfilePath ".\render-profiles\trip-to-andromeda\4k-balanced.json"
-```
-
-The render command remains interactive: it refuses redirected input and still
-requires a valid exact authorization record plus both render confirmations.
-
-## Workflow
-
-Mission Control also exposes calibration, saved-profile generation,
-provider-neutral cloud primitives, NVIDIA Brev readiness and bounded benchmark
-preparation, exclusive performance mode, and identity-bound
-stop-after-current-chunk controls. The top-level menu is paginated, so actions
-ten and later remain reachable with arrows or Page Up/Page Down.
-
-## Current capability matrix
-
-| Capability | Status | Important boundary |
-| --- | --- | --- |
-| Local calibration, profiles, preflight, dry run, render, and local sequence encode | Implemented local workflows | Rendering and encoding still require their exact confirmations |
-| Sanitized remote package | Offline local workflow | Produces the established remote-package schema; use the explicit offline bridge before cloud-manifest validation |
-| Cloud manifest, scheduler, leases, retry/quarantine, storage, and cost ranking | Offline-tested primitives | No provider or billable side effect |
-| Worker | Offline mock plus bounded Blender subprocess runtime | Production entrypoint is fake-runner tested; it has not been executed on a Brev VM or against the frozen production scene |
-| NVIDIA Brev | Readiness and fail-closed adapter | No verified local CLI capability report, live benchmark, winning GPU, or production fleet |
-| Benchmark tournament | Preparation and offline ranking only | `PREPARED BUT NOT EXECUTED`; supplied measurements are not live results |
-| Hybrid | Static disjoint planning plus shared-queue/conflict primitives | The local production renderer does not yet claim the cloud scheduler queue |
-| Cloud video encode / returned-master audio mux | Argument plans only | The executable Mission Control encoder currently starts from a verified local frame sequence |
-| Worker termination | Tested controller primitive | No active reconciler; an already known live instance requires manual teardown |
-| Thermal/memory protection | Snapshot and manual safe-stop controls | No continuous watchdog automatically writes a stop marker |
-
-The exact copy-paste offline cloud commands, including package adaptation,
-manifest validation, scheduler setup, mock work, tournament ranking, media
-plans, and return import, are in
-[`docs/cloud-rendering.md`](docs/cloud-rendering.md). No runnable live
-provisioning command is documented.
-
-Focused operator documentation:
-
-- [`docs/render-calibration.md`](docs/render-calibration.md)
-- [`docs/render-profiles.md`](docs/render-profiles.md)
-- [`docs/local-performance-mode.md`](docs/local-performance-mode.md)
-- [`docs/cloud-rendering.md`](docs/cloud-rendering.md)
-- [`docs/nvidia-brev-rendering.md`](docs/nvidia-brev-rendering.md)
-- [`docs/cloud-render-privacy.md`](docs/cloud-render-privacy.md)
-- [`docs/cloud-render-recovery.md`](docs/cloud-render-recovery.md)
-- [`docs/cloud-render-cost-model.md`](docs/cloud-render-cost-model.md)
-
-1. **Mode Confirmation**
-   - Select preflight, dry-run/resume plan, production render, visual watcher,
-     output viewer, or another preparation package.
-   - Select the authorized render profile and output/resume target.
-   - Review scene, hashes, counts, resolution, frame contract, progress,
-     authorization state, and watcher state inside one framed screen.
-   - Confirm with `Y`, or press `N` to fix the mode.
-   - Complete a second final Y/N confirmation.
-
-2. **The Frame**
-   - Runs the existing renderer in a child PowerShell process.
-   - Streams all process output inside the WZHK console frame.
-   - Production mode automatically starts the browser progress dashboard.
-   - The dashboard shows the newest frame, rendered and atomically published
-     progress, movie position, active chunk, rolling speed, ETA, and Blender log.
-
-3. **Done**
-   - A short neon/90s ASCII celebration appears after successful completion.
-   - Failures produce a framed error and preserve the wrapper log.
-
-## Safety
-
-The wrapper does not bypass or weaken the existing production renderer. The
-existing exact authorization token, scene/profile hash validation, one-GPU
-mutex, storage checks, atomic chunk publication, and resume behavior remain in
-control. If a profile explicitly enables invalid-frame replacement, production
-does not overwrite the file: after authorization, mutex acquisition, and a
-fresh storage check, it moves invalid canonical frames into a recoverable
-checkpoint quarantine and renders the now-missing frames. Valid frames,
-ambiguous names, and dry-run/preflight state are never mutated.
-
-The wrapper never runs:
-
-```text
-git reset --hard
-git clean -fd
-docker compose down --volumes
-```
-
-It does not delete partial or completed outputs.
-
-## NVIDIA Brev safety boundary
-
-The cloud readiness path is offline. `-ValidateOnly` checks files, PowerShell
-5.1 parsing, module imports, and local profile/output discovery; it does not
-invoke Brev or contact a provider. `INSPECT INSTALLED BREV CLI` is a separate
-operator action limited to local version/help inspection.
-
-Mission Control prepares the bounded benchmark token:
-
-```text
-AUTHORIZE BREV BENCHMARK: <PACKAGE_SHA12> | <PROFILE_SHA12> | MAX $<BUDGET>
-```
-
-The token is case-sensitive and plan-specific. The current offline preparation
-path accepts the exact token, displays the offline plan, and asks only for
-`[Y] LOCK CLOUD PLAN`. It then reports `PREPARED BUT NOT EXECUTED` and exits
-without discovery, provisioning, upload, render, or network action. It never
-asks the operator to rehearse a billable confirmation and records no reusable
-live authorization.
-
-A separately authorized future live command must ask again with the exact live
-plan and must additionally require `[Y] PROVISION BILLABLE GPU WORKERS`. No
-runnable live provisioning command is documented by this readiness build.
-
-Brev full GPU VMs are the intended environment. NVIDIA NIM inference containers
-are not used for Blender. The installed Brev CLI, its official command schema,
-the VM image, production Blender worker environment, and automatic fleet
-controller remain unverified on this machine. Manual teardown is required for any instance
-created outside this preparation-only workflow; see
-[`docs/nvidia-brev-rendering.md`](docs/nvidia-brev-rendering.md).
-
-## 4K
-
-A genuine 4K mode appears only when the selected final-render preparation
-package contains a valid profile that resolves to `3840×2160` and a matching
-scene/profile authorization token. The wrapper does not rename or mutate a
-1440p profile to pretend it is 4K.
+- [React UI architecture](docs/mission-control-react-ui.md)
+- [User guide](docs/mission-control-user-guide.md)
+- [Real-time events](docs/mission-control-realtime-events.md)
+- [Troubleshooting](docs/mission-control-troubleshooting.md)
+- [Render profiles](docs/render-profiles.md)
+- [Calibration results](docs/render-calibration-results-20260720.md)
+- [Local performance mode](docs/local-performance-mode.md)
+- [NVIDIA Brev boundary](docs/nvidia-brev-rendering.md)

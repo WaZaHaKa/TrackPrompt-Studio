@@ -19,6 +19,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import __version__
 from .adapters import get_capabilities
 from .analysis.sanity import validate_analysis_result
+from .cinematic.router import CinematicAPIError
+from .cinematic.router import router as cinematic_router
 from .config import Settings
 from .editing import PatchError, apply_analysis_patch
 from .exports import analysis_json_export, analysis_markdown_export
@@ -62,6 +64,11 @@ from .schemas import (
 from .security import LocalRequestBoundaryMiddleware
 from .store import DeletionError, JobStore
 from .visualizer.compiler import VisualCueCompilationError, compile_visual_cues
+from .visualizer.presets import (
+    ResolvedVisualizerConfig,
+    VisualizerConfigRequest,
+    resolve_visualizer_config,
+)
 from .visualizer.schemas import (
     ALLOWED_FPS,
     CuePreferences,
@@ -304,7 +311,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=list(configured.cors_origins),
         allow_credentials=False,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "Range"],
         expose_headers=["Content-Range", "Accept-Ranges", "Content-Disposition"],
     )
@@ -327,6 +334,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @application.exception_handler(APIError)
     async def api_error_handler(_request: Request, exc: APIError) -> JSONResponse:
         payload = ErrorResponse(error=exc.detail).model_dump(mode="json", by_alias=True)
+        return JSONResponse(status_code=exc.status_code, content=payload)
+
+    @application.exception_handler(CinematicAPIError)
+    async def cinematic_api_error_handler(
+        _request: Request,
+        exc: CinematicAPIError,
+    ) -> JSONResponse:
+        payload = ErrorResponse(
+            error=ErrorDetail(code=exc.code, message=exc.safe_message, details=exc.details)
+        ).model_dump(mode="json", by_alias=True)
         return JSONResponse(status_code=exc.status_code, content=payload)
 
     @application.exception_handler(RequestValidationError)
@@ -403,6 +420,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             response.gpu_task_queue.active = manager.gpu_active
             response.gpu_task_queue.waiting = manager.gpu_waiting
         return response
+
+    application.include_router(cinematic_router)
+
+    @application.post(
+        "/api/visualizer/config/resolve",
+        response_model=ResolvedVisualizerConfig,
+    )
+    async def resolve_blender_visualizer_config(
+        config: VisualizerConfigRequest,
+    ) -> ResolvedVisualizerConfig:
+        return resolve_visualizer_config(config)
 
     @application.post("/api/analyses", response_model=JobResponse, status_code=202)
     async def create_analysis(

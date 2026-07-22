@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0.0",
+  "templateId": "trip-to-andromeda-story-v1",
+  "acts": [
+    {"id":"signal","name":"Signal","weight":0.10,"purpose":"A dormant orb detects a distant impossible transmission.","state":"signalled","environment":"dead_moon","cameraRig":"establishing_reveal","motion":"cinematic_drift"},
+    {"id":"awakening","name":"Awakening","weight":0.12,"purpose":"Ancient ruins answer and the orb awakens to agency.","state":"awakened","environment":"signal_ruins","cameraRig":"slow_orbit","motion":"weightless_float"},
+    {"id":"departure","name":"Departure","weight":0.14,"purpose":"The protagonist leaves safety and commits to the journey.","state":"travelling","environment":"launch_structure","cameraRig":"subject_follow","motion":"slow_acceleration"},
+    {"id":"gates","name":"Gates","weight":0.16,"purpose":"Successive thresholds test speed, scale, and resolve.","state":"travelling","environment":"gate_corridor","cameraRig":"gate_approach","motion":"controlled_chase"},
+    {"id":"rupture","name":"Rupture","weight":0.14,"purpose":"The route breaks and the protagonist is visibly damaged.","state":"damaged","environment":"broken_void","cameraRig":"rupture_fall","motion":"impact_recoil"},
+    {"id":"transformation","name":"Transformation","weight":0.18,"purpose":"The broken orb is rebuilt into a new luminous form.","state":"transforming","environment":"transformation_megastructure","cameraRig":"transformation_closeup","motion":"transformation_orbit"},
+    {"id":"arrival","name":"Arrival","weight":0.16,"purpose":"The transformed protagonist reaches Andromeda and finds scale beyond itself.","state":"arrived","environment":"andromeda_arrival","cameraRig":"arrival_reveal","motion":"cinematic_drift"}
+  ]
+}

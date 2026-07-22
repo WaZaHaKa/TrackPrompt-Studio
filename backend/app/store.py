@@ -363,6 +363,7 @@ class JobStore:
             "analysis.json", "detected-analysis.json", "prompt.json", "preferences.json",
             "lyrics.json", "detected-lyrics.json", "lyrics-summary.json",
             "visual-features.json",
+            "story-plan.json", "shot-plan.json", "art-direction-reviews.json",
         }:
             raise ValueError("Unsupported job payload filename")
         directory = self.job_dir(job_id)
@@ -380,7 +381,8 @@ class JobStore:
     def delete_json(self, job_id: str, filename: str) -> None:
         if filename not in {
             "prompt.json", "preferences.json", "lyrics.json", "detected-lyrics.json",
-            "lyrics-summary.json", "visual-features.json",
+            "lyrics-summary.json", "visual-features.json", "story-plan.json",
+            "shot-plan.json", "art-direction-reviews.json",
         }:
             raise ValueError("Unsupported job payload filename")
         path = self.job_dir(job_id) / filename
@@ -393,6 +395,7 @@ class JobStore:
             "analysis.json", "detected-analysis.json", "prompt.json", "preferences.json",
             "lyrics.json", "detected-lyrics.json", "lyrics-summary.json",
             "visual-features.json",
+            "story-plan.json", "shot-plan.json", "art-direction-reviews.json",
         }:
             raise ValueError("Unsupported job payload filename")
         path = self.job_dir(job_id) / filename

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
@@ -13,6 +13,21 @@ T = TypeVar("T")
 VISUAL_CUE_SHEET_SCHEMA_VERSION = "1.1.0"
 VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION = "1.0.0"
 BLENDER_VISUALIZER_PRESET = "abstract-geometry"
+BLENDER_VISUALIZER_DEFAULT_PRESET = "abstract-geometry"
+BLENDER_VISUALIZER_CONFIG_SCHEMA_VERSION: Literal["1.0.0"] = "1.0.0"
+
+
+class VisualizerPreset(StrEnum):
+    ABSTRACT_GEOMETRY = "abstract-geometry"
+    SPACE_JOURNEY = "space-journey"
+    SPACE_JOURNEY_STORY = "space-journey-story"
+
+
+BLENDER_VISUALIZER_PRESETS: tuple[VisualizerPreset, ...] = (
+    VisualizerPreset.ABSTRACT_GEOMETRY,
+    VisualizerPreset.SPACE_JOURNEY,
+    VisualizerPreset.SPACE_JOURNEY_STORY,
+)
 
 
 class APIModel(BaseModel):
@@ -174,6 +189,11 @@ class CapabilitiesResponse(APIModel):
     visual_cue_sheet_schema_version: str = VISUAL_CUE_SHEET_SCHEMA_VERSION
     visual_feature_artifact_schema_version: str = VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION
     blender_visualizer_preset: str = BLENDER_VISUALIZER_PRESET
+    blender_visualizer_default_preset: VisualizerPreset = VisualizerPreset.ABSTRACT_GEOMETRY
+    blender_visualizer_presets: list[VisualizerPreset] = Field(
+        default_factory=lambda: list(BLENDER_VISUALIZER_PRESETS)
+    )
+    blender_visualizer_config_schema_version: str = BLENDER_VISUALIZER_CONFIG_SCHEMA_VERSION
     network_features_enabled: bool = False
 
 
@@ -193,6 +213,11 @@ class HealthResponse(APIModel):
     visual_cue_sheet_schema_version: str = VISUAL_CUE_SHEET_SCHEMA_VERSION
     visual_feature_artifact_schema_version: str = VISUAL_FEATURE_ARTIFACT_SCHEMA_VERSION
     blender_visualizer_preset: str = BLENDER_VISUALIZER_PRESET
+    blender_visualizer_default_preset: VisualizerPreset = VisualizerPreset.ABSTRACT_GEOMETRY
+    blender_visualizer_presets: list[VisualizerPreset] = Field(
+        default_factory=lambda: list(BLENDER_VISUALIZER_PRESETS)
+    )
+    blender_visualizer_config_schema_version: str = BLENDER_VISUALIZER_CONFIG_SCHEMA_VERSION
     network_features_enabled: bool = False
 
 

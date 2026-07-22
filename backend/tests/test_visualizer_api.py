@@ -74,6 +74,70 @@ def test_visual_cue_contract_is_advertised_in_capabilities_and_openapi(
     assert capability_properties["visualCueSheetSchemaVersion"]["default"] == "1.1.0"
     assert capability_properties["visualFeatureArtifactSchemaVersion"]["default"] == "1.0.0"
     assert capability_properties["blenderVisualizerPreset"]["default"] == "abstract-geometry"
+    assert capability_properties["blenderVisualizerDefaultPreset"]["default"] == "abstract-geometry"
+    assert capability_properties["blenderVisualizerConfigSchemaVersion"]["default"] == "1.0.0"
+
+    config_operation = openapi["paths"]["/api/visualizer/config/resolve"]["post"]
+    config_schema = config_operation["requestBody"]["content"]["application/json"]["schema"]
+    request_refs = {variant["$ref"].rsplit("/", 1)[-1] for variant in config_schema["anyOf"]}
+    assert request_refs == {
+        "AbstractVisualizerConfigRequest",
+        "SpaceJourneyVisualizerConfigRequest",
+        "SpaceJourneyStoryVisualizerConfigRequest",
+    }
+    response_schema = config_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    response_refs = {
+        variant["$ref"].rsplit("/", 1)[-1] for variant in response_schema["anyOf"]
+    }
+    assert response_refs == {
+        "AbstractResolvedVisualizerConfig",
+        "SpaceJourneyResolvedVisualizerConfig",
+        "SpaceJourneyStoryResolvedVisualizerConfig",
+    }
+
+    component_schemas = openapi["components"]["schemas"]
+    abstract_request = component_schemas["AbstractVisualizerConfigRequest"]
+    space_request = component_schemas["SpaceJourneyVisualizerConfigRequest"]
+    assert abstract_request["properties"]["parameters"]["$ref"].endswith(
+        "/AbstractGeometryParameters"
+    )
+    assert space_request["properties"]["parameters"]["$ref"].endswith(
+        "/SpaceJourneyParameters"
+    )
+    assert space_request["required"] == ["preset"]
+    assert component_schemas["AbstractResolvedVisualizerConfig"]["properties"][
+        "parameters"
+    ]["$ref"].endswith("/AbstractGeometryParameters")
+    assert component_schemas["SpaceJourneyResolvedVisualizerConfig"]["properties"][
+        "parameters"
+    ]["$ref"].endswith("/SpaceJourneyParameters")
+    space_parameters = component_schemas["SpaceJourneyParameters"]["properties"]
+    assert set(space_parameters) == {
+        "cameraDistance",
+        "cameraOrbitSpeed",
+        "ringThickness",
+        "ringOcclusion",
+        "palette",
+        "glowStrength",
+        "shardDensity",
+        "fogDepth",
+        "bassResponse",
+        "drumResponse",
+        "vocalResponse",
+    }
+    assert space_parameters["cameraDistance"] == {
+        "type": "number",
+        "maximum": 40.0,
+        "minimum": 8.0,
+        "title": "Cameradistance",
+        "default": 18.0,
+    }
+    assert space_parameters["ringThickness"]["minimum"] == 0.02
+    assert space_parameters["ringThickness"]["maximum"] == 0.2
+    assert space_parameters["glowStrength"]["maximum"] == 4.0
+    assert space_parameters["palette"]["$ref"].endswith("/SpaceJourneyPalette")
 
     health_properties = openapi["components"]["schemas"]["HealthResponse"]["properties"]
     for field_name in (
@@ -81,6 +145,9 @@ def test_visual_cue_contract_is_advertised_in_capabilities_and_openapi(
         "visualCueSheetSchemaVersion",
         "visualFeatureArtifactSchemaVersion",
         "blenderVisualizerPreset",
+        "blenderVisualizerDefaultPreset",
+        "blenderVisualizerPresets",
+        "blenderVisualizerConfigSchemaVersion",
     ):
         assert health_properties[field_name] == capability_properties[field_name]
 
@@ -92,13 +159,83 @@ def test_visual_cue_contract_is_advertised_in_capabilities_and_openapi(
     assert capabilities.json()["visualCueSheetSchemaVersion"] == "1.1.0"
     assert capabilities.json()["visualFeatureArtifactSchemaVersion"] == "1.0.0"
     assert capabilities.json()["blenderVisualizerPreset"] == "abstract-geometry"
+    assert capabilities.json()["blenderVisualizerDefaultPreset"] == "abstract-geometry"
+    assert capabilities.json()["blenderVisualizerPresets"] == [
+        "abstract-geometry",
+        "space-journey",
+        "space-journey-story",
+    ]
+    assert capabilities.json()["blenderVisualizerConfigSchemaVersion"] == "1.0.0"
     assert capabilities.json()["networkFeaturesEnabled"] is False
     assert health.status_code == 200
     assert health.json()["visualCueExportAvailable"] is True
     assert health.json()["visualCueSheetSchemaVersion"] == "1.1.0"
     assert health.json()["visualFeatureArtifactSchemaVersion"] == "1.0.0"
     assert health.json()["blenderVisualizerPreset"] == "abstract-geometry"
+    assert health.json()["blenderVisualizerDefaultPreset"] == "abstract-geometry"
+    assert health.json()["blenderVisualizerPresets"] == [
+        "abstract-geometry",
+        "space-journey",
+        "space-journey-story",
+    ]
+    assert health.json()["blenderVisualizerConfigSchemaVersion"] == "1.0.0"
     assert health.json()["networkFeaturesEnabled"] is False
+
+
+def test_visualizer_config_resolution_api_is_typed_and_backward_compatible(
+    tmp_path: Path,
+) -> None:
+    application = create_app(settings_for(tmp_path / "config-data"))
+    with TestClient(application) as client:
+        default_response = client.post("/api/visualizer/config/resolve", json={})
+        space_response = client.post(
+            "/api/visualizer/config/resolve",
+            json={
+                "schemaVersion": "1.0.0",
+                "preset": "space-journey",
+                "parameters": {
+                    "cameraDistance": 22,
+                    "palette": "cyan-violet",
+                    "bassResponse": 1.4,
+                },
+                "seed": 7788,
+            },
+        )
+        invalid_preset = client.post(
+            "/api/visualizer/config/resolve",
+            json={"preset": "not-a-preset"},
+        )
+        invalid_parameter = client.post(
+            "/api/visualizer/config/resolve",
+            json={"preset": "space-journey", "parameters": {"fogDepth": 1.1}},
+        )
+        unknown_parameter = client.post(
+            "/api/visualizer/config/resolve",
+            json={"preset": "space-journey", "parameters": {"sourceAudioPath": "private.wav"}},
+        )
+
+    assert default_response.status_code == 200
+    assert default_response.json() == {
+        "schemaVersion": "1.0.0",
+        "preset": "abstract-geometry",
+        "parameters": {},
+        "seed": 84291,
+        "defaultedParameters": [],
+        "warnings": [],
+    }
+    assert space_response.status_code == 200
+    space = space_response.json()
+    assert space["preset"] == "space-journey"
+    assert space["parameters"]["cameraDistance"] == 22.0
+    assert space["parameters"]["palette"] == "cyan-violet"
+    assert space["parameters"]["bassResponse"] == 1.4
+    assert space["seed"] == 7788
+    assert "cameraDistance" not in space["defaultedParameters"]
+    assert "fogDepth" in space["defaultedParameters"]
+    for response in (invalid_preset, invalid_parameter, unknown_parameter):
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "request_validation_failed"
+        assert "private.wav" not in response.text
 
 
 def test_visual_cue_missing_artifact_and_download_headers_are_safe(

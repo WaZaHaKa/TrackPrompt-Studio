@@ -1206,3 +1206,67 @@ def render_r13_lookdev_variants(
     return _safe_entrypoint(
         lambda: _render_r13_lookdev_variants(output_directory, snapshot_directory)
     )
+
+
+def _build_r131_refinement_scene(output_path: str) -> dict[str, Any]:
+    output = validate_output_file(output_path, suffix=".blend")
+    from .lookdev_r131 import build_r131_refinement_scene
+
+    return build_r131_refinement_scene(str(output))
+
+
+def build_r131_refinement_scene(output_path: str) -> dict[str, Any]:
+    """Author one bounded R13.1 refinement from the active verified R13 scene."""
+
+    return _safe_entrypoint(lambda: _build_r131_refinement_scene(output_path))
+
+
+def validate_r131_refinement_scene() -> dict[str, Any]:
+    from .lookdev_r131 import validate_r131_scene
+
+    return _safe_entrypoint(validate_r131_scene)
+
+
+def _capture_r131_motion_report(output_path: str) -> dict[str, Any]:
+    from .lookdev_r131 import build_r131_motion_report
+
+    output = validate_output_file(output_path, suffix=".json")
+    report = build_r131_motion_report()
+    _atomic_json(output, report)
+    return {
+        "ok": report["technicalPass"],
+        "revisionId": report["revisionId"],
+        "motionReport": str(output),
+        "motionReportSha256": _sha256_file(output),
+        "technicalPass": report["technicalPass"],
+        "frameStart": report["frameStart"],
+        "frameEnd": report["frameEnd"],
+    }
+
+
+def capture_r131_motion_report(output_path: str) -> dict[str, Any]:
+    """Capture dense diagnostics for the exact R13.1 motion range."""
+
+    return _safe_entrypoint(lambda: _capture_r131_motion_report(output_path))
+
+
+def _render_r131_refinement_proof(
+    output_directory: str,
+    ffmpeg_path: str,
+) -> dict[str, Any]:
+    output = validate_output_directory(output_directory)
+    ffmpeg = validate_input_file(ffmpeg_path, label="FFmpeg")
+    from .lookdev_r131 import render_r131_refinement_proof
+
+    return render_r131_refinement_proof(str(output), str(ffmpeg))
+
+
+def render_r131_refinement_proof(
+    output_directory: str,
+    ffmpeg_path: str,
+) -> dict[str, Any]:
+    """Render exactly one ignored four-second R13.1 proof and its review stills."""
+
+    return _safe_entrypoint(
+        lambda: _render_r131_refinement_proof(output_directory, ffmpeg_path)
+    )

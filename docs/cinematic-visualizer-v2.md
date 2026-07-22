@@ -262,6 +262,36 @@ Start-Process "$proof\variants-lock"
 Start-Process "$proof\r13-lookdev-review.json"
 ```
 
+### R13.1 selected refinement and motion proof
+
+The human-facing R13 review records the following direction as **selected for refinement**, not approved: `protagonist-b-ancient-engine`, `weathered-stone-metal-crystal-v1`, `nested-ring-monolith-v1`, and `restrained-teal-cyan-amber-v1`. `artistApproved` remains `false` and `humanArtistApproval` remains `pending`.
+
+R13.1 is one deterministic refinement and one four-second motion proof under the ignored root:
+
+```text
+test-output/cinematic-v2-andromeda-r131-20260722-213840/
+```
+
+The additive `andromeda-r13.1-selected-refinement` builder loads the immutable R13 scene as hidden source and authors only `TP_R131_*` data through the high-level Blender MCP entrypoints. It reduces protagonist B to one narrow armor band and one atmosphere layer, exposes the purple frontal aperture with asymmetric orientation cues, retains a restrained rear wake, and animates bounded local compression. Repeated load pylons, rails, hinges, recesses, conduits, and routed crystals replace the disconnected-panel reading. The gate separates dark monolith thickness, three moving rings, one localized membrane, destination depth geometry, and four closing locks.
+
+The authoritative motion range is **frames 1-120 inclusive at 30 fps: exactly 4.0 seconds**. The protagonist moves on its own authored path; the camera follows with lag, passes a foreground bay at a different parallax velocity, overtakes after crossing, and looks back as the protagonist recovers and the gate begins sealing. There are no camera cuts, lens changes, one-frame transform jumps, or raw-audio links to major travel. Dense diagnostics report protagonist peak velocity `9.5557` units/s, peak acceleration `33.5821` units/s², camera peak velocity `21.7605` units/s, peak angular velocity `1.9029` rad/s, lag distance `8.8220-11.8094` units, foreground/destination p95 parallax ratio `2.1281`, deformation range `0.0-1.0`, and final seal progress `0.48`.
+
+Final images and motion use Blender 5.2 Eevee at native 1080x1920 with 64 temporal render samples, 32 volumetric samples, temporal reprojection, AgX Medium High Contrast, fixed 40 mm lens, disabled motion blur, DITHERED transparency, one atmosphere layer, and one local membrane. Compositor denoising is not used; the quality improvement is the deterministic increase from the included eight-sample comparison to 64 temporal samples. Phone derivatives are uncropped 180x320. The encoded preview is H.264/yuv420p plus 48 kHz stereo AAC, 120 frames, and 4.0 seconds. Media diagnostics report zero clipped highlights and no cosmic-darkness or mobile-contrast gate failures.
+
+The immutable proof manifest is `r13.1-proof-manifest.json`, SHA-256 `acb896e9d445e2d0f7a187c3667dc22b01e91d9056644b510861e8b555685140`. It binds the authoritative scene, render manifest, exact motion diagnostics, media diagnostics, preview, selected protagonist/gate stills, artistic review, and unchanged R11/R12/R13 proof hashes. The preview SHA-256 is `1b1a02a52c241552e0b4a6c3b3490a04168fdd954b19f17d47e90332997a72c0`.
+
+Codex recommends **`REVISE`**. The bounded story motion now reads, but the destination remains abstract, the connected architecture still has a procedural blockout finish, the protagonist can look spherical when its aperture is hidden, and the late motivated camera arc approaches its declared angular-velocity ceiling. Human approval remains pending; calibration readiness remains blocked and production authorization remains false. R13.1 does not develop Rupture, Transformation, or Arrival, provision cloud resources, calibrate V2, or render a full track.
+
+Open Mission Control, the authoritative phone/native stills, preview, and review without starting another render:
+
+```powershell
+$proof = "C:\Users\theon\GitHub\TrackPrompt-Studio\test-output\cinematic-v2-andromeda-r131-20260722-213840"
+Start-Process "C:\Users\theon\GitHub\TrackPrompt-Studio\WZHK-Media-Launcher.cmd"
+Start-Process "$proof\media-lock-final\stills"
+Start-Process "$proof\media-lock-final\r13.1-motion-preview.mp4"
+Start-Process "$proof\r13.1-artistic-review.json"
+```
+
 ## Local verification
 
 ```powershell
@@ -290,6 +320,8 @@ Local deployment means a current frontend build and loopback Mission Control ser
 
 ## Known limitations and remaining gates
 
+- R13.1 passes its bounded structural, motion, encoding, exposure, and immutable-evidence gates, but its Codex-assisted recommendation is `REVISE`; the provisional look is not artist-approved.
+- Its destination is still abstract, mechanically connected architecture remains a procedural blockout, and the late look-back camera arc is the most aggressive motion in the proof.
 - R13 is a neutral comparison stage rather than a complete cinematic environment. The chamber is an isolated construction module, the recommended protagonist bands remain visually busy, and the gate membrane is still a stylized disk-and-ring system rather than a final refractive volume.
 - R13 has no motion proof. A human must select the protagonist, architectural material language, gate construction, and exposure/lighting treatment before the bounded 3-5 second motion test can be authored.
 - The R12 real-analysis bounded proof passes its technical continuity, encoding, exposure, and evidence-integrity gates, but its Codex-assisted artistic decision is `REVISE` and it is not a human artist-approved film.

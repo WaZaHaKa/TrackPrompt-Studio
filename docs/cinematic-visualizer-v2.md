@@ -237,6 +237,31 @@ Each motion report covers camera and protagonist velocity, angular velocity, acc
 
 R12 remains preview-only. It does not start V2 calibration, create production authorization, provision cloud resources, render the full track, or extend the art pass into future acts. Generated audio extracts, Blender scenes, rendered frames, clips, phone derivatives, and proof/report outputs remain private ignored runtime evidence and must not be committed.
 
+### R13 look-development lock
+
+R13 is a look-development comparison derived from the immutable R12 source scene, not a continuation render. Its ignored proof root is:
+
+```text
+test-output/cinematic-v2-andromeda-r13-lookdev-20260722-201803/
+```
+
+The persistent `andromeda-r13-lookdev-lock` builder is invoked only through the existing high-level Blender MCP entrypoints. It creates three protagonist alternatives under one fixed camera and lighting setup, one chamber construction module, one gate monolith, and three gate-action diagnostic states: approach, whole-vessel compression, and post-crossing seal. The same deterministic construction system supplies shared bevels, weathered stone/metal surfaces, panel seams, buttresses, crystals, nested gate rings, and seal elements. No competing orchestration path was added.
+
+The authoritative comparison directory is `variants-lock/`. Each of its eight states contains a native 1080x1920 beauty still, an uncropped 180x320 phone derivative, a subject mask, an optional gate mask, and a separately saved revision snapshot. `r13-lookdev-render-manifest.json`, `r13-lookdev-diagnostics.json`, and `r13-lookdev-review.json` are all hash-bound by `r13-lookdev-proof-manifest.json`. The proof-manifest SHA-256 is `ba0f13da116d6d13994c75bc58720153aae13c56147bc0373a6f8d168806365b`; the bound review SHA-256 is `bf13ef0b0e77ccab8e91ccf740cf80675207c9567141760f3d808391659cd476`. Generated `.blend`, PNG, JSON, and snapshot evidence remains ignored.
+
+All eight native and phone frames were visually reviewed. The objective diagnostic summary records zero ordinary near-black flags, zero subject-separation flags, zero gate-separation flags, and a maximum clipped-highlight ratio of `0.0`. These technical results do not constitute artistic approval. Codex recommends `protagonist-b-ancient-engine`, the weathered stone-metal-crystal construction system, the thick-monolith/nested-ring/membrane/lock/seal gate, and restrained teal/cyan/amber lighting. All four operator selections remain null, the human review is `pending`, and `artistApproved` is false.
+
+Because the human look selection is incomplete, the requested 3-5 second motion test is deliberately `blocked-pending-look-selection` and was not rendered. Calibration readiness remains blocked and production authorization remains false. R13 does not build future acts, provision cloud resources, calibrate V2, or render a full sequence or full track.
+
+Open Mission Control, the authoritative variants, and the review record without starting a render:
+
+```powershell
+$proof = "C:\Users\theon\GitHub\TrackPrompt-Studio\test-output\cinematic-v2-andromeda-r13-lookdev-20260722-201803"
+Start-Process "C:\Users\theon\GitHub\TrackPrompt-Studio\WZHK-Media-Launcher.cmd"
+Start-Process "$proof\variants-lock"
+Start-Process "$proof\r13-lookdev-review.json"
+```
+
 ## Local verification
 
 ```powershell
@@ -265,6 +290,8 @@ Local deployment means a current frontend build and loopback Mission Control ser
 
 ## Known limitations and remaining gates
 
+- R13 is a neutral comparison stage rather than a complete cinematic environment. The chamber is an isolated construction module, the recommended protagonist bands remain visually busy, and the gate membrane is still a stylized disk-and-ring system rather than a final refractive volume.
+- R13 has no motion proof. A human must select the protagonist, architectural material language, gate construction, and exposure/lighting treatment before the bounded 3-5 second motion test can be authored.
 - The R12 real-analysis bounded proof passes its technical continuity, encoding, exposure, and evidence-integrity gates, but its Codex-assisted artistic decision is `REVISE` and it is not a human artist-approved film.
 - The procedural/low-poly machinery, simple green membrane/beyond layer, still-graphic orange chamber aperture, dark corridor, and inherited geometric-orb protagonist remain the principal artistic limitations. The proof uses review-quality Eevee output rather than final-quality shading, volumetrics, motion blur, or production sampling.
 - Only Signal through First Gate was revised and reviewed; the later Rupture, Transformation, and Arrival environments still need an equivalent artistic pass before any full-story approval.

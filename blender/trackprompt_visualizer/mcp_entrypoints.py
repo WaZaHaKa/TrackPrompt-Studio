@@ -1155,3 +1155,54 @@ def capture_review_state(
 
 def save_revision_snapshot(path: str) -> dict[str, Any]:
     return save_scene(path)
+
+
+def _build_r13_lookdev_scene(output_path: str) -> dict[str, Any]:
+    output = validate_output_file(output_path, suffix=".blend")
+    from .lookdev_r13 import build_r13_lookdev_scene
+
+    return build_r13_lookdev_scene(str(output))
+
+
+def build_r13_lookdev_scene(output_path: str) -> dict[str, Any]:
+    """Author the bounded R13 look-development scene from the active verified R12 scene."""
+
+    return _safe_entrypoint(lambda: _build_r13_lookdev_scene(output_path))
+
+
+def _set_r13_lookdev_variant(variant_id: str) -> dict[str, Any]:
+    from .lookdev_r13 import apply_r13_variant
+
+    return apply_r13_variant(variant_id)
+
+
+def set_r13_lookdev_variant(variant_id: str) -> dict[str, Any]:
+    return _safe_entrypoint(lambda: _set_r13_lookdev_variant(variant_id))
+
+
+def validate_r13_lookdev_scene() -> dict[str, Any]:
+    from .lookdev_r13 import validate_r13_scene
+
+    return _safe_entrypoint(validate_r13_scene)
+
+
+def _render_r13_lookdev_variants(
+    output_directory: str,
+    snapshot_directory: str,
+) -> dict[str, Any]:
+    output = validate_output_directory(output_directory)
+    snapshots = validate_output_directory(snapshot_directory)
+    from .lookdev_r13 import render_r13_lookdev_variants
+
+    return render_r13_lookdev_variants(str(output), str(snapshots))
+
+
+def render_r13_lookdev_variants(
+    output_directory: str,
+    snapshot_directory: str,
+) -> dict[str, Any]:
+    """Render the source-defined R13 variant set and ignored revision snapshots."""
+
+    return _safe_entrypoint(
+        lambda: _render_r13_lookdev_variants(output_directory, snapshot_directory)
+    )

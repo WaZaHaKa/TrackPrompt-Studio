@@ -1088,6 +1088,8 @@ async def test_encode_start_queues_delivery_then_master_with_managed_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    if not SOURCE_PROFILE.is_file():
+        pytest.skip("private frozen render profile is unavailable in this checkout")
     fixture = _build_config(tmp_path, profile_source=SOURCE_PROFILE)
     service = MissionControlService(fixture.config)
     try:

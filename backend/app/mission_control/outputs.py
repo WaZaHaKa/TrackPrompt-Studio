@@ -408,7 +408,15 @@ class OutputManager:
         if isinstance(start, int) and isinstance(end, int):
             expected_values["frameCount"] = end - start + 1
         for field, value in expected_values.items():
-            if str(frame_contract.get(field)) != str(value):
+            actual = frame_contract.get(field)
+            both_numeric = (
+                isinstance(actual, (int, float))
+                and not isinstance(actual, bool)
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+            )
+            matches = actual == value if both_numeric else str(actual) == str(value)
+            if not matches:
                 issues.append(f"Output {field} does not match the profile.")
 
     def create_child(

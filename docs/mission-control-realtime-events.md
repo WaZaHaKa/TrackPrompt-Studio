@@ -1,5 +1,7 @@
 # Mission Control real-time events
 
+Production frame activity also enters the existing persisted SSE stream through exact-prefix Blender worker events. Only `WZHK_RENDER_EVENT ` JSON is treated as machine telemetry; malformed or wrong-job payloads are inert, while every non-prefixed bounded line remains a human log. `frame_written` is rendered/in-flight, never safe/published. See [Cinematic Visualizer V2](cinematic-visualizer-v2.md#renderer-telemetry).
+
 The Mission Control backend owns durable render state. The React client uses a
 same-origin event stream for updates and bounded HTTP recovery when a stream is
 temporarily unavailable. Rendering never depends on a browser connection.
@@ -51,11 +53,17 @@ any active state -> FAILED or CANCELLED
 ```
 
 Relevant phases include scene load, frame render/write, frame and chunk
-validation, chunk publication, and storage wait. The shared schema reserves
-master/delivery encode, local audio mux, and final-verification phases for the
-future encode adapter; this implementation does not emit those phases as if an
-encode were running. Every actual transition and event is committed to the
-local Mission Control state store before it is presented as authoritative.
+validation, chunk publication, and storage wait. Every actual transition and
+event is committed to the local Mission Control state store before it is
+presented as authoritative.
+
+Encode progress is a separate persistent local job resource. While an encode is
+queued, encoding, or verifying, the UI polls
+`GET /api/mission-control/encode/{renderJobId}` once per second. The response
+reports the current output kind, encoded frame, total frames, FFmpeg fps and
+speed, ETA, overall Delivery-plus-Master progress, completed output kinds,
+published paths, and a structured failure if one occurs. Browser refresh loads
+that record before polling resumes; it never issues a second encode start.
 
 ## Heartbeats and long frames
 

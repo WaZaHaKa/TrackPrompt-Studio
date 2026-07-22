@@ -1,5 +1,7 @@
 # Codex and Blender MCP preview workflow
 
+For story-driven V2 authoring, use the high-level `build_story_scene`, `set_review_shot`, `validate_current_shot`, `capture_review_state`, and `save_revision_snapshot` entrypoints. The V2 MCP loop is documented in [Cinematic Visualizer V2](cinematic-visualizer-v2.md). MCP is restricted to interactive authoring and bounded preview evidence; it must not start the production renderer.
+
 Use a configured Blender MCP server as a narrow orchestration layer around the
 repository's Blender Python package. MCP should make a few bounded calls; the
 package itself validates and imports all curve points. Tool names vary by MCP
@@ -20,13 +22,17 @@ inspection, bounded revisions, or recovery after a job has already completed.
 3. Open a clean scene or an operator-approved template. Do not delete or
    overwrite the user's existing file.
 4. Add the repository's absolute `blender/` directory to Blender's Python path.
-5. Import `trackprompt_visualizer.mcp_entrypoints` and call
-   `build_scene(cue_path, audio_path, output_blend, "abstract-geometry", seed)`.
+5. Import `trackprompt_visualizer.mcp_entrypoints` and call `build_scene` with
+   the selected registered preset. Space Journey revisions supply only a
+   validated configuration path or bounded parameter dictionary; do not expose
+   arbitrary Python or individual-keyframe mutation.
 6. Inspect the structured result and call `scene_summary()`. Confirm
    `TP_AUDIO_BUS`, the required TrackPrompt collections, active camera, expected
    FPS/range, audio strip, F-curves, preset, and seed.
 7. Call `render_preview_stills(approved_output_directory)` and inspect each
-   image. Make no more than two bounded preset-parameter revision passes.
+   role-labelled image. Make no more than two bounded preset-parameter revision
+   passes, rebuilding to a new approved `.blend` and retaining its revision
+   manifest each time.
 8. Call `render_preview_clip(approved_output_path)` for the planned segment: 10
    seconds for a source at least that long, or the complete shorter source. This
    narrow MCP function reports the requested audio policy but does
@@ -39,7 +45,15 @@ inspection, bounded revisions, or recovery after a job has already completed.
 The available narrow functions are:
 
 ```python
-build_scene(cue_path, audio_path, output_blend, preset="abstract-geometry", seed=84291)
+build_scene(
+    cue_path,
+    audio_path,
+    output_blend,
+    preset="abstract-geometry",
+    seed=84291,
+    config_path=None,
+    parameters=None,
+)
 scene_summary()
 render_preview_stills(output_directory)
 render_preview_clip(output_path)
@@ -48,9 +62,11 @@ save_scene(path)
 
 Each validates caller-provided inputs/outputs, returns a dictionary with
 structured success or failure data, and performs no shell execution. Only
-`build_scene` may clear and construct a scene, and it does so only after input
-validation. Output parents must already exist, preventing an MCP call from
-creating an arbitrary directory tree.
+`build_scene` may clear and construct a scene, and it does so only after cue,
+audio, output, preset, seed, and complete configuration validation. Output
+parents must already exist, preventing an MCP call from creating an arbitrary
+directory tree. `parameters` is restricted to the registered preset schema and
+cannot name Blender data paths or code.
 
 The build result and sibling manifest expose explicit scene-contract checks,
 including frame range/FPS, `TP_AUDIO_BUS`, required controls and F-curves,
@@ -75,7 +91,8 @@ Use the TrackPrompt visualizer package in this repository.
 Inputs:
 - cue sheet: <absolute path>
 - audio file: <absolute path>
-- preset: abstract-geometry
+- preset: abstract-geometry or space-journey
+- visualizer config: <optional absolute validated JSON path>
 - seed: <integer>
 - output blend: <absolute path>
 - preview directory: <absolute path>
@@ -83,8 +100,11 @@ Inputs:
 First inspect the available Blender MCP tools and Blender version.
 
 Then add the repository's blender directory to Blender's Python path and invoke
-trackprompt_visualizer.mcp_entrypoints.build_scene(...). Do not manually create
-beat keyframes through MCP and do not treat cue JSON as Python.
+trackprompt_visualizer.mcp_entrypoints.build_scene(...). For Space Journey, use
+the complete resolved configuration or a bounded parameter patch such as camera
+distance, ring occlusion, palette, glow, fog, shard density, or one audio
+response. Do not manually create beat keyframes through MCP and do not treat cue
+or configuration JSON as Python.
 
 After building:
 1. inspect the returned scene summary;

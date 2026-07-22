@@ -13,7 +13,7 @@
       5. Polls the job until completion or failure.
       6. Exports the completed analysis and Blender visual cue sheet.
       7. Validates the cue sheet and continuous master curve.
-      8. Builds an abstract-geometry Blender scene.
+      8. Builds the selected Blender visualizer preset.
       9. Renders the bounded Blender preview unless -SkipPreview is supplied.
      10. Writes a run manifest containing all generated artifact paths.
 
@@ -21,9 +21,10 @@
     audio to any external service and never deletes the TrackPrompt job unless
     -DeleteJobAfterSuccess is explicitly supplied. -BuildStack always rebuilds
     and recreates the current backend and frontend. Otherwise the default
-    -AutoRebuildStaleBackend behavior checks both visual-cue OpenAPI operations
-    and, only when needed, performs one backend-only build/recreation without
-    removing named data or model-cache volumes. Pass
+    -AutoRebuildStaleBackend behavior checks visual-cue/config OpenAPI
+    operations and advertised visualizer preset/schema capabilities. Only when
+    needed, it performs one backend-only build/recreation without removing
+    named data or model-cache volumes. Pass
     -AutoRebuildStaleBackend:$false to disable that bounded repair.
 
 .EXAMPLE
@@ -66,12 +67,13 @@
         analysis.md
         visual-cues.json
         cue-summary.json
-        trackprompt-abstract.blend
-        trackprompt-abstract.manifest.json
+        visualizer-config.resolved.json
+        trackprompt-abstract.blend OR trackprompt-space-journey.blend
+        trackprompt-abstract.manifest.json OR trackprompt-space-journey.manifest.json
         blender-build-result.json
         preview\
           preview-manifest.json
-          trackprompt-preview.mp4
+          trackprompt-preview.mp4 OR space-journey-preview.mp4
         run-manifest.json
 
       test-output\last-trackprompt-job-id.txt
@@ -111,6 +113,11 @@ param(
     [ValidateSet("compact", "balanced", "detailed")]
     [string]$CurveDetail = "balanced",
 
+    [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+    [string]$VisualizerPreset = "abstract-geometry",
+
+    [string]$VisualizerConfigPath = "",
+
     [int]$Seed = 84291,
 
     [int]$AnalysisTimeoutMinutes = 45,
@@ -139,6 +146,8 @@ $script:JobId = $null
 $script:StackWasStarted = $false
 $script:BackendRepairAttempted = $false
 $script:LastApiHealthObservation = $null
+$script:VisualizerPresetWasExplicit = $PSBoundParameters.ContainsKey("VisualizerPreset")
+$script:SeedWasExplicit = $PSBoundParameters.ContainsKey("Seed")
 
 function Write-Step {
     param([Parameter(Mandatory = $true)][string]$Message)
@@ -295,13 +304,24 @@ function Assert-NativeJsonSuccess {
 
     for ($index = $NativeResult.Lines.Count - 1; $index -ge 0; $index--) {
         $line = ([string]$NativeResult.Lines[$index]).Trim()
+        $jsonStart = $line.IndexOf("{")
+        $jsonEnd = $line.LastIndexOf("}")
 
-        if (-not ($line.StartsWith("{") -and $line.EndsWith("}"))) {
+        if ($jsonStart -lt 0 -or $jsonEnd -le $jsonStart) {
             continue
         }
 
         try {
-            $candidate = $line | ConvertFrom-Json
+            # Blender animation progress is written to stderr with carriage
+            # returns. Windows PowerShell 5.1 can merge the final progress text
+            # and the JSON written to stdout into one captured line. Extract
+            # the bounded JSON object while still requiring an explicit `ok`
+            # field before accepting native completion.
+            $candidateText = $line.Substring(
+                $jsonStart,
+                $jsonEnd - $jsonStart + 1
+            )
+            $candidate = $candidateText | ConvertFrom-Json
 
             if ($null -ne $candidate.PSObject.Properties["ok"]) {
                 $jsonResult = $candidate
@@ -475,6 +495,13 @@ function Get-LiveOpenApi {
         -TimeoutSec 30
 }
 
+function Get-LiveCapabilities {
+    return Invoke-RestMethod `
+        -Method Get `
+        -Uri "$ApiBase/api/capabilities" `
+        -TimeoutSec 20
+}
+
 function Test-OpenApiOperation {
     param(
         [Parameter(Mandatory = $true)]$OpenApi,
@@ -498,10 +525,14 @@ function Test-OpenApiOperation {
 }
 
 function Get-VisualizerRouteStatus {
-    param([Parameter(Mandatory = $true)]$OpenApi)
+    param(
+        [Parameter(Mandatory = $true)]$OpenApi,
+        [string]$RequestedPreset = "abstract-geometry"
+    )
 
     $postPath = "/api/analyses/{job_id}/visual-cues"
     $exportPath = "/api/analyses/{job_id}/visual-cues/export"
+    $configPath = "/api/visualizer/config/resolve"
     $postAvailable = Test-OpenApiOperation `
         -OpenApi $OpenApi `
         -Path $postPath `
@@ -510,11 +541,104 @@ function Get-VisualizerRouteStatus {
         -OpenApi $OpenApi `
         -Path $exportPath `
         -Method "get"
+    $configAvailable = Test-OpenApiOperation `
+        -OpenApi $OpenApi `
+        -Path $configPath `
+        -Method "post"
+    $cinematicPlanAvailable = Test-OpenApiOperation `
+        -OpenApi $OpenApi `
+        -Path "/api/analyses/{job_id}/cinematic/plan" `
+        -Method "post"
+    $storyExportAvailable = Test-OpenApiOperation `
+        -OpenApi $OpenApi `
+        -Path "/api/analyses/{job_id}/cinematic/story-plan/export" `
+        -Method "get"
+    $shotExportAvailable = Test-OpenApiOperation `
+        -OpenApi $OpenApi `
+        -Path "/api/analyses/{job_id}/cinematic/shot-plan/export" `
+        -Method "get"
+    $cinematicRequired = $RequestedPreset -eq "space-journey-story"
+    $cinematicComplete = (
+        $cinematicPlanAvailable -and
+        $storyExportAvailable -and
+        $shotExportAvailable
+    )
 
     return [pscustomobject]@{
         PostVisualCues = $postAvailable
         GetVisualCuesExport = $exportAvailable
-        Complete = ($postAvailable -and $exportAvailable)
+        ResolveVisualizerConfig = $configAvailable
+        PostCinematicPlan = $cinematicPlanAvailable
+        GetStoryPlanExport = $storyExportAvailable
+        GetShotPlanExport = $shotExportAvailable
+        CinematicComplete = $cinematicComplete
+        Complete = (
+            $postAvailable -and
+            $exportAvailable -and
+            $configAvailable -and
+            (-not $cinematicRequired -or $cinematicComplete)
+        )
+    }
+}
+
+function Get-VisualizerCapabilitiesStatus {
+    param(
+        $Capabilities,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$RequestedPreset
+    )
+
+    $legacyPreset = Get-DirectPropertyValue `
+        -Node $Capabilities `
+        -Names @("blenderVisualizerPreset")
+    $defaultPreset = Get-DirectPropertyValue `
+        -Node $Capabilities `
+        -Names @("blenderVisualizerDefaultPreset")
+    $schemaVersion = Get-DirectPropertyValue `
+        -Node $Capabilities `
+        -Names @("blenderVisualizerConfigSchemaVersion")
+    $presetsProperty = if ($null -ne $Capabilities) {
+        $Capabilities.PSObject.Properties["blenderVisualizerPresets"]
+    }
+    else {
+        $null
+    }
+    $presets = @()
+
+    if ($null -ne $presetsProperty) {
+        $presets = @($presetsProperty.Value)
+    }
+
+    $stringPresets = @(
+        $presets | Where-Object { $_ -is [string] -and -not [string]::IsNullOrWhiteSpace($_) }
+    )
+    $uniqueStringPresets = @($stringPresets | Select-Object -Unique)
+    $registryCurrent = (
+        @($presets).Count -eq @($stringPresets).Count -and
+        @($uniqueStringPresets).Count -eq @($stringPresets).Count -and
+        $stringPresets -contains "abstract-geometry" -and
+        $stringPresets -contains "space-journey" -and
+        $stringPresets -contains "space-journey-story"
+    )
+    $legacyCurrent = [string]$legacyPreset -ceq "abstract-geometry"
+    $defaultCurrent = [string]$defaultPreset -ceq "abstract-geometry"
+    $schemaCurrent = [string]$schemaVersion -ceq "1.0.0"
+    $requestedAdvertised = $stringPresets -contains $RequestedPreset
+
+    return [pscustomobject]@{
+        LegacyPresetCurrent = $legacyCurrent
+        DefaultPresetCurrent = $defaultCurrent
+        PresetRegistryCurrent = $registryCurrent
+        ConfigSchemaCurrent = $schemaCurrent
+        RequestedPresetAdvertised = $requestedAdvertised
+        Presets = $stringPresets
+        Complete = (
+            $legacyCurrent -and
+            $defaultCurrent -and
+            $registryCurrent -and
+            $schemaCurrent
+        )
     }
 }
 
@@ -1681,6 +1805,417 @@ function Test-FiniteNumber {
     }
 }
 
+function Get-VisualizerOutputNames {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$Preset
+    )
+
+    if ($Preset -eq "space-journey-story") {
+        return [pscustomobject]@{
+            BlendFile = "trackprompt-space-journey-story.blend"
+            PreviewClip = "space-journey-story-preview.mp4"
+        }
+    }
+
+    if ($Preset -eq "space-journey") {
+        return [pscustomobject]@{
+            BlendFile = "trackprompt-space-journey.blend"
+            PreviewClip = "space-journey-preview.mp4"
+        }
+    }
+
+    return [pscustomobject]@{
+        BlendFile = "trackprompt-abstract.blend"
+        PreviewClip = "trackprompt-preview.mp4"
+    }
+}
+
+function Read-VisualizerConfigRequest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$Preset,
+        [Parameter(Mandatory = $true)][int]$Seed,
+        [string]$ConfigPath = "",
+        [bool]$PresetWasExplicit = $false,
+        [bool]$SeedWasExplicit = $false
+    )
+
+    $payload = [pscustomobject]@{}
+
+    if (-not [string]::IsNullOrWhiteSpace($ConfigPath)) {
+        if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+            throw "VisualizerConfigPath does not identify an existing file."
+        }
+
+        $resolvedPath = (Resolve-Path -LiteralPath $ConfigPath).Path
+        $item = Get-Item -LiteralPath $resolvedPath
+
+        if ($item.Extension -ne ".json") {
+            throw "VisualizerConfigPath must use the .json extension."
+        }
+
+        if ($item.Length -le 0 -or $item.Length -gt 65536) {
+            throw "VisualizerConfigPath must be a non-empty JSON file no larger than 64 KiB."
+        }
+
+        try {
+            $payload = Get-Content -LiteralPath $resolvedPath -Raw | ConvertFrom-Json
+        }
+        catch {
+            throw "VisualizerConfigPath does not contain valid JSON."
+        }
+
+        if (
+            $null -eq $payload -or
+            $payload -is [System.Array] -or
+            $payload -is [string] -or
+            $payload -is [ValueType]
+        ) {
+            throw "VisualizerConfigPath must contain a JSON object."
+        }
+
+        $allowedProperties = @(
+            "schemaVersion",
+            "preset",
+            "parameters",
+            "seed",
+            "defaultedParameters",
+            "warnings"
+        )
+
+        foreach ($property in @($payload.PSObject.Properties)) {
+            if ($property.Name -notin $allowedProperties) {
+                throw "VisualizerConfigPath contains an unsupported top-level field: $($property.Name)"
+            }
+        }
+    }
+
+    $schemaProperty = $payload.PSObject.Properties["schemaVersion"]
+    $schemaVersion = "1.0.0"
+
+    if ($null -ne $schemaProperty) {
+        if (-not ($schemaProperty.Value -is [string])) {
+            throw "Visualizer configuration schemaVersion must be a string."
+        }
+
+        $schemaVersion = [string]$schemaProperty.Value
+    }
+
+    if ($schemaVersion -ne "1.0.0") {
+        throw "Visualizer configuration schemaVersion must be 1.0.0."
+    }
+
+    $effectivePreset = $Preset
+    $presetProperty = $payload.PSObject.Properties["preset"]
+
+    if ($null -ne $presetProperty) {
+        if (-not ($presetProperty.Value -is [string])) {
+            throw "Visualizer configuration preset must be a string."
+        }
+
+        $filePreset = [string]$presetProperty.Value
+
+        if ($filePreset -notin @("abstract-geometry", "space-journey", "space-journey-story")) {
+            throw "Visualizer configuration contains an unsupported preset."
+        }
+
+        if ($PresetWasExplicit -and $filePreset -ne $Preset) {
+            throw "VisualizerPreset conflicts with the preset in VisualizerConfigPath."
+        }
+
+        $effectivePreset = $filePreset
+    }
+
+    $effectiveSeed = $Seed
+    $seedProperty = $payload.PSObject.Properties["seed"]
+
+    if ($null -ne $seedProperty) {
+        $fileSeed = $seedProperty.Value
+
+        if (
+            -not ($fileSeed -is [int] -or $fileSeed -is [long]) -or
+            [long]$fileSeed -lt 0 -or
+            [long]$fileSeed -gt 2147483647
+        ) {
+            throw "Visualizer configuration seed must be an integer between 0 and 2147483647."
+        }
+
+        if ($SeedWasExplicit -and [int]$fileSeed -ne $Seed) {
+            throw "Seed conflicts with the seed in VisualizerConfigPath."
+        }
+
+        $effectiveSeed = [int]$fileSeed
+    }
+
+    $parameters = [pscustomobject]@{}
+    $parametersProperty = $payload.PSObject.Properties["parameters"]
+
+    if ($null -ne $parametersProperty) {
+        $parameters = $parametersProperty.Value
+
+        if (
+            $null -eq $parameters -or
+            $parameters -is [System.Array] -or
+            $parameters -is [string] -or
+            $parameters -is [ValueType]
+        ) {
+            throw "Visualizer configuration parameters must be a JSON object."
+        }
+    }
+
+    return [ordered]@{
+        schemaVersion = "1.0.0"
+        preset = $effectivePreset
+        parameters = $parameters
+        seed = $effectiveSeed
+    }
+}
+
+function Assert-ResolvedVisualizerConfig {
+    param(
+        [Parameter(Mandatory = $true)]$Config,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$ExpectedPreset,
+        [Parameter(Mandatory = $true)][int]$ExpectedSeed
+    )
+
+    $requiredProperties = @(
+        "schemaVersion",
+        "preset",
+        "parameters",
+        "seed",
+        "defaultedParameters",
+        "warnings"
+    )
+
+    foreach ($name in $requiredProperties) {
+        if ($null -eq $Config.PSObject.Properties[$name]) {
+            throw "Resolved visualizer configuration is missing $name."
+        }
+    }
+
+    foreach ($property in @($Config.PSObject.Properties)) {
+        if ($property.Name -notin $requiredProperties) {
+            throw "Resolved visualizer configuration contains an unsupported field: $($property.Name)"
+        }
+    }
+
+    if (
+        [string]$Config.schemaVersion -ne "1.0.0" -or
+        [string]$Config.preset -ne $ExpectedPreset -or
+        -not (Test-FiniteNumber -Value $Config.seed) -or
+        [double]$Config.seed -ne [math]::Truncate([double]$Config.seed) -or
+        [int]$Config.seed -ne $ExpectedSeed -or
+        [int]$Config.seed -lt 0
+    ) {
+        throw "Resolved visualizer configuration identity is invalid."
+    }
+
+    $parameters = $Config.parameters
+
+    if (
+        $null -eq $parameters -or
+        $parameters -is [System.Array] -or
+        $parameters -is [string] -or
+        $parameters -is [ValueType]
+    ) {
+        throw "Resolved visualizer configuration parameters are invalid."
+    }
+
+    $parameterNames = @(
+        foreach ($property in @($parameters.PSObject.Properties)) {
+            [string]$property.Name
+        }
+    )
+    $spaceParameterNames = @(
+        "cameraDistance",
+        "cameraOrbitSpeed",
+        "ringThickness",
+        "ringOcclusion",
+        "palette",
+        "glowStrength",
+        "shardDensity",
+        "fogDepth",
+        "bassResponse",
+        "drumResponse",
+        "vocalResponse"
+    )
+
+    if ($ExpectedPreset -eq "abstract-geometry") {
+        if ($parameterNames.Count -ne 0) {
+            throw "Abstract Geometry does not accept public visualizer parameters."
+        }
+    }
+    else {
+        if (
+            $parameterNames.Count -ne $spaceParameterNames.Count -or
+            @($parameterNames | Where-Object { $_ -notin $spaceParameterNames }).Count -gt 0
+        ) {
+            throw "Space Journey resolved parameters do not match the required contract."
+        }
+
+        $bounds = [ordered]@{
+            cameraDistance = @(8.0, 40.0)
+            cameraOrbitSpeed = @(0.0, 0.5)
+            ringThickness = @(0.02, 0.20)
+            ringOcclusion = @(0.0, 1.0)
+            glowStrength = @(0.0, 4.0)
+            shardDensity = @(0.0, 1.0)
+            fogDepth = @(0.0, 1.0)
+            bassResponse = @(0.0, 2.0)
+            drumResponse = @(0.0, 2.0)
+            vocalResponse = @(0.0, 2.0)
+        }
+
+        foreach ($name in $bounds.Keys) {
+            $value = $parameters.PSObject.Properties[$name].Value
+            $minimum = [double]$bounds[$name][0]
+            $maximum = [double]$bounds[$name][1]
+
+            if (
+                -not (Test-FiniteNumber -Value $value) -or
+                [double]$value -lt $minimum -or
+                [double]$value -gt $maximum
+            ) {
+                throw "Resolved Space Journey parameter $name is outside its allowed range."
+            }
+        }
+
+        if ([string]$parameters.palette -notin @(
+            "andromeda",
+            "deep-space",
+            "cyan-violet",
+            "violet-magenta",
+            "monochrome-blue",
+            "dark-amber"
+        )) {
+            throw "Resolved Space Journey palette is unsupported."
+        }
+    }
+
+    $defaulted = @($Config.defaultedParameters)
+
+    if (
+        @($defaulted | Where-Object { -not ($_ -is [string]) }).Count -gt 0 -or
+        @($defaulted | Where-Object { $_ -notin $parameterNames }).Count -gt 0 -or
+        @($defaulted | Select-Object -Unique).Count -ne $defaulted.Count -or
+        @($defaulted | Sort-Object).Count -ne $defaulted.Count
+    ) {
+        throw "Resolved visualizer defaultedParameters are invalid."
+    }
+
+    $sortedDefaulted = @($defaulted | Sort-Object)
+
+    for ($index = 0; $index -lt $defaulted.Count; $index++) {
+        if ([string]$defaulted[$index] -ne [string]$sortedDefaulted[$index]) {
+            throw "Resolved visualizer defaultedParameters must be sorted."
+        }
+    }
+
+    $warnings = @($Config.warnings)
+
+    if (
+        $warnings.Count -gt 20 -or
+        @($warnings | Where-Object { -not ($_ -is [string]) }).Count -gt 0
+    ) {
+        throw "Resolved visualizer warnings are invalid."
+    }
+
+    return $Config
+}
+
+function Resolve-VisualizerConfig {
+    param(
+        [Parameter(Mandatory = $true)]$Request,
+        [Parameter(Mandatory = $true)][string]$ApiBaseUrl
+    )
+
+    $body = $Request | ConvertTo-Json -Depth 20 -Compress
+    $resolved = Invoke-RestMethod `
+        -Method Post `
+        -Uri "$ApiBaseUrl/api/visualizer/config/resolve" `
+        -ContentType "application/json" `
+        -Body $body `
+        -TimeoutSec 30
+
+    return Assert-ResolvedVisualizerConfig `
+        -Config $resolved `
+        -ExpectedPreset ([string]$Request.preset) `
+        -ExpectedSeed ([int]$Request.seed)
+}
+
+function ConvertTo-CanonicalJsonValue {
+    param(
+        $Value,
+        [int]$Depth = 0
+    )
+
+    if ($Depth -gt 64) {
+        throw "Visualizer configuration exceeds the safe nesting limit."
+    }
+
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) {
+        return $Value
+    }
+
+    if ($Value -is [System.Collections.IDictionary]) {
+        $canonicalDictionary = [ordered]@{}
+
+        foreach ($key in @($Value.Keys | Sort-Object)) {
+            $canonicalDictionary[[string]$key] = ConvertTo-CanonicalJsonValue `
+                -Value $Value[$key] `
+                -Depth ($Depth + 1)
+        }
+
+        return $canonicalDictionary
+    }
+
+    if ($Value -is [System.Collections.IEnumerable]) {
+        return @(
+            foreach ($item in $Value) {
+                ConvertTo-CanonicalJsonValue -Value $item -Depth ($Depth + 1)
+            }
+        )
+    }
+
+    $canonicalObject = [ordered]@{}
+
+    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
+        $canonicalObject[[string]$property.Name] = ConvertTo-CanonicalJsonValue `
+            -Value $property.Value `
+            -Depth ($Depth + 1)
+    }
+
+    return $canonicalObject
+}
+
+function Test-VisualizerConfigMatch {
+    param(
+        [Parameter(Mandatory = $true)]$Actual,
+        [Parameter(Mandatory = $true)]$Expected,
+        [Parameter(Mandatory = $true)][string]$Preset,
+        [Parameter(Mandatory = $true)][int]$Seed
+    )
+
+    $actualValidated = Assert-ResolvedVisualizerConfig `
+        -Config $Actual `
+        -ExpectedPreset $Preset `
+        -ExpectedSeed $Seed
+    $expectedValidated = Assert-ResolvedVisualizerConfig `
+        -Config $Expected `
+        -ExpectedPreset $Preset `
+        -ExpectedSeed $Seed
+    $actualJson = ConvertTo-CanonicalJsonValue -Value $actualValidated |
+        ConvertTo-Json -Depth 20 -Compress
+    $expectedJson = ConvertTo-CanonicalJsonValue -Value $expectedValidated |
+        ConvertTo-Json -Depth 20 -Compress
+    return $actualJson -ceq $expectedJson
+}
+
 function Assert-PublicCueValue {
     param(
         $Value,
@@ -1966,7 +2501,10 @@ function Assert-BlenderBuildArtifacts {
         [Parameter(Mandatory = $true)][string]$BlendPath,
         [Parameter(Mandatory = $true)][string]$ManifestPath,
         [Parameter(Mandatory = $true)][string]$ExpectedCueSchema,
-        [Parameter(Mandatory = $true)][int]$ExpectedSeed
+        [Parameter(Mandatory = $true)][int]$ExpectedSeed,
+        [ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$ExpectedPreset = "abstract-geometry",
+        $ExpectedConfig = $null
     )
 
     Assert-NonEmptyFile -Path $BlendPath -Description "Blender scene"
@@ -1985,14 +2523,31 @@ function Assert-BlenderBuildArtifacts {
 
     if (
         [string]$manifest.schemaVersion -ne "1.0.0" -or
-        [string]$manifest.preset -ne "abstract-geometry" -or
+        [string]$manifest.preset -ne $ExpectedPreset -or
         [int]$manifest.seed -ne $ExpectedSeed -or
         [string]$manifest.cueSheetSchemaVersion -ne $ExpectedCueSchema -or
         $null -eq $manifest.scene -or
         $manifest.scene.ok -ne $true -or
-        $manifest.scene.audioStripPresent -ne $true
+        $manifest.scene.audioStripPresent -ne $true -or
+        [string]$manifest.scene.preset -ne $ExpectedPreset -or
+        [int]$manifest.scene.seed -ne $ExpectedSeed
     ) {
         throw "The Blender scene manifest does not confirm a complete TrackPrompt build."
+    }
+
+    if ($null -ne $ExpectedConfig) {
+        $configProperty = $manifest.PSObject.Properties["visualizerConfig"]
+
+        if (
+            $null -eq $configProperty -or
+            -not (Test-VisualizerConfigMatch `
+                -Actual $configProperty.Value `
+                -Expected $ExpectedConfig `
+                -Preset $ExpectedPreset `
+                -Seed $ExpectedSeed)
+        ) {
+            throw "The Blender scene manifest does not match the resolved visualizer configuration."
+        }
     }
 
     foreach ($checkName in @(
@@ -2085,7 +2640,14 @@ function Assert-BlenderBuildArtifacts {
 function Assert-PreviewArtifacts {
     param(
         [Parameter(Mandatory = $true)][string]$PreviewDirectory,
-        [Parameter(Mandatory = $true)][string]$ManifestPath
+        [Parameter(Mandatory = $true)][string]$ManifestPath,
+        [ValidateSet("", "abstract-geometry", "space-journey", "space-journey-story")]
+        [string]$ExpectedPreset = "",
+        $ExpectedConfig = $null,
+        [string]$ExpectedClipName = "",
+        [int]$ExpectedWidth = 0,
+        [int]$ExpectedHeight = 0,
+        [int]$ExpectedFps = 0
     )
 
     Assert-NonEmptyFile -Path $ManifestPath -Description "Blender preview manifest"
@@ -2105,6 +2667,30 @@ function Assert-PreviewArtifacts {
         $manifest.clip.ok -ne $true
     ) {
         throw "The Blender preview manifest reports an incomplete preview."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedPreset)) {
+        if (
+            [string]$manifest.preset -ne $ExpectedPreset -or
+            [string]$manifest.scene.preset -ne $ExpectedPreset
+        ) {
+            throw "The Blender preview manifest reports the wrong visualizer preset."
+        }
+
+        if ($null -ne $ExpectedConfig) {
+            $configProperty = $manifest.PSObject.Properties["visualizerConfig"]
+
+            if (
+                $null -eq $configProperty -or
+                -not (Test-VisualizerConfigMatch `
+                    -Actual $configProperty.Value `
+                    -Expected $ExpectedConfig `
+                    -Preset $ExpectedPreset `
+                    -Seed ([int]$ExpectedConfig.seed))
+            ) {
+                throw "The Blender preview manifest does not match the resolved visualizer configuration."
+            }
+        }
     }
 
     foreach ($checkName in @(
@@ -2141,9 +2727,173 @@ function Assert-PreviewArtifacts {
         throw "The Blender preview manifest contains no still frames."
     }
 
-    $previewRoot = (Resolve-Path -LiteralPath $PreviewDirectory).Path.TrimEnd('\', '/')
+    if ($ExpectedPreset -in @("space-journey", "space-journey-story")) {
+        $expectedRoles = @(
+            "opening",
+            "early-development",
+            "main-groove",
+            "breakdown",
+            "peak",
+            "outro"
+        )
+        $stillEntries = @($manifest.stills.stills)
+        $plannedFrames = @($manifest.stills.plannedFrames)
+        $renderedFrames = @($manifest.stills.renderedFrames)
+        $stillRoles = @($manifest.stills.stillRoles)
+        $previewRoles = @($manifest.previewRoles)
 
-    foreach ($artifactPath in @($stills + @([string]$manifest.clip.clip))) {
+        if (
+            $ExpectedWidth -lt 1 -or
+            $ExpectedHeight -lt 1 -or
+            $ExpectedFps -lt 1 -or
+            $stills.Count -ne 6 -or
+            $stillEntries.Count -ne 6 -or
+            $plannedFrames.Count -ne 6 -or
+            $renderedFrames.Count -ne 6 -or
+            $stillRoles.Count -ne 6 -or
+            $previewRoles.Count -ne 6 -or
+            @($stills | Select-Object -Unique).Count -ne 6
+        ) {
+            throw "The Space Journey preview must contain exactly six unique role-labelled stills."
+        }
+
+        if (
+            $null -eq $manifest.scene -or
+            -not (Test-FiniteNumber -Value $manifest.scene.frameStart) -or
+            -not (Test-FiniteNumber -Value $manifest.scene.frameEnd) -or
+            -not (Test-FiniteNumber -Value $manifest.scene.fps)
+        ) {
+            throw "The Space Journey preview manifest is missing scene range diagnostics."
+        }
+
+        $sceneStart = [int]$manifest.scene.frameStart
+        $sceneEnd = [int]$manifest.scene.frameEnd
+        $sceneFps = [double]$manifest.scene.fps
+        $previousFrame = $sceneStart - 1
+
+        for ($index = 0; $index -lt 6; $index++) {
+            $entry = $stillEntries[$index]
+            $role = [string]$entry.role
+            $frame = $entry.frame
+            $entryPath = [string]$entry.path
+            $planRole = $stillRoles[$index]
+            $sceneRole = $previewRoles[$index]
+
+            if (
+                -not (Test-FiniteNumber -Value $frame) -or
+                [double]$frame -ne [math]::Truncate([double]$frame) -or
+                [int]$frame -le $previousFrame -or
+                [int]$frame -lt $sceneStart -or
+                [int]$frame -gt $sceneEnd -or
+                $role -cne $expectedRoles[$index] -or
+                [int]$plannedFrames[$index] -ne [int]$frame -or
+                [int]$renderedFrames[$index] -ne [int]$frame -or
+                [string]$planRole.role -cne $role -or
+                [int]$planRole.frame -ne [int]$frame -or
+                [string]$sceneRole.role -cne $role -or
+                [int]$sceneRole.frame -ne [int]$frame -or
+                [string]::IsNullOrWhiteSpace($entryPath) -or
+                [string]::IsNullOrWhiteSpace([string]$stills[$index]) -or
+                -not [IO.Path]::GetFullPath($entryPath).Equals(
+                    [IO.Path]::GetFullPath([string]$stills[$index]),
+                    [StringComparison]::OrdinalIgnoreCase
+                )
+            ) {
+                throw "Space Journey still $index does not match its ordered preview role contract."
+            }
+
+            $previousFrame = [int]$frame
+        }
+
+        if (
+            [int]$plannedFrames[0] -ne $sceneStart -or
+            [int]$plannedFrames[5] -ne $sceneEnd
+        ) {
+            throw "Space Journey opening and outro stills must bound the scene timeline."
+        }
+
+        $render = $manifest.render
+        $verification = $manifest.clip.verification
+
+        if (
+            $null -eq $render -or
+            [int]$render.width -ne $ExpectedWidth -or
+            [int]$render.height -ne $ExpectedHeight -or
+            -not (Test-FiniteNumber -Value $render.fps) -or
+            [math]::Abs([double]$render.fps - $ExpectedFps) -gt 0.01 -or
+            [math]::Abs($sceneFps - $ExpectedFps) -gt 0.01 -or
+            $null -eq $verification -or
+            $verification.ok -ne $true -or
+            [int]$verification.width -ne $ExpectedWidth -or
+            [int]$verification.height -ne $ExpectedHeight -or
+            -not (Test-FiniteNumber -Value $verification.fps) -or
+            [math]::Abs([double]$verification.fps - $ExpectedFps) -gt 0.01 -or
+            [string]$verification.videoCodec -cne "h264" -or
+            [string]$verification.audioCodec -cne "aac" -or
+            $verification.videoPresent -ne $true -or
+            $verification.audioRequested -ne $true -or
+            $verification.audioPresent -ne $true -or
+            $verification.audioMatchesRequest -ne $true -or
+            [string]$manifest.clip.audioMuxStatus -cne "verified-muxed"
+        ) {
+            throw "The Space Journey preview is missing verified H.264/AAC render evidence."
+        }
+
+        $clipStart = $manifest.clip.startFrame
+        $clipEnd = $manifest.clip.endFrame
+        $clipCenter = $manifest.clip.centerFrame
+        $plannedDuration = $manifest.clip.plannedDurationSeconds
+        $actualDuration = $manifest.clip.durationSeconds
+        $verifiedPlannedDuration = $verification.plannedDurationSeconds
+        $verifiedActualDuration = $verification.durationSeconds
+
+        if (
+            -not (Test-FiniteNumber -Value $clipStart) -or
+            -not (Test-FiniteNumber -Value $clipEnd) -or
+            -not (Test-FiniteNumber -Value $clipCenter) -or
+            [double]$clipStart -ne [math]::Truncate([double]$clipStart) -or
+            [double]$clipEnd -ne [math]::Truncate([double]$clipEnd) -or
+            [int]$clipStart -lt $sceneStart -or
+            [int]$clipEnd -gt $sceneEnd -or
+            [int]$clipEnd -lt [int]$clipStart -or
+            [int]$clipCenter -lt [int]$clipStart -or
+            [int]$clipCenter -gt [int]$clipEnd -or
+            [string]$manifest.clip.role -notlike "representative-*" -or
+            -not (Test-FiniteNumber -Value $plannedDuration) -or
+            -not (Test-FiniteNumber -Value $actualDuration) -or
+            -not (Test-FiniteNumber -Value $verifiedPlannedDuration) -or
+            -not (Test-FiniteNumber -Value $verifiedActualDuration)
+        ) {
+            throw "The Space Journey preview clip is outside its planned scene range."
+        }
+
+        $calculatedDuration = ([int]$clipEnd - [int]$clipStart + 1) / $sceneFps
+        $durationTolerance = [math]::Max(0.15, 2.0 / $sceneFps)
+
+        if (
+            [double]$plannedDuration -gt 10.1 -or
+            [double]$actualDuration -gt 10.1 -or
+            [math]::Abs([double]$plannedDuration - $calculatedDuration) -gt 0.001 -or
+            [math]::Abs([double]$verifiedPlannedDuration - [double]$plannedDuration) -gt 0.001 -or
+            [math]::Abs([double]$verifiedActualDuration - [double]$actualDuration) -gt 0.001 -or
+            [math]::Abs([double]$actualDuration - [double]$plannedDuration) -gt $durationTolerance -or
+            $verification.durationMatches -ne $true
+        ) {
+            throw "The Space Journey preview clip duration is not a verified bounded plan."
+        }
+    }
+
+    $previewRoot = (Resolve-Path -LiteralPath $PreviewDirectory).Path.TrimEnd('\', '/')
+    $clipPath = [string]$manifest.clip.clip
+
+    if (
+        -not [string]::IsNullOrWhiteSpace($ExpectedClipName) -and
+        [IO.Path]::GetFileName($clipPath) -cne $ExpectedClipName
+    ) {
+        throw "The Blender preview clip filename does not match the selected preset."
+    }
+
+    foreach ($artifactPath in @($stills + @($clipPath))) {
         Assert-NonEmptyFile -Path $artifactPath -Description "Blender preview artifact"
         $resolvedArtifact = (Resolve-Path -LiteralPath $artifactPath).Path
 
@@ -2163,7 +2913,8 @@ function Assert-PreviewArtifacts {
 function Assert-CanonicalRunOutputs {
     param(
         [Parameter(Mandatory = $true)]$Outputs,
-        [Parameter(Mandatory = $true)][bool]$PreviewRequired
+        [Parameter(Mandatory = $true)][bool]$PreviewRequired,
+        [string]$ExpectedPreset = "abstract-geometry"
     )
 
     $requiredFiles = @(
@@ -2183,12 +2934,16 @@ function Assert-CanonicalRunOutputs {
         "analysisMarkdown",
         "cueSheet",
         "cueSummary",
+        "visualizerConfig",
         "blend",
         "sceneManifest"
     )
 
     if ($PreviewRequired) {
         $requiredFiles += @("previewManifest", "previewClip")
+    }
+    if ($ExpectedPreset -eq "space-journey-story") {
+        $requiredFiles += @("storyPlan", "shotPlan")
     }
 
     foreach ($outputName in $requiredFiles) {
@@ -2295,6 +3050,16 @@ or disable it:
         }
     }
 
+    $visualizerConfigRequest = Read-VisualizerConfigRequest `
+        -Preset $VisualizerPreset `
+        -Seed $Seed `
+        -ConfigPath $VisualizerConfigPath `
+        -PresetWasExplicit $script:VisualizerPresetWasExplicit `
+        -SeedWasExplicit $script:SeedWasExplicit
+    $VisualizerPreset = [string]$visualizerConfigRequest.preset
+    $Seed = [int]$visualizerConfigRequest.seed
+    $visualizerOutputNames = Get-VisualizerOutputNames -Preset $VisualizerPreset
+
     if (-not (Test-Path -LiteralPath $AudioPath -PathType Leaf)) {
         throw "The supplied local audio file was not found."
     }
@@ -2321,6 +3086,8 @@ or disable it:
         enableGenre = $EnableGenre
         enableLyrics = $EnableLyrics
         deriveAbstractThemes = $DeriveAbstractThemes
+        visualizerPreset = $VisualizerPreset
+        seed = $Seed
         buildStack = [bool]$BuildStack
         autoRebuildStaleBackend = $AutoRebuildStaleBackend
         backendRepairAttempted = $false
@@ -2454,14 +3221,31 @@ or disable it:
     }
 
     $openApi = Get-LiveOpenApi
-    $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi
+    $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi -RequestedPreset $VisualizerPreset
+    $capabilities = $null
 
-    if (-not $routeStatus.Complete -and $AutoRebuildStaleBackend -and -not $BuildStack) {
+    try {
+        $capabilities = Get-LiveCapabilities
+    }
+    catch {
+        Write-WarningMessage "The live backend capabilities could not be inspected before compatibility repair."
+    }
+
+    $capabilitiesStatus = Get-VisualizerCapabilitiesStatus `
+        -Capabilities $capabilities `
+        -RequestedPreset $VisualizerPreset
+    $visualizerContractCurrent = (
+        $routeStatus.Complete -and
+        $capabilitiesStatus.Complete -and
+        $capabilitiesStatus.RequestedPresetAdvertised
+    )
+
+    if (-not $visualizerContractCurrent -and $AutoRebuildStaleBackend -and -not $BuildStack) {
         if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-            throw "The backend OpenAPI contract is stale and Docker is unavailable for bounded repair."
+            throw "The backend visualizer contract is stale and Docker is unavailable for bounded repair."
         }
 
-        Write-WarningMessage "The live backend is missing one or both visual-cue routes. Rebuilding and recreating only the backend once."
+        Write-WarningMessage "The live backend routes or visualizer capabilities are stale. Rebuilding and recreating only the backend once."
         $script:BackendRepairAttempted = $true
         $script:RunManifest["backendRepairAttempted"] = $true
         Save-RunManifest
@@ -2490,13 +3274,28 @@ or disable it:
             -Description "TrackPrompt frontend refresh after backend repair"
         Wait-ComposeServiceHealthy -Service "frontend"
         $openApi = Get-LiveOpenApi
-        $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi
+        $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi -RequestedPreset $VisualizerPreset
+        $capabilities = Get-LiveCapabilities
+        $capabilitiesStatus = Get-VisualizerCapabilitiesStatus `
+            -Capabilities $capabilities `
+            -RequestedPreset $VisualizerPreset
     }
 
     Write-ApiObservation -Path $openApiAfterPath -Value $openApi
     $script:RunManifest["visualCueRoutes"] = [ordered]@{
         post = $routeStatus.PostVisualCues
         exportGet = $routeStatus.GetVisualCuesExport
+        configResolve = $routeStatus.ResolveVisualizerConfig
+        cinematicPlanPost = $routeStatus.PostCinematicPlan
+        storyPlanExportGet = $routeStatus.GetStoryPlanExport
+        shotPlanExportGet = $routeStatus.GetShotPlanExport
+    }
+    $script:RunManifest["visualizerCapabilities"] = [ordered]@{
+        legacyPresetCurrent = $capabilitiesStatus.LegacyPresetCurrent
+        defaultPresetCurrent = $capabilitiesStatus.DefaultPresetCurrent
+        presetRegistryCurrent = $capabilitiesStatus.PresetRegistryCurrent
+        configSchemaCurrent = $capabilitiesStatus.ConfigSchemaCurrent
+        requestedPresetAdvertised = $capabilitiesStatus.RequestedPresetAdvertised
     }
     $script:RunManifest["outputs"]["openApiAfter"] = $openApiAfterPath
     Save-RunManifest
@@ -2510,9 +3309,36 @@ or disable it:
         }
 
         throw @"
-The live backend must expose both visual-cue operations:
+The live backend must expose the complete local visualizer contract:
   POST /api/analyses/{job_id}/visual-cues
   GET  /api/analyses/{job_id}/visual-cues/export
+  POST /api/visualizer/config/resolve
+  POST /api/analyses/{job_id}/cinematic/plan (required by space-journey-story)
+  GET  /api/analyses/{job_id}/cinematic/story-plan/export (required by space-journey-story)
+  GET  /api/analyses/{job_id}/cinematic/shot-plan/export (required by space-journey-story)
+
+$repairHint
+"@
+    }
+
+    if (-not $capabilitiesStatus.RequestedPresetAdvertised) {
+        throw "The live backend does not advertise the requested Blender visualizer preset '$VisualizerPreset' after compatibility repair."
+    }
+
+    if (-not $capabilitiesStatus.Complete) {
+        $repairHint = if ($AutoRebuildStaleBackend) {
+            "The bounded backend repair did not publish the current visualizer capability metadata."
+        }
+        else {
+            "AutoRebuildStaleBackend is disabled. Re-run with -BuildStack after reviewing the current stack."
+        }
+
+        throw @"
+The live backend must advertise:
+  blenderVisualizerPreset = abstract-geometry
+  blenderVisualizerDefaultPreset = abstract-geometry
+  blenderVisualizerPresets containing abstract-geometry, space-journey, and space-journey-story
+  blenderVisualizerConfigSchemaVersion = 1.0.0
 
 $repairHint
 "@
@@ -2525,11 +3351,6 @@ $repairHint
     Write-JsonFile -Path $healthPath -Value $health
     Write-JsonFile -Path $healthAfterPath -Value $health
 
-    $capabilities = Invoke-RestMethod `
-        -Method Get `
-        -Uri "$ApiBase/api/capabilities" `
-        -TimeoutSec 20
-
     $capabilitiesPath = Join-Path $script:RunDirectory "capabilities.json"
     Write-JsonFile -Path $capabilitiesPath -Value $capabilities
     $script:RunManifest["outputs"]["health"] = $healthPath
@@ -2537,7 +3358,19 @@ $repairHint
     $script:RunManifest["outputs"]["capabilities"] = $capabilitiesPath
     Save-RunManifest
 
-    Write-Success "TrackPrompt API and both Blender cue routes are current"
+    $resolvedVisualizerConfig = Resolve-VisualizerConfig `
+        -Request $visualizerConfigRequest `
+        -ApiBaseUrl $ApiBase
+    $resolvedVisualizerConfigPath = Join-Path `
+        $script:RunDirectory `
+        "visualizer-config.resolved.json"
+    Write-JsonFile `
+        -Path $resolvedVisualizerConfigPath `
+        -Value $resolvedVisualizerConfig
+    $script:RunManifest["outputs"]["visualizerConfig"] = $resolvedVisualizerConfigPath
+    Save-RunManifest
+
+    Write-Success "TrackPrompt API and visualizer configuration contract are current"
 
     if ($Mode -eq "deep") {
         $deepAvailable = Get-DirectPropertyValue `
@@ -2730,26 +3563,79 @@ $repairHint
     Write-Host ($cueSummary | ConvertTo-Json -Depth 20)
     Write-Success "Blender cue sheet validated"
 
-    Write-Step "Building the Blender abstract-geometry scene"
+    $shotPlanPath = ""
+
+    if ($VisualizerPreset -eq "space-journey-story") {
+        Write-Step "Compiling the deterministic cinematic story and shot plans"
+        $cinematicRequest = [ordered]@{
+            cuePreferences = [ordered]@{
+                fps = $Fps
+                includeBeats = $true
+                includeOnsets = $true
+                includeStemEvidence = $true
+                includeCurves = $true
+                curveDetail = $CurveDetail
+            }
+            visualizerConfig = $visualizerConfigRequest
+        }
+        $cinematicPlan = Invoke-RestMethod `
+            -Method Post `
+            -Uri "$ApiBase/api/analyses/$($script:JobId)/cinematic/plan" `
+            -ContentType "application/json" `
+            -Body ($cinematicRequest | ConvertTo-Json -Depth 30 -Compress) `
+            -TimeoutSec 60
+
+        if (
+            $null -eq $cinematicPlan.storyPlan -or
+            $null -eq $cinematicPlan.shotPlan -or
+            [string]$cinematicPlan.storyPlan.schemaVersion -ne "1.0.0" -or
+            [string]$cinematicPlan.shotPlan.schemaVersion -ne "1.0.0" -or
+            [string]$cinematicPlan.storyPlan.preset -ne "space-journey-story" -or
+            [string]$cinematicPlan.shotPlan.preset -ne "space-journey-story" -or
+            @($cinematicPlan.storyPlan.acts).Count -ne 7 -or
+            @($cinematicPlan.shotPlan.shots).Count -lt 7
+        ) {
+            throw "The cinematic compiler returned an invalid story or shot plan."
+        }
+        $actNames = @($cinematicPlan.storyPlan.acts | ForEach-Object { [string]$_.name })
+        if (($actNames -join "|") -ne "Signal|Awakening|Departure|Gates|Rupture|Transformation|Arrival") {
+            throw "The cinematic story plan does not preserve the fixed seven-act contract."
+        }
+        $storyPlanPath = Join-Path $script:RunDirectory "story-plan.json"
+        $shotPlanPath = Join-Path $script:RunDirectory "shot-plan.json"
+        Write-JsonFile -Path $storyPlanPath -Value $cinematicPlan.storyPlan
+        Write-JsonFile -Path $shotPlanPath -Value $cinematicPlan.shotPlan
+        $script:RunManifest["outputs"]["storyPlan"] = $storyPlanPath
+        $script:RunManifest["outputs"]["shotPlan"] = $shotPlanPath
+        Save-RunManifest
+        Write-Success "Cinematic story and shot plans compiled"
+    }
+
+    Write-Step "Building the Blender $VisualizerPreset scene"
 
     $blendPath = Join-Path `
         $script:RunDirectory `
-        "trackprompt-abstract.blend"
+        ([string]$visualizerOutputNames.BlendFile)
 
     Write-Host "> blender.exe (scene build; local audio input redacted)" -ForegroundColor DarkGray
+    $buildArguments = @(
+        "--background",
+        "--python-exit-code", "1",
+        "--python", $buildScript,
+        "--",
+        "--cues", $cuePath,
+        "--audio", $resolvedAudio,
+        "--preset", $VisualizerPreset,
+        "--seed", [string]$Seed,
+        "--config", $resolvedVisualizerConfigPath,
+        "--output", $blendPath
+    )
+    if (-not [string]::IsNullOrWhiteSpace($shotPlanPath)) {
+        $buildArguments += @("--shot-plan", $shotPlanPath)
+    }
     $buildNativeResult = Invoke-NativeCaptured `
         -Executable $resolvedBlender `
-        -ArgumentList @(
-            "--background",
-            "--python-exit-code", "1",
-            "--python", $buildScript,
-            "--",
-            "--cues", $cuePath,
-            "--audio", $resolvedAudio,
-            "--preset", "abstract-geometry",
-            "--seed", [string]$Seed,
-            "--output", $blendPath
-        ) `
+        -ArgumentList $buildArguments `
         -Description "Blender visualizer scene build" `
         -Quiet
 
@@ -2767,7 +3653,9 @@ $repairHint
         -BlendPath $blendPath `
         -ManifestPath $sceneManifestPath `
         -ExpectedCueSchema ([string]$cue.schemaVersion) `
-        -ExpectedSeed $Seed
+        -ExpectedSeed $Seed `
+        -ExpectedPreset $VisualizerPreset `
+        -ExpectedConfig $resolvedVisualizerConfig
 
     $script:RunManifest["outputs"]["blend"] = $blendPath
     $script:RunManifest["outputs"]["sceneManifest"] = $sceneManifestPath
@@ -2822,7 +3710,13 @@ $repairHint
 
         $previewResult = Assert-PreviewArtifacts `
             -PreviewDirectory $previewDirectory `
-            -ManifestPath $previewManifest
+            -ManifestPath $previewManifest `
+            -ExpectedPreset $VisualizerPreset `
+            -ExpectedConfig $resolvedVisualizerConfig `
+            -ExpectedClipName ([string]$visualizerOutputNames.PreviewClip) `
+            -ExpectedWidth $PreviewWidth `
+            -ExpectedHeight $PreviewHeight `
+            -ExpectedFps $Fps
 
         $script:RunManifest["outputs"]["previewDirectory"] = $previewDirectory
         $script:RunManifest["outputs"]["previewManifest"] = $previewManifest
@@ -2843,7 +3737,8 @@ $repairHint
 
     Assert-CanonicalRunOutputs `
         -Outputs $script:RunManifest["outputs"] `
-        -PreviewRequired (-not $SkipPreview)
+        -PreviewRequired (-not $SkipPreview) `
+        -ExpectedPreset $VisualizerPreset
 
     if ($DeleteJobAfterSuccess) {
         Write-Step "Deleting the TrackPrompt job after successful export"

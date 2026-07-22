@@ -1,10 +1,37 @@
 # TrackPrompt Studio — Self-Handoff
 
+## Cinematic Visualizer V2 handoff (2026-07-22)
+
+`space-journey-story` is registered as a distinct preview-only preset with deterministic story/shot compilation, Blender MCP authoring entrypoints, bounded motion/camera health checks, exact-prefix frame telemetry, and a Mission Control Director workflow. The synthetic 10-second proof under `test-output/cinematic-v2-proof-20260722-0905/` produced six reviewed stills and a verified 4.5-second H.264/AAC clip without touching the paused 13,029-frame V1 production job. The honest review decision is `revise`; V2 calibration, frozen authorization, and artist approval remain separate future gates. See `docs/cinematic-visualizer-v2.md` for contracts and commands.
+
 **Date:** 2026-07-19  
 **Repository:** `C:\Users\theon\GitHub\TrackPrompt-Studio`  
-**Status:** Full TrackPrompt → cue-sheet → Blender scene → bounded preview workflow reported successful end to end.
+**Status:** Full TrackPrompt → cue-sheet → selectable Blender preset → bounded preview workflow verified end to end, including Space Journey.
 
-> Verification note: the completion details below come from the latest Codex run and user-provided output. They were not independently rerun from this ChatGPT environment. On the next work session, preserve the working state and verify only the specific area being changed.
+> Verification note: the original Abstract Geometry baseline below remains a
+> historical record. Space Journey was independently rebuilt and rerun from
+> this checkout on 2026-07-19 with the canonical `-BuildStack` workflow; exact
+> current evidence is recorded below.
+
+## 2026-07-20 catalogue and long-form milestone
+
+The current source also contains the professional local catalogue milestone:
+clients/projects/batches, 32 MiB resumable chunks, 12-hour source admission,
+durable cancellable streaming multi-signal segmentation with bounded local refinement, reviewable
+virtual segments, persistent fair child scheduling, mastering comparison
+reports, hash-chained audit/revisions/artifacts, explicit deletion, and verified
+backup/restore tooling. Ordinary single-track analysis remains the default UI
+and retains its 1,200-second bound.
+
+Current source verification passed 255 backend tests, 44 frontend tests, 114
+Blender/tool tests, two Chromium E2E scenarios, the canonical PowerShell runner
+tests, and backup/verify/restore wrapper smoke. No production Blender render was
+started. The final live full-GPU smoke was blocked by Docker Desktop’s NVIDIA
+prestart hook reporting `WSL environment detected but no adapters were found`;
+host `nvidia-smi` still reported the RTX 3060. The local backend/frontend were
+restored healthy in base mode using the existing named data volume, and the
+prompt-writer/model volume was preserved. Restart Docker Desktop/WSL GPU
+integration before rerunning `verify-full-gpu.ps1`; do not delete volumes.
 
 ---
 
@@ -41,12 +68,57 @@ The latest Codex pass reported the following as working:
 - Automatic stale-backend detection and one bounded rebuild attempt.
 - Blender 5.2.0 LTS headless scene construction.
 - Abstract Geometry preset.
+- Space Journey preset with a typed `1.0.0` configuration, role-labelled stills,
+  deterministic procedural geometry, and bounded parameter revisions.
 - Bounded preview stills and 10-second MP4 preview with muxed audio.
 - Cached no-rebuild runner path.
 - Controlled stale-backend recovery path.
 - Backend, frontend, Blender, PowerShell, Compose, and E2E checks.
 
 The original failure was a healthy but stale backend image whose live OpenAPI did not expose the visual-cue routes. The canonical runner now detects this and can rebuild/recreate the backend without deleting named volumes.
+
+### Fresh Space Journey verification
+
+The latest verified run is:
+
+```text
+Run:    test-output\system-runs\run-20260719-151848-5ba6f8d7
+Job:    5ec62fcc-8230-4581-9d2c-60f1484b0879
+Status: completed
+Mode:   deep
+```
+
+It used `-BuildStack`, created and polled only that fresh job, exported cue
+schema `1.1.0`, resolved Space Journey config schema `1.0.0`, built the original
+39-object Space Journey scene, rendered the six ordered roles, and verified a
+10.0-second H.264/AAC preview at 640×360 and 30 fps. The job and named volumes
+were preserved.
+
+The premium visual-quality-only upgrade established the approved visual
+baseline under `test-output\space-journey-premium-pass-20260719\iteration-08\`.
+The subsequent cinematic/emotional direction pass re-used the same verified cue
+sheet and private audio without changing analysis, APIs, configuration, runner,
+or cue contracts. Its final deterministic scene and review artifacts are:
+
+```text
+test-output\space-journey-cinematic-pass-20260719\iteration-04\
+```
+
+The cinematic scene has 75 objects, 25 materials, 14 collections, 154 F-curves,
+and the same 10 audio-bus curves. It retains six primary rings, nine companion
+lanes, 304 stars in four combined layers, 124 combined orbital-dust elements,
+four nebula layers, and no build warnings. Fifteen deterministic macro states
+stage mystery, approach, breath, rebuild, revelation, and release over the
+unchanged micro audio response. The final refinement replaces the flat optical
+aperture with a dimensional violet/cyan portal, adds a threshold hold before
+the accelerated release, and moves the existing foreground bracket plus
+near/far travel layers through bounded depth during the rising transition.
+The six final review stills are 1280×720 under
+`preview-stills\`. The bounded clip under
+`preview-final\space-journey-preview.mp4` covers only frames 6930–7229 and is
+verified as exactly 10.0 seconds, 640×360, 30 fps, H.264 with AAC audio. Its
+external FFmpeg frame sequence was removed after the verified mux. No full-track
+render was started.
 
 ---
 
@@ -95,6 +167,7 @@ docs\analysis-methods.md
 docs\blender-visual-cue-sheet.md
 docs\blender-visualizer-mvp.md
 docs\codex-blender-mcp-preview.md
+docs\space-journey-visualizer.md
 ```
 
 ---
@@ -112,6 +185,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\run-trackprompt-to-blender.ps1 `
   -AudioPath "C:\Users\theon\OneDrive\Desktop\Gratis Project\DJ WaZaHaKa - Trip to Andromeda.wav" `
   -BlenderExe "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
+  -VisualizerPreset "space-journey" `
   -ConfirmPermission `
   -ConfirmLyricsConsent `
   -BuildStack
@@ -126,6 +200,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\run-trackprompt-to-blender.ps1 `
   -AudioPath "C:\Users\theon\OneDrive\Desktop\Gratis Project\DJ WaZaHaKa - Trip to Andromeda.wav" `
   -BlenderExe "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
+  -VisualizerPreset "space-journey" `
   -ConfirmPermission `
   -ConfirmLyricsConsent
 ```
@@ -137,6 +212,7 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\run-trackprompt-to-blender.ps1 `
   -AudioPath "C:\Users\theon\OneDrive\Desktop\Gratis Project\DJ WaZaHaKa - Trip to Andromeda.wav" `
   -BlenderExe "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
+  -VisualizerPreset "space-journey" `
   -ConfirmPermission `
   -ConfirmLyricsConsent `
   -SkipPreview
@@ -366,7 +442,14 @@ TP_BACKGROUND
 TP_DEBUG
 ```
 
-The current preview image shows a central wireframe-like sphere surrounded by multiple bright orbital rings against a dark background. The scene is functioning, though the visual framing is still MVP-level: some rings cross heavily in front of the central object and could benefit from camera, thickness, palette, and depth tuning in the next visual-quality pass.
+The current Space Journey preview uses a displaced dark destination shell with
+a camera-facing optical iris, violet crescent, cyan focal seed, sparse lattice,
+clustered crystalline facets, inner filaments, and a restrained Fresnel halo.
+Its orbit system preserves the six-primary/nine-companion contract while
+separating broken structural sweeps, dim continuous ellipses, and hairline
+traces with moving light packets. Four point-like parallax star layers,
+directional low-frequency nebula depth, and bounded camera target/shift easing
+replace the earlier HUD-like dash wall, triangular confetti, and centered zoom.
 
 ---
 
@@ -375,11 +458,11 @@ The current preview image shows a central wireframe-like sphere surrounded by mu
 Reported preview validation:
 
 ```text
-Stills:      6
-Resolution:  640x360
-Clip:        10 seconds
-Codec:       H.264
-Audio:       AAC muxed
+Stills:            6 at 1280x720
+Bounded clip:      10.0 seconds at 640x360 and 30 fps
+Video codec:       H.264
+Audio codec:       AAC, verified muxed
+Temporary frames:  0 after successful mux
 ```
 
 The preview pipeline must remain bounded. Do not start a full 7-minute render during ordinary testing.
@@ -458,19 +541,22 @@ It must continue to:
 2. validate Docker/Compose;
 3. check API health;
 4. inspect live OpenAPI;
-5. detect missing visual-cue routes even when the backend is healthy;
+5. detect missing visual-cue/config routes or stale preset capability metadata
+   even when the backend is healthy;
 6. rebuild/recreate the backend at most once automatically;
 7. honor `-BuildStack` even when health succeeds;
 8. upload the supplied audio;
 9. save the fresh job ID immediately;
 10. poll only that fresh job;
 11. export analysis and visual cues;
-12. validate cue privacy and curve integrity;
-13. call Blender only after cue validation;
-14. verify `.blend` and manifest output;
-15. render only a bounded preview;
-16. preserve the TrackPrompt job by default;
-17. never remove named volumes.
+12. resolve and persist a typed visualizer configuration;
+13. validate cue privacy and curve integrity;
+14. call Blender only after cue/config validation;
+15. verify `.blend` and manifest output;
+16. enforce six ordered Space Journey roles and verified H.264/AAC media;
+17. render only a bounded preview;
+18. preserve the TrackPrompt job by default;
+19. never remove named volumes.
 
 Never regress to manually reusing an old job ID.
 
@@ -480,15 +566,23 @@ Never regress to manually reusing an old job ID.
 
 - Demucs, CLAP, lyrics, and local prompt-writer models must already be provisioned.
 - `-BuildStack` rebuilds current source; it intentionally does not redownload model weights.
-- The implemented visual preset is only `abstract-geometry`.
+- `abstract-geometry` remains the default; `space-journey` is the second
+  registered preset.
 - Preview rendering is bounded to approximately 10 seconds.
-- No narrative scene generation, characters, lip sync, or photoreal environment exists yet.
+- No full-track render starts automatically. Characters, lip sync, and a
+  photoreal narrative film remain out of scope.
+- Blender 5.2's compositor-node-group path is supported and verified with
+  bounded Fog Glow. Unsupported Blender compositor APIs still report
+  `controlled_compositor_glow_unavailable` and retain the material fallback.
 - Existing unrelated worktree changes were preserved.
 - Nothing was staged or committed by the latest Codex run.
 - The worktree may still be dirty.
 - Local paths are Windows-specific.
 - Docker, Blender, FFmpeg, model volumes, and the original WAV are local dependencies.
-- The current visual result is technically successful but still needs an authored visual-quality pass.
+- Space Journey passed iterative authored still review, native 640×360 motion
+  review, verified mux probing, and a direct comparison with the preceding
+  premium version. The cinematic pass is emotionally stronger and ready for
+  artistic review, but is not represented as a final mastered YouTube render.
 
 ---
 
@@ -557,7 +651,7 @@ Then inspect the latest successful run:
 
 ```powershell
 Get-Content `
-  .\test-output\system-runs\run-20260719-000700-4db9fbe7\run-manifest.json `
+  .\test-output\system-runs\run-20260719-151848-5ba6f8d7\run-manifest.json `
   -Raw
 ```
 
@@ -570,33 +664,23 @@ Do not rerun the full setup installer merely to begin work.
 The strongest next step is:
 
 ```text
-Space Journey preset
-+ visual quality controls
-+ MCP revision workflow
-+ user-facing preset parameters
+Space Journey artistic approval
++ optional bounded palette/parameter comparison
++ explicit final-render preparation after approval
 ```
 
 Suggested focus:
 
-1. Preserve the cue exporter, audio bus, and whole-system runner unchanged.
-2. Add a second preset rather than replacing `abstract-geometry`.
-3. Create a cinematic space-flight scene suited to long electronic tracks.
-4. Add bounded parameters:
-   - camera distance;
-   - camera orbit speed;
-   - ring thickness;
-   - ring occlusion;
-   - palette;
-   - glow strength;
-   - shard density;
-   - fog depth;
-   - bass response;
-   - drum response;
-   - vocal response.
-5. Improve framing so foreground rings do not obscure the core excessively.
-6. Render representative stills before any preview clip.
-7. Use MCP only for bounded parameter revisions, not individual keyframes.
-8. Never begin a full-track render automatically.
+1. Review the latest six stills and 10-second clip with the artist.
+2. Compare only bounded configuration revisions such as palette, glow, fog,
+   ring occlusion, and camera distance; keep each revision deterministic.
+3. Keep the verified Blender 5.2 compositor-node-group glow path and the
+   material fallback intact.
+4. Render any higher-resolution hero still only after artistic approval.
+5. Keep `abstract-geometry`, cue schema `1.1.0`, `TP_AUDIO_BUS`, fresh-job
+   capture, privacy validation, and named-volume preservation unchanged.
+6. Create any final-quality/full-track command as a separate explicit operator
+   action only after artistic approval; never make it the default runner path.
 
 ---
 
@@ -605,14 +689,17 @@ Suggested focus:
 ```text
 Read the repository documentation and this handoff before changing anything.
 
-The TrackPrompt-to-Blender whole-system runner, stale-backend recovery, visual
-cue export, abstract-geometry scene, and bounded preview are already working.
+The TrackPrompt-to-Blender whole-system runner, typed visualizer configuration,
+stale-backend recovery, visual cue export, Abstract Geometry, Space Journey,
+six-role still review, and verified bounded preview are working.
 
 Preserve the canonical runner and all current contracts. First inspect git
 status, service health, the latest successful run manifest, and existing tests.
 
-The next intended milestone is a new Space Journey preset and visual-quality
-tuning. Do not regress the abstract-geometry preset, cue schema, private visual
-features, model volumes, or the fresh-job workflow. Do not render the complete
-track during development.
+The next intended milestone is the operator's Space Journey artistic decision
+and, if approved, an explicit final-render handoff. Do not regress the Abstract
+Geometry default, cue/config
+schemas, private visual features, model volumes, strict preview evidence, or the
+fresh-job workflow. Do not render the complete track without a separate
+explicit operator decision.
 ```

@@ -1,5 +1,33 @@
 # Architecture
 
+The optional cinematic layer compiles local visual cues into versioned `StoryPlan` and `ShotPlan` artifacts before Blender scene construction. `space-journey-story` consumes the shot plan through a distinct preset boundary, and Mission Control exposes persisted frame/act/shot telemetry plus an atomic local Director review workspace. The browser still talks only to loopback FastAPI services, and audio/media remain local. See [Cinematic Visualizer V2](cinematic-visualizer-v2.md).
+
+## Catalogue and long-form boundary
+
+The professional catalogue is an additive subsystem sharing the private data
+root and SQLite database while retaining independent schema versions. Catalogue
+schema `1.0.0` adds clients, projects, batches, source assets, upload sessions,
+virtual segments, durable queue items, artifacts, revisions, and chained audit
+events. Migrations are transactional and idempotent; no existing analysis table
+or job directory is replaced.
+
+Archived source blobs are addressed by complete SHA-256 and stored once below
+`archive/blobs`. Logical source assets link the same bytes into batches. Partial
+uploads live below UUID session directories in `uploads`; ordinary temporary
+analysis remains below UUID directories in `jobs`. Public contracts expose
+IDs, hashes, and storage state but never physical paths.
+
+Long-form source ingestion/segmentation and bounded child analysis are separate
+resource domains. The scan decodes sequential 8 kHz PCM chunks and retains only
+one low-rate feature observation per second by default. Source scans have their
+own durable queue and safe progress contract; running scans return to queued
+after restart, cancellation reaches bounded FFmpeg work, and segment maps are
+published only after a successful complete scan. Reviewed segments are
+durably queued; the scheduler survives restart, dispatches fairly across active
+batches, and uses the existing worker/GPU semaphores. Temporary range decodes,
+worker files, and stems are removed after their immutable analysis/prompt
+artifacts are registered.
+
 ## System boundary
 
 TrackPrompt Studio is one local web application, not a hosted service. The React
@@ -18,7 +46,10 @@ flowchart LR
     Worker --> VisualFeatures["private 20 Hz visual features"]
     VisualFeatures --> CueCompiler["pure visual cue compiler"]
     CueCompiler --> CueExport["minimized visual-cues.json"]
+    Browser -->|"typed preset parameters"| ConfigAPI["visualizer config resolver"]
+    ConfigAPI --> ConfigArtifact["resolved visualizer config"]
     CueExport -. "separate approved audio input" .-> Blender["Blender Python preset"]
+    ConfigArtifact -. "bounded local parameters" .-> Blender
     Blender --> Preview["bounded stills + short movie"]
     Preview --> Probe["local ffprobe stream/duration verification"]
     API --> Prompt["prompt evidence + validation engine"]
@@ -50,7 +81,7 @@ There is deliberately no normal-analysis arrow to an external service.
 | `backend/requirements.txt`, `backend/requirements.lock.txt`, `backend/requirements.full-gpu.txt` | Human-maintained runtime policy, the exact base Linux set, and reviewed pinned full-GPU direct dependencies. |
 | `backend/tests/`, `frontend/src/**/*.test.*`, `frontend/e2e/` | Unit, component, and browser coverage using generated synthetic media. |
 | `tools/generate_test_audio.py` | Deterministic, synthetic-only audio fixtures. |
-| `blender/` | Reusable cue loader, audio-control F-curves, procedural abstract preset, diagnostics, previews, and MCP-safe entrypoints. |
+| `blender/` | Reusable cue loader, audio-control F-curves, typed preset registry, Abstract Geometry and Space Journey builders, diagnostics, previews, and MCP-safe entrypoints. |
 | `.trackprompt-data/` or Docker `/data` | Runtime state; ignored by Git and removable independently of source. |
 
 The Pydantic models are the API boundary and FastAPI publishes their OpenAPI
@@ -60,16 +91,18 @@ Pydantic field changes, its TypeScript mirror, parser, tests, and documentation
 must change in the same patch.
 
 Blender build and preview manifests are local verification boundaries. The build
-manifest records explicit frame/FPS, audio-bus, collection, F-curve, audio-strip,
-camera, and output checks. The preview manifest pairs planned still frames with
-written artifacts and uses a bounded local ffprobe argument array to confirm the
-movie duration and whether its actual audio stream matches the scene request.
+manifest records explicit frame/FPS, resolved preset configuration, audio-bus,
+collection, F-curve, audio-strip, camera, and output checks. The preview manifest
+pairs role-labelled planned still frames with written artifacts and uses a
+bounded local ffprobe argument array to confirm the movie duration and whether
+its actual audio stream matches the scene request.
 
 On Windows, `run-trackprompt-to-blender.ps1` is the canonical whole-system
 orchestrator: it optionally rebuilds the full-GPU Compose images, starts or
-reuses the stack, uploads one permitted audio file, persists the job ID, polls
-to completion, exports analysis and cue artifacts, builds the `.blend`, and
-renders/verifies the bounded preview unless `-SkipPreview` is set. Omitting
+reuses the stack, resolves a validated visualizer preset/configuration, uploads
+one permitted audio file, persists the job ID, polls to completion, exports
+analysis and cue artifacts, builds the `.blend`, and renders/verifies the bounded
+preview unless `-SkipPreview` is set. Omitting
 `-BuildStack` starts from cached images; the default may perform one bounded
 backend rebuild when live OpenAPI lacks the visualizer routes. Passing
 `-AutoRebuildStaleBackend:$false` enforces a cached-only run. Every invocation
@@ -293,6 +326,7 @@ the storage layout or retention behavior.
 | `GET /api/analyses/{job_id}/audio` | Stream the private source to the local waveform player with bounded byte-range handling and a generic response filename. |
 | `POST /api/analyses/{job_id}/visual-cues` | Compile and return a minimized versioned Blender cue sheet from typed FPS/event/stem/curve/detail preferences. |
 | `GET /api/analyses/{job_id}/visual-cues/export` | Download the same cue contract with query preferences and a UUID-derived filename; no source path or filename is exported. |
+| `POST /api/visualizer/config/resolve` | Validate and resolve an Abstract Geometry or Space Journey configuration. It does not launch Blender or persist job state. |
 
 Errors use a safe shape with `code`, `message`, and optional non-sensitive
 `details`. Stack traces and filesystem paths are not returned. FastAPI serves the

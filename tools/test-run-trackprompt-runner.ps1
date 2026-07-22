@@ -18,6 +18,7 @@ function Assert-RunnerTest {
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $runnerPath = Join-Path $repoRoot "run-trackprompt-to-blender.ps1"
+$manualBuilderPath = Join-Path $repoRoot "build-trackprompt-visualizer.ps1"
 $tokens = $null
 $parseErrors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -28,6 +29,18 @@ $ast = [System.Management.Automation.Language.Parser]::ParseFile(
 
 if ($parseErrors.Count -gt 0) {
     throw "The canonical runner does not parse: $($parseErrors[0].Message)"
+}
+
+$manualTokens = $null
+$manualParseErrors = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile(
+    $manualBuilderPath,
+    [ref]$manualTokens,
+    [ref]$manualParseErrors
+)
+
+if ($manualParseErrors.Count -gt 0) {
+    throw "The manual visualizer builder does not parse: $($manualParseErrors[0].Message)"
 }
 
 $runnerText = Get-Content -LiteralPath $runnerPath -Raw
@@ -44,6 +57,15 @@ Assert-RunnerTest `
     )) `
     "automatic stale repair must be one backend-only no-dependency recreation path"
 Assert-RunnerTest `
+    ($runnerText.Contains('-not $visualizerContractCurrent -and $AutoRebuildStaleBackend')) `
+    "the one-attempt stale repair must gate on routes and visualizer capabilities together"
+Assert-RunnerTest `
+    ([regex]::IsMatch(
+        $runnerText,
+        '(?s)One-time stale TrackPrompt backend repair.*?Get-LiveOpenApi.*?Get-LiveCapabilities'
+    )) `
+    "the bounded repair must refetch both OpenAPI and capabilities"
+Assert-RunnerTest `
     (-not $runnerText.Contains('"--volumes"')) `
     "the canonical runner must never remove named volumes"
 Assert-RunnerTest `
@@ -53,11 +75,55 @@ Assert-RunnerTest `
     (([regex]::Matches($runnerText, '"--python-exit-code", "1"')).Count -eq 2) `
     "both Blender Python invocations must request a nonzero Python failure exit"
 Assert-RunnerTest `
+    ($runnerText.Contains('[ValidateSet("abstract-geometry", "space-journey", "space-journey-story")]')) `
+    "the runner must constrain visualizer presets to the supported registry"
+Assert-RunnerTest `
+    ($runnerText.Contains('[string]$VisualizerPreset = "abstract-geometry"')) `
+    "Abstract Geometry must remain the canonical runner default"
+Assert-RunnerTest `
+    ($runnerText.Contains('"--config", $resolvedVisualizerConfigPath')) `
+    "the resolved configuration artifact must be passed to Blender"
+Assert-RunnerTest `
+    ($runnerText.Contains('/api/visualizer/config/resolve')) `
+    "the runner must resolve configurations through the typed backend endpoint"
+Assert-RunnerTest `
     ($runnerText.Contains('-Arguments @("config", "--quiet")')) `
     "the combined base and full-GPU Compose configuration must be validated before stack work"
 Assert-RunnerTest `
     (([regex]::Matches($runnerText, 'Wait-ComposeServiceHealthy -Service "frontend"')).Count -ge 3) `
     "the frontend must reach its Compose healthcheck after rebuild, startup, and bounded repair paths"
+
+$manualBuilderText = Get-Content -LiteralPath $manualBuilderPath -Raw
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('[string]$VisualizerPreset = "abstract-geometry"')) `
+    "the manual builder must preserve Abstract Geometry as its default preset"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('/api/visualizer/config/resolve')) `
+    "the manual builder must use the typed configuration resolver"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('"--config", $resolvedConfigPath')) `
+    "the manual builder must pass the resolved configuration to Blender"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('trip-to-andromeda-space-journey.blend')) `
+    "the manual builder must avoid cross-preset output collisions"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('Join-Path $legacyOutputDirectory "space-journey"')) `
+    "Space Journey manual outputs must be isolated from legacy Abstract outputs"
+Assert-RunnerTest `
+    (([regex]::Matches($manualBuilderText, '"--python-exit-code", "1"')).Count -eq 2) `
+    "both manual Blender invocations must surface Python failures"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('scene build; local audio input redacted')) `
+    "the manual builder must redact the private audio path from displayed commands"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('Assert-CurrentBuildArtifacts')) `
+    "the manual builder must validate a fresh build manifest and resolved config"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('Assert-CurrentPreviewArtifacts')) `
+    "the manual builder must validate fresh preview artifacts and probe evidence"
+Assert-RunnerTest `
+    ($manualBuilderText.Contains('$item.LastWriteTimeUtc -lt $StartedAt')) `
+    "the manual builder must reject stale artifacts from earlier invocations"
 
 $functionNames = @(
     "Invoke-NativeCaptured",
@@ -79,7 +145,14 @@ $functionNames = @(
     "New-UploadFieldPlan",
     "Test-OpenApiOperation",
     "Get-VisualizerRouteStatus",
+    "Get-VisualizerCapabilitiesStatus",
     "Test-FiniteNumber",
+    "Get-VisualizerOutputNames",
+    "Read-VisualizerConfigRequest",
+    "Assert-ResolvedVisualizerConfig",
+    "Resolve-VisualizerConfig",
+    "ConvertTo-CanonicalJsonValue",
+    "Test-VisualizerConfigMatch",
     "Assert-PublicCueValue",
     "Assert-VisualCueSheet",
     "Assert-NonEmptyFile",
@@ -170,7 +243,8 @@ $openApi = @'
       }
     },
     "/api/analyses/{job_id}/visual-cues": {"post": {}},
-    "/api/analyses/{job_id}/visual-cues/export": {"get": {}}
+    "/api/analyses/{job_id}/visual-cues/export": {"get": {}},
+    "/api/visualizer/config/resolve": {"post": {}}
   },
   "components": {
     "schemas": {
@@ -204,7 +278,49 @@ $openApi = @'
 '@ | ConvertFrom-Json
 
 $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi
-Assert-RunnerTest $routeStatus.Complete "both visual-cue methods must be detected"
+Assert-RunnerTest $routeStatus.Complete "both visual-cue methods and config resolution must be detected"
+$openApi.paths.PSObject.Properties.Remove("/api/visualizer/config/resolve")
+$routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi
+Assert-RunnerTest (-not $routeStatus.Complete) "a missing config resolver must mark the contract stale"
+$openApi.paths | Add-Member `
+    -NotePropertyName "/api/visualizer/config/resolve" `
+    -NotePropertyValue ([pscustomobject]@{ post = [pscustomobject]@{} })
+
+$currentCapabilities = [pscustomobject]@{
+    blenderVisualizerPreset = "abstract-geometry"
+    blenderVisualizerDefaultPreset = "abstract-geometry"
+    blenderVisualizerPresets = @("abstract-geometry", "space-journey", "space-journey-story")
+    blenderVisualizerConfigSchemaVersion = "1.0.0"
+}
+$capabilitiesStatus = Get-VisualizerCapabilitiesStatus `
+    -Capabilities $currentCapabilities `
+    -RequestedPreset "space-journey"
+Assert-RunnerTest `
+    ($capabilitiesStatus.Complete -and $capabilitiesStatus.RequestedPresetAdvertised) `
+    "the current typed visualizer capability contract must pass"
+
+$staleSchemaCapabilities = $currentCapabilities |
+    ConvertTo-Json -Depth 10 |
+    ConvertFrom-Json
+$staleSchemaCapabilities.blenderVisualizerConfigSchemaVersion = "0.9.0"
+$capabilitiesStatus = Get-VisualizerCapabilitiesStatus `
+    -Capabilities $staleSchemaCapabilities `
+    -RequestedPreset "space-journey"
+Assert-RunnerTest `
+    (-not $capabilitiesStatus.Complete) `
+    "a stale visualizer config schema must consume the shared compatibility repair gate"
+
+$missingPresetCapabilities = $currentCapabilities |
+    ConvertTo-Json -Depth 10 |
+    ConvertFrom-Json
+$missingPresetCapabilities.blenderVisualizerPresets = @("abstract-geometry")
+$capabilitiesStatus = Get-VisualizerCapabilitiesStatus `
+    -Capabilities $missingPresetCapabilities `
+    -RequestedPreset "space-journey"
+Assert-RunnerTest `
+    (-not $capabilitiesStatus.Complete -and -not $capabilitiesStatus.RequestedPresetAdvertised) `
+    "a missing requested preset must remain an honest capability failure after repair"
+
 $openApi.paths.PSObject.Properties.Remove("/api/analyses/{job_id}/visual-cues")
 $routeStatus = Get-VisualizerRouteStatus -OpenApi $openApi
 Assert-RunnerTest (-not $routeStatus.Complete) "a missing POST route must mark the contract stale"
@@ -299,6 +415,18 @@ $nativeSuccess = Assert-NativeJsonSuccess `
     -NativeResult ([pscustomobject]@{ Lines = @('{"ok":true,"outputFile":"scene.blend"}') }) `
     -Description "Mock Blender operation"
 Assert-RunnerTest ($nativeSuccess.ok -eq $true) "structured Blender success must be accepted"
+
+$nativeProgressSuccess = Assert-NativeJsonSuccess `
+    -NativeResult ([pscustomobject]@{
+        Lines = @(
+            'Fra:7229 Mem:10.00M Time:00:06:00.00 {"ok":true,"manifest":"preview-manifest.json"} Blender quit'
+        )
+    }) `
+    -Description "Mock progress-prefixed Blender operation"
+Assert-RunnerTest `
+    ($nativeProgressSuccess.manifest -eq "preview-manifest.json") `
+    "Blender carriage-return progress must not hide structured completion"
+
 $nativeFailureRejected = $false
 
 try {
@@ -347,6 +475,7 @@ foreach ($outputName in @(
     "analysisMarkdown",
     "cueSheet",
     "cueSummary",
+    "visualizerConfig",
     "blend",
     "sceneManifest",
     "previewManifest",
@@ -364,6 +493,206 @@ $contractRoot = Join-Path `
 
 try {
     New-Item -ItemType Directory -Path $contractRoot -Force | Out-Null
+
+    $abstractOutputNames = Get-VisualizerOutputNames -Preset "abstract-geometry"
+    $spaceOutputNames = Get-VisualizerOutputNames -Preset "space-journey"
+    $storyOutputNames = Get-VisualizerOutputNames -Preset "space-journey-story"
+    Assert-RunnerTest `
+        ($abstractOutputNames.BlendFile -eq "trackprompt-abstract.blend") `
+        "the legacy Abstract Geometry blend filename must be preserved"
+    Assert-RunnerTest `
+        ($abstractOutputNames.PreviewClip -eq "trackprompt-preview.mp4") `
+        "the legacy Abstract Geometry preview filename must be preserved"
+    Assert-RunnerTest `
+        ($spaceOutputNames.BlendFile -eq "trackprompt-space-journey.blend") `
+        "Space Journey must use a non-colliding blend filename"
+    Assert-RunnerTest `
+        ($spaceOutputNames.PreviewClip -eq "space-journey-preview.mp4") `
+        "Space Journey must use its preset-specific preview filename"
+    Assert-RunnerTest `
+        ($storyOutputNames.BlendFile -eq "trackprompt-space-journey-story.blend") `
+        "Space Journey Story must use a non-colliding blend filename"
+    Assert-RunnerTest `
+        ($storyOutputNames.PreviewClip -eq "space-journey-story-preview.mp4") `
+        "Space Journey Story must use its preset-specific preview filename"
+
+    $abstractResolvedConfig = @'
+{
+  "schemaVersion": "1.0.0",
+  "preset": "abstract-geometry",
+  "parameters": {},
+  "seed": 84291,
+  "defaultedParameters": [],
+  "warnings": []
+}
+'@ | ConvertFrom-Json
+    $spaceResolvedConfig = @'
+{
+  "schemaVersion": "1.0.0",
+  "preset": "space-journey",
+  "parameters": {
+    "cameraDistance": 18.0,
+    "cameraOrbitSpeed": 0.15,
+    "ringThickness": 0.06,
+    "ringOcclusion": 0.20,
+    "palette": "andromeda",
+    "glowStrength": 1.8,
+    "shardDensity": 0.35,
+    "fogDepth": 0.50,
+    "bassResponse": 1.2,
+    "drumResponse": 0.9,
+    "vocalResponse": 0.65
+  },
+  "seed": 84291,
+  "defaultedParameters": [
+    "bassResponse",
+    "cameraDistance",
+    "cameraOrbitSpeed",
+    "drumResponse",
+    "fogDepth",
+    "glowStrength",
+    "palette",
+    "ringOcclusion",
+    "ringThickness",
+    "shardDensity",
+    "vocalResponse"
+  ],
+  "warnings": []
+}
+'@ | ConvertFrom-Json
+
+    [void](Assert-ResolvedVisualizerConfig `
+        -Config $abstractResolvedConfig `
+        -ExpectedPreset "abstract-geometry" `
+        -ExpectedSeed 84291)
+    [void](Assert-ResolvedVisualizerConfig `
+        -Config $spaceResolvedConfig `
+        -ExpectedPreset "space-journey" `
+        -ExpectedSeed 84291)
+
+    $reorderedSpaceConfig = @'
+{
+  "warnings": [],
+  "defaultedParameters": [
+    "bassResponse",
+    "cameraDistance",
+    "cameraOrbitSpeed",
+    "drumResponse",
+    "fogDepth",
+    "glowStrength",
+    "palette",
+    "ringOcclusion",
+    "ringThickness",
+    "shardDensity",
+    "vocalResponse"
+  ],
+  "seed": 84291,
+  "parameters": {
+    "vocalResponse": 0.65,
+    "shardDensity": 0.35,
+    "ringThickness": 0.06,
+    "ringOcclusion": 0.20,
+    "palette": "andromeda",
+    "glowStrength": 1.8,
+    "fogDepth": 0.50,
+    "drumResponse": 0.9,
+    "cameraOrbitSpeed": 0.15,
+    "cameraDistance": 18.0,
+    "bassResponse": 1.2
+  },
+  "preset": "space-journey",
+  "schemaVersion": "1.0.0"
+}
+'@ | ConvertFrom-Json
+    Assert-RunnerTest `
+        (Test-VisualizerConfigMatch `
+            -Actual $reorderedSpaceConfig `
+            -Expected $spaceResolvedConfig `
+            -Preset "space-journey" `
+            -Seed 84291) `
+        "manifest configuration comparison must ignore JSON object property order"
+
+    $invalidSpaceConfig = (
+        $spaceResolvedConfig | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    )
+    $invalidSpaceConfig.parameters.cameraDistance = 41.0
+    $invalidSpaceRejected = $false
+
+    try {
+        [void](Assert-ResolvedVisualizerConfig `
+            -Config $invalidSpaceConfig `
+            -ExpectedPreset "space-journey" `
+            -ExpectedSeed 84291)
+    }
+    catch {
+        $invalidSpaceRejected = $true
+    }
+
+    Assert-RunnerTest `
+        $invalidSpaceRejected `
+        "resolved Space Journey parameters outside backend bounds must be rejected"
+
+    $defaultConfigRequest = Read-VisualizerConfigRequest `
+        -Preset "abstract-geometry" `
+        -Seed 84291
+    Assert-RunnerTest `
+        ($defaultConfigRequest.preset -eq "abstract-geometry") `
+        "omitting preset configuration must preserve Abstract Geometry"
+    Assert-RunnerTest `
+        (@($defaultConfigRequest.parameters.PSObject.Properties).Count -eq 0) `
+        "the default Abstract Geometry request must have no public parameters"
+
+    $configRequestPath = Join-Path $contractRoot "space-journey-config.json"
+    [IO.File]::WriteAllText(
+        $configRequestPath,
+        ($spaceResolvedConfig | ConvertTo-Json -Depth 20),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+    $fileConfigRequest = Read-VisualizerConfigRequest `
+        -Preset "abstract-geometry" `
+        -Seed 84291 `
+        -ConfigPath $configRequestPath
+    Assert-RunnerTest `
+        ($fileConfigRequest.preset -eq "space-journey") `
+        "a config file must select its preset when the CLI preset was omitted"
+    Assert-RunnerTest `
+        ([double]$fileConfigRequest.parameters.glowStrength -eq 1.8) `
+        "a config file must preserve explicit preset parameters"
+
+    $presetConflictRejected = $false
+
+    try {
+        [void](Read-VisualizerConfigRequest `
+            -Preset "abstract-geometry" `
+            -Seed 84291 `
+            -ConfigPath $configRequestPath `
+            -PresetWasExplicit $true)
+    }
+    catch {
+        $presetConflictRejected = $true
+    }
+
+    Assert-RunnerTest `
+        $presetConflictRejected `
+        "an explicit CLI preset must not silently conflict with the config file"
+
+    $seedConflictRejected = $false
+
+    try {
+        [void](Read-VisualizerConfigRequest `
+            -Preset "space-journey" `
+            -Seed 7 `
+            -ConfigPath $configRequestPath `
+            -SeedWasExplicit $true)
+    }
+    catch {
+        $seedConflictRejected = $true
+    }
+
+    Assert-RunnerTest `
+        $seedConflictRejected `
+        "an explicit CLI seed must not silently conflict with the config file"
+
     $fakeBlend = Join-Path $contractRoot "scene.blend"
     $fakeSceneManifestPath = Join-Path $contractRoot "scene.manifest.json"
     [IO.File]::WriteAllBytes($fakeBlend, [byte[]](1, 2, 3, 4))
@@ -391,9 +720,12 @@ try {
         preset = "abstract-geometry"
         seed = 84291
         cueSheetSchemaVersion = "1.1.0"
+        visualizerConfig = $abstractResolvedConfig
         checks = $sceneChecks
         scene = [ordered]@{
             ok = $true
+            preset = "abstract-geometry"
+            seed = 84291
             audioStripPresent = $true
             outputFile = $resolvedFakeBlend
             collections = @(
@@ -423,7 +755,9 @@ try {
         -BlendPath $fakeBlend `
         -ManifestPath $fakeSceneManifestPath `
         -ExpectedCueSchema "1.1.0" `
-        -ExpectedSeed 84291)
+        -ExpectedSeed 84291 `
+        -ExpectedPreset "abstract-geometry" `
+        -ExpectedConfig $abstractResolvedConfig)
 
     $sceneManifest["checks"]["audioBus"] = $false
     [IO.File]::WriteAllText(
@@ -438,7 +772,9 @@ try {
             -BlendPath $fakeBlend `
             -ManifestPath $fakeSceneManifestPath `
             -ExpectedCueSchema "1.1.0" `
-            -ExpectedSeed 84291)
+            -ExpectedSeed 84291 `
+            -ExpectedPreset "abstract-geometry" `
+            -ExpectedConfig $abstractResolvedConfig)
     }
     catch {
         $failedSceneCheckRejected = $true
@@ -448,12 +784,61 @@ try {
         $failedSceneCheckRejected `
         "a failed scene-contract check must stop the runner"
 
+    $sceneManifest["checks"]["audioBus"] = $true
+    $sceneManifest["preset"] = "space-journey"
+    $sceneManifest["visualizerConfig"] = $spaceResolvedConfig
+    $sceneManifest["scene"]["preset"] = "space-journey"
+    [IO.File]::WriteAllText(
+        $fakeSceneManifestPath,
+        ($sceneManifest | ConvertTo-Json -Depth 20),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+    [void](Assert-BlenderBuildArtifacts `
+        -BlendPath $fakeBlend `
+        -ManifestPath $fakeSceneManifestPath `
+        -ExpectedCueSchema "1.1.0" `
+        -ExpectedSeed 84291 `
+        -ExpectedPreset "space-journey" `
+        -ExpectedConfig $spaceResolvedConfig)
+
     $previewDirectory = Join-Path $contractRoot "preview"
     New-Item -ItemType Directory -Path $previewDirectory -Force | Out-Null
-    $stillPath = Join-Path $previewDirectory "frame_000001.png"
-    $clipPath = Join-Path $previewDirectory "preview.mp4"
+    $clipPath = Join-Path $previewDirectory "space-journey-preview.mp4"
     $previewManifestPath = Join-Path $previewDirectory "preview-manifest.json"
-    [IO.File]::WriteAllBytes($stillPath, [byte[]](1, 2, 3))
+    $previewFrames = @(1, 12, 24, 36, 48, 60)
+    $previewRoles = @(
+        "opening",
+        "early-development",
+        "main-groove",
+        "breakdown",
+        "peak",
+        "outro"
+    )
+    $stillPaths = @()
+    $stillEntries = @()
+    $roleEntries = @()
+
+    for ($index = 0; $index -lt $previewFrames.Count; $index++) {
+        $frame = $previewFrames[$index]
+        $stillPath = Join-Path $previewDirectory ("frame_{0:D6}.png" -f $frame)
+        [IO.File]::WriteAllBytes($stillPath, [byte[]](1, 2, 3))
+        $resolvedStillPath = (Resolve-Path -LiteralPath $stillPath).Path
+        $roleEntry = [ordered]@{
+            role = $previewRoles[$index]
+            frame = $frame
+            sectionId = "section-$index"
+        }
+        $stillPaths += $resolvedStillPath
+        $roleEntries += $roleEntry
+        $stillEntries += [ordered]@{
+            frame = $frame
+            path = $resolvedStillPath
+            sizeBytes = 3
+            role = $previewRoles[$index]
+            sectionId = "section-$index"
+        }
+    }
+
     [IO.File]::WriteAllBytes($clipPath, [byte[]](4, 5, 6))
     $previewChecks = [ordered]@{}
 
@@ -467,15 +852,51 @@ try {
 
     $previewManifest = [ordered]@{
         ok = $true
+        schemaVersion = "1.0.0"
+        preset = "space-journey"
+        visualizerConfig = $spaceResolvedConfig
+        previewRoles = $roleEntries
+        render = [ordered]@{ width = 640; height = 360; fps = 30.0 }
+        scene = [ordered]@{
+            preset = "space-journey"
+            frameStart = 1
+            frameEnd = 60
+            fps = 30.0
+        }
         checks = $previewChecks
         stills = [ordered]@{
             ok = $true
-            stillFrames = @((Resolve-Path -LiteralPath $stillPath).Path)
+            plannedFrames = $previewFrames
+            renderedFrames = $previewFrames
+            stillFrames = $stillPaths
+            stillRoles = $roleEntries
+            stills = $stillEntries
         }
         clip = [ordered]@{
             ok = $true
             clip = (Resolve-Path -LiteralPath $clipPath).Path
-            verification = [ordered]@{ ok = $true }
+            startFrame = 1
+            endFrame = 60
+            centerFrame = 30
+            role = "representative-interior"
+            plannedDurationSeconds = 2.0
+            durationSeconds = 2.0
+            audioMuxStatus = "verified-muxed"
+            verification = [ordered]@{
+                ok = $true
+                plannedDurationSeconds = 2.0
+                durationSeconds = 2.0
+                durationMatches = $true
+                width = 640
+                height = 360
+                fps = 30.0
+                videoCodec = "h264"
+                audioCodec = "aac"
+                videoPresent = $true
+                audioRequested = $true
+                audioPresent = $true
+                audioMatchesRequest = $true
+            }
         }
     }
     [IO.File]::WriteAllText(
@@ -485,9 +906,72 @@ try {
     )
     [void](Assert-PreviewArtifacts `
         -PreviewDirectory $previewDirectory `
-        -ManifestPath $previewManifestPath)
+        -ManifestPath $previewManifestPath `
+        -ExpectedPreset "space-journey" `
+        -ExpectedConfig $spaceResolvedConfig `
+        -ExpectedClipName "space-journey-preview.mp4" `
+        -ExpectedWidth 640 `
+        -ExpectedHeight 360 `
+        -ExpectedFps 30)
 
-    $previewManifest["stills"]["stillFrames"] = @($resolvedFakeBlend)
+    $previewManifest["clip"]["verification"]["videoCodec"] = "vp9"
+    [IO.File]::WriteAllText(
+        $previewManifestPath,
+        ($previewManifest | ConvertTo-Json -Depth 20),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+    $wrongCodecRejected = $false
+
+    try {
+        [void](Assert-PreviewArtifacts `
+            -PreviewDirectory $previewDirectory `
+            -ManifestPath $previewManifestPath `
+            -ExpectedPreset "space-journey" `
+            -ExpectedConfig $spaceResolvedConfig `
+            -ExpectedClipName "space-journey-preview.mp4" `
+            -ExpectedWidth 640 `
+            -ExpectedHeight 360 `
+            -ExpectedFps 30)
+    }
+    catch {
+        $wrongCodecRejected = $true
+    }
+
+    Assert-RunnerTest `
+        $wrongCodecRejected `
+        "Space Journey must reject preview clips without verified H.264/AAC evidence"
+    $previewManifest["clip"]["verification"]["videoCodec"] = "h264"
+
+    $previewManifest["stills"]["stills"][2]["role"] = "peak"
+    [IO.File]::WriteAllText(
+        $previewManifestPath,
+        ($previewManifest | ConvertTo-Json -Depth 20),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+    $wrongRoleRejected = $false
+
+    try {
+        [void](Assert-PreviewArtifacts `
+            -PreviewDirectory $previewDirectory `
+            -ManifestPath $previewManifestPath `
+            -ExpectedPreset "space-journey" `
+            -ExpectedConfig $spaceResolvedConfig `
+            -ExpectedClipName "space-journey-preview.mp4" `
+            -ExpectedWidth 640 `
+            -ExpectedHeight 360 `
+            -ExpectedFps 30)
+    }
+    catch {
+        $wrongRoleRejected = $true
+    }
+
+    Assert-RunnerTest `
+        $wrongRoleRejected `
+        "Space Journey must reject missing or out-of-order still roles"
+    $previewManifest["stills"]["stills"][2]["role"] = "main-groove"
+
+    $previewManifest["stills"]["stillFrames"][0] = $resolvedFakeBlend
+    $previewManifest["stills"]["stills"][0]["path"] = $resolvedFakeBlend
     [IO.File]::WriteAllText(
         $previewManifestPath,
         ($previewManifest | ConvertTo-Json -Depth 20),
@@ -498,7 +982,13 @@ try {
     try {
         [void](Assert-PreviewArtifacts `
             -PreviewDirectory $previewDirectory `
-            -ManifestPath $previewManifestPath)
+            -ManifestPath $previewManifestPath `
+            -ExpectedPreset "space-journey" `
+            -ExpectedConfig $spaceResolvedConfig `
+            -ExpectedClipName "space-journey-preview.mp4" `
+            -ExpectedWidth 640 `
+            -ExpectedHeight 360 `
+            -ExpectedFps 30)
     }
     catch {
         $outsidePreviewRejected = $true

@@ -1,5 +1,7 @@
 # WZHK Media Mission Control user guide
 
+The **Director** navigation item opens the local Cinematic Visualizer V2 review workspace. It shows story acts, shot intent, representative review frames, prior findings, and approve/revise state. Saving a review updates only the local UUID job artifact atomically; it does not contact an external service. An empty Director screen means no completed local V2 plan is available yet.
+
 Mission Control is designed so the normal local workflow does not require a
 PowerShell command, JSON edit, hash, Blender command, or authorization token.
 
@@ -58,11 +60,18 @@ request before it is honored. A safely paused job appears under Jobs with
 ## Encode and open the result
 
 After all expected frames are verified, choose **Encode video** to review the
-sequence and local FFmpeg readiness. In this migration increment the React
-backend does not yet start the reviewed encoder or private-audio mux, so its
-encode action remains disabled instead of simulating success. Use **Open
-frames** or the preserved legacy interface for the existing reviewed
-encode/mux workflow. The image sequence remains the master clock.
+sequence and local FFmpeg readiness. Choose **Encode delivery + master** to run
+the reviewed outputs in order: the H.264 delivery MP4 first, followed by the
+ProRes 422 HQ master with lossless PCM audio. Mission Control shows overall
+progress, the active output, encoded frame count, FFmpeg rate and speed, an
+estimated time remaining, final verification, and links to each published
+file. The image sequence remains the master clock and approved audio is read
+only from its saved local path.
+
+Refreshing the browser does not restart an encode. Return to **Encode** to
+inspect its persisted status. Mission Control never overwrites an existing
+final media file; failed temporary output and logs remain available for
+diagnosis.
 
 ## Calibration
 

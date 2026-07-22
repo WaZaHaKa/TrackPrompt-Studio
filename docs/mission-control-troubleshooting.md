@@ -1,5 +1,12 @@
 # Mission Control troubleshooting
 
+## Director or frame telemetry
+
+- If Director is empty, compile `space-journey-story` for a completed analysis and refresh.
+- If Director reports invalid local artifacts, recompile the story/shot pair; do not hand-edit only one plan because their digest/timeline identities must match.
+- If exact frame activity is missing but the renderer is healthy, inspect ordinary logs and confirm the worker emits the exact `WZHK_RENDER_EVENT ` prefix. Malformed telemetry is intentionally ignored and never upgrades in-flight frames to safe.
+- A retained older preview during an active chunk is expected. Preview publication follows structural validation and atomic chunk publication.
+
 Mission Control keeps errors in the browser with a plain-language action and an
 expandable Technical details section. Use this guide when that action is not
 enough.
@@ -107,11 +114,22 @@ live cloud workflow exists. See
 
 ## Encode action is disabled
 
-Mission Control can identify a complete published sequence and report FFmpeg
-readiness, but this React backend does not yet start the reviewed encoder or
-private-audio mux. Open the frame output from the UI and use
-`WZHK-Media-Launcher-Legacy.cmd` for the existing production encode workflow.
-No encode is reported as complete unless the underlying tooling verifies it.
+Encoding is enabled only when the frame sequence is complete, the saved render
+identity still matches, and Mission Control can resolve the real FFmpeg
+executable. Check **Settings > Render tools & storage**: FFmpeg must say
+**Found**. If it does not, install or repair FFmpeg, restart Mission Control,
+and return to **Encode**. Rendering itself remains available when FFmpeg is
+missing.
+
+## Encode failed or stopped
+
+Mission Control encodes Delivery first and Master second. It publishes a final
+file only after stream, duration, frame, audio, and color verification passes;
+an interrupted `.partial-*` file is not a finished result. Read the failure on
+the Encode page and inspect the timestamped `encode_delivery` or
+`encode_master` logs under the render output's `logs` folder. Existing final
+media is never overwritten. Preserve it and the frame sequence while
+diagnosing the missing output.
 
 ## Legacy fallback
 

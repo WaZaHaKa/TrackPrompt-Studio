@@ -15,7 +15,7 @@ from .curve_importer import CONTROL_CURVES, create_audio_bus
 from .diagnostics import audio_strip_present, scene_summary as collect_scene_summary
 from .geometry import clear_scene, move_to_collection
 from .preset_registry import DEFAULT_PRESET, DEFAULT_SEED, resolve_visualizer_config
-from .preview import build_preview_plan, build_review_edit_spec
+from .preview import build_continuous_review_spec, build_preview_plan, build_review_edit_spec
 from .shot_plan import active_shot, load_shot_plan, validate_shot_plan
 from .timeline import attach_audio, configure_timeline
 from .validation import (
@@ -257,12 +257,60 @@ def _preview_plan() -> dict[str, Any]:
     return parsed
 
 
-def _render_preview_stills(output_directory: str) -> dict[str, Any]:
+def _apply_preview_layout(plan: dict[str, Any], layout: str | None) -> dict[str, Any] | None:
+    """Select one authored R12 composition without affecting legacy previews."""
+
+    if "continuousRange" not in plan:
+        if layout is not None:
+            raise VisualizerValidationError("A responsive layout may only be selected for R12.")
+        return None
+    formats = plan.get("formats")
+    if not isinstance(formats, dict) or layout not in formats:
+        raise VisualizerValidationError("R12 rendering requires landscape or vertical layout.")
+    contract = formats[layout]
+    if not isinstance(contract, dict):
+        raise VisualizerValidationError("The R12 responsive format contract is invalid.")
+    width, height = contract.get("width"), contract.get("height")
+    if (
+        isinstance(width, bool)
+        or not isinstance(width, int)
+        or isinstance(height, bool)
+        or not isinstance(height, int)
+    ):
+        raise VisualizerValidationError("The R12 responsive dimensions are invalid.")
+    from .story_revision_r12 import apply_r12_layout
+
+    state = apply_r12_layout(layout)
+    if not isinstance(state, dict):
+        raise RuntimeError("The R12 authored layout did not return a safe state contract.")
+    import bpy  # type: ignore[import-not-found]
+
+    scene = bpy.context.scene
+    scene.render.resolution_x = width
+    scene.render.resolution_y = height
+    scene.render.resolution_percentage = 100
+    return {
+        "id": layout,
+        "width": width,
+        "height": height,
+        "phoneWidth": int(contract["phoneWidth"]),
+        "phoneHeight": int(contract["phoneHeight"]),
+        "compositionProfile": str(contract["compositionProfile"]),
+        "authoredState": state,
+        "authoredStateSha256": _canonical_payload_sha256(state),
+    }
+
+
+def _render_preview_stills(
+    output_directory: str,
+    layout: str | None = None,
+) -> dict[str, Any]:
     import bpy  # type: ignore[import-not-found]
 
     output = validate_output_directory(output_directory)
     scene = bpy.context.scene
     plan = _preview_plan()
+    layout_contract = _apply_preview_layout(plan, layout)
     _configure_preview_scene()
     planned_frames = [int(frame) for frame in plan.get("stillFrames", [])]
     role_by_frame = {
@@ -303,11 +351,15 @@ def _render_preview_stills(output_directory: str) -> dict[str, Any]:
         "stillFrames": [item["path"] for item in rendered],
         "stillRoles": plan.get("stillRoles", []),
         "stills": rendered,
+        **({"format": layout_contract} if layout_contract is not None else {}),
     }
 
 
-def render_preview_stills(output_directory: str) -> dict[str, Any]:
-    return _safe_entrypoint(lambda: _render_preview_stills(output_directory))
+def render_preview_stills(
+    output_directory: str,
+    layout: str | None = None,
+) -> dict[str, Any]:
+    return _safe_entrypoint(lambda: _render_preview_stills(output_directory, layout))
 
 
 def _scene_audio_path() -> Path | None:
@@ -577,12 +629,302 @@ def _render_review_edit(
     }
 
 
-def _render_preview_clip(output_path: str, ffmpeg_path: str | None = None) -> dict[str, Any]:
+def _build_continuous_story_render_receipt(
+    *,
+    scene_file: Path,
+    shot_plan: dict[str, Any],
+    preview_plan: dict[str, Any],
+    continuous_edit: dict[str, Any],
+    rendered_frame_sequence: dict[str, Any],
+    clip: Path,
+    layout: dict[str, Any],
+) -> dict[str, Any]:
+    """Hash-bind one exact R12 range and one authored responsive composition."""
+
+    validate_shot_plan(shot_plan)
+    roles = preview_plan.get("stillRoles")
+    source_frames = continuous_edit.get("sourceFrames")
+    if (
+        not scene_file.is_file()
+        or scene_file.suffix.casefold() != ".blend"
+        or not clip.is_file()
+        or not isinstance(roles, list)
+        or len(roles) != 8
+        or not isinstance(source_frames, list)
+        or len(source_frames) != int(continuous_edit.get("outputFrameCount", -1))
+    ):
+        raise RuntimeError("The R12 continuous render receipt inputs are incomplete.")
+    representative_frames: list[dict[str, Any]] = []
+    for role in roles:
+        if not isinstance(role, dict) or isinstance(role.get("frame"), bool):
+            raise RuntimeError("The R12 representative role is invalid.")
+        frame = int(role["frame"])
+        still = clip.parent / f"frame_{frame:06d}.png"
+        if not still.is_file() or still.stat().st_size <= 0:
+            raise RuntimeError("Render the eight R12 stills before the continuous clip.")
+        representative_frames.append(
+            {
+                "frame": frame,
+                "file": still.name,
+                "sha256": _sha256_file(still),
+                "sizeBytes": still.stat().st_size,
+                **{
+                    key: role[key]
+                    for key in ("role", "actId", "shotId")
+                    if isinstance(role.get(key), str) and role.get(key)
+                },
+            }
+        )
+    sequence_count = rendered_frame_sequence.get("count")
+    sequence_sha256 = rendered_frame_sequence.get("sha256")
+    if (
+        sequence_count != len(source_frames)
+        or not isinstance(sequence_sha256, str)
+        or len(sequence_sha256) != 64
+    ):
+        raise RuntimeError("The R12 ordered rendered-frame digest is incomplete.")
+    return {
+        "schemaVersion": "1.0.0",
+        "kind": "trackprompt-blender-mcp-continuous-preview-render-receipt",
+        "revisionId": "andromeda-r12-continuous-slice",
+        "preset": "space-journey-story",
+        "previewOnly": True,
+        "productionAuthorized": False,
+        "scene": {
+            "file": scene_file.name,
+            "sha256": _sha256_file(scene_file),
+            "sizeBytes": scene_file.stat().st_size,
+        },
+        "shotPlan": {
+            "schemaVersion": shot_plan["schemaVersion"],
+            "canonicalSha256": _canonical_payload_sha256(shot_plan),
+            "inputDigest": shot_plan["inputDigest"],
+            "seed": shot_plan["seed"],
+            "shotCount": len(shot_plan["shots"]),
+        },
+        "continuousRange": {
+            "strategy": continuous_edit["strategy"],
+            "startFrame": continuous_edit["startFrame"],
+            "endFrame": continuous_edit["endFrame"],
+            "outputFrameCount": len(source_frames),
+            "durationSeconds": continuous_edit["durationSeconds"],
+            "orderedSourceFramesSha256": _canonical_payload_sha256(source_frames),
+        },
+        "format": layout,
+        "renderedFrames": {
+            "count": sequence_count,
+            "orderedPngSha256": sequence_sha256,
+            "hashScope": "ordered-output-index-source-frame-png-sha256-v1",
+            "representativeFrames": representative_frames,
+        },
+        "clip": {
+            "file": clip.name,
+            "sha256": _sha256_file(clip),
+            "sizeBytes": clip.stat().st_size,
+        },
+        "encoding": {
+            "strategy": "external-ffmpeg-argument-array",
+            "videoCodec": "libx264",
+            "videoPreset": "fast",
+            "constantRateFactor": 23,
+            "pixelFormat": "yuv420p",
+            "audioCodec": "aac",
+            "audioBitrate": "160k",
+            "audioEdit": "single-contiguous-source-atrim",
+            "fastStart": True,
+        },
+    }
+
+
+def _render_continuous_story_clip(
+    output: Path,
+    ffmpeg: Path,
+    plan: dict[str, Any],
+    layout: dict[str, Any],
+) -> dict[str, Any]:
+    import bpy  # type: ignore[import-not-found]
+
+    scene = bpy.context.scene
+    fps = scene.render.fps / scene.render.fps_base
+    edit = build_continuous_review_spec(
+        plan,
+        timeline_frame_start=scene.frame_start,
+        timeline_frame_end=scene.frame_end,
+        fps=fps,
+    )
+    audio = _scene_audio_path()
+    if audio is None:
+        raise VisualizerValidationError("R12 continuous review requires the attached local audio strip.")
+    temporary = output.parent / f".{output.stem}.continuous-{uuid4().hex}"
+    temporary.mkdir(exist_ok=False)
+    original_frame = scene.frame_current
+    original_start, original_end = scene.frame_start, scene.frame_end
+    original_filepath = scene.render.filepath
+    original_format = scene.render.image_settings.file_format
+    rendered_sequence_digest = hashlib.sha256()
+    try:
+        _configure_preview_scene()
+        scene.render.filepath = str(temporary / "source_")
+        scene.frame_start = int(edit["startFrame"])
+        scene.frame_end = int(edit["endFrame"])
+        bpy.ops.render.render(animation=True)
+        rendered = sorted(temporary.glob("source_*.png"))
+        if len(rendered) != int(edit["outputFrameCount"]):
+            raise RuntimeError("Blender did not write the complete R12 continuous range.")
+        for output_index, (source_frame, source) in enumerate(
+            zip(edit["sourceFrames"], rendered, strict=True),
+            start=1,
+        ):
+            destination = temporary / f"frame_{output_index:06d}.png"
+            os.replace(source, destination)
+            rendered_sequence_digest.update(
+                (
+                    json.dumps(
+                        {
+                            "outputFrame": output_index,
+                            "sourceFrame": source_frame,
+                            "pngSha256": _sha256_file(destination),
+                        },
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            )
+        encoded = temporary / output.name
+        command = [
+            str(ffmpeg),
+            "-y",
+            "-nostdin",
+            "-loglevel",
+            "error",
+            "-framerate",
+            f"{fps:.8g}",
+            "-start_number",
+            "1",
+            "-i",
+            str(temporary / "frame_%06d.png"),
+            "-i",
+            str(audio),
+            "-filter_complex",
+            str(edit["audioFilter"]),
+            "-map",
+            "0:v:0",
+            "-map",
+            "[review_audio]",
+            "-frames:v",
+            str(edit["outputFrameCount"]),
+            "-t",
+            f"{float(edit['durationSeconds']):.9f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-movflags",
+            "+faststart",
+            "-shortest",
+            str(encoded),
+        ]
+        completed = subprocess.run(
+            command,
+            shell=False,
+            check=False,
+            capture_output=True,
+            timeout=3600,
+        )
+        if (
+            completed.returncode != 0
+            or len(completed.stdout) > 1_000_000
+            or len(completed.stderr) > 1_000_000
+            or not encoded.is_file()
+            or encoded.stat().st_size <= 0
+        ):
+            raise RuntimeError("External FFmpeg did not encode the R12 continuous review.")
+        os.replace(encoded, output)
+    finally:
+        scene.frame_start, scene.frame_end = original_start, original_end
+        scene.frame_set(original_frame)
+        scene.render.filepath = original_filepath
+        try:
+            scene.render.image_settings.file_format = original_format
+        except TypeError:
+            scene.render.image_settings.file_format = "PNG"
+        shutil.rmtree(temporary, ignore_errors=True)
+    return {
+        "ok": True,
+        "clip": str(output),
+        "strategy": edit["strategy"],
+        "startFrame": edit["startFrame"],
+        "endFrame": edit["endFrame"],
+        "outputFrameCount": edit["outputFrameCount"],
+        "plannedDurationSeconds": edit["durationSeconds"],
+        "format": layout,
+        "encoder": "external-ffmpeg-argument-array",
+        "audioRequested": True,
+        "audioMuxStatus": "requested-unverified",
+        "verification": {"ok": False, "status": "not-probed-by-mcp-entrypoint"},
+        "renderedFrameSequence": {
+            "count": int(edit["outputFrameCount"]),
+            "sha256": rendered_sequence_digest.hexdigest(),
+        },
+    }
+
+
+def _render_preview_clip(
+    output_path: str,
+    ffmpeg_path: str | None = None,
+    layout: str | None = None,
+) -> dict[str, Any]:
     import bpy  # type: ignore[import-not-found]
 
     output = validate_output_file(output_path, suffix=".mp4")
     scene = bpy.context.scene
     preview_plan = _preview_plan()
+    layout_contract = _apply_preview_layout(preview_plan, layout)
+    if preview_plan.get("continuousRange"):
+        if ffmpeg_path is None or layout_contract is None:
+            raise VisualizerValidationError(
+                "R12 continuous review requires explicit FFmpeg and responsive layout."
+            )
+        ffmpeg = validate_input_file(ffmpeg_path, label="FFmpeg")
+        result = _render_continuous_story_clip(output, ffmpeg, preview_plan, layout_contract)
+        raw_shot_plan = scene.get("trackprompt_shot_plan")
+        if not isinstance(raw_shot_plan, str):
+            raise VisualizerValidationError("The R12 scene has no identity-bound shot plan.")
+        shot_plan = json.loads(raw_shot_plan)
+        if not isinstance(shot_plan, dict):
+            raise VisualizerValidationError("The R12 scene shot plan is invalid.")
+        continuous_edit = build_continuous_review_spec(
+            preview_plan,
+            timeline_frame_start=scene.frame_start,
+            timeline_frame_end=scene.frame_end,
+            fps=scene.render.fps / scene.render.fps_base,
+        )
+        sequence = result.get("renderedFrameSequence")
+        if not isinstance(sequence, dict):
+            raise RuntimeError("The R12 render has no ordered frame digest.")
+        receipt = _build_continuous_story_render_receipt(
+            scene_file=Path(bpy.data.filepath).resolve(),
+            shot_plan=shot_plan,
+            preview_plan=preview_plan,
+            continuous_edit=continuous_edit,
+            rendered_frame_sequence=sequence,
+            clip=output,
+            layout=layout_contract,
+        )
+        receipt_path = output.parent / MCP_RENDER_RECEIPT_NAME
+        _atomic_json(receipt_path, receipt)
+        result["renderReceiptFile"] = receipt_path.name
+        result["renderReceiptSha256"] = _sha256_file(receipt_path)
+        return result
     if preview_plan.get("reviewSegments"):
         if ffmpeg_path is None:
             raise VisualizerValidationError("Story review edit requires an explicit local FFmpeg path.")
@@ -651,8 +993,12 @@ def _render_preview_clip(output_path: str, ffmpeg_path: str | None = None) -> di
     }
 
 
-def render_preview_clip(output_path: str, ffmpeg_path: str | None = None) -> dict[str, Any]:
-    return _safe_entrypoint(lambda: _render_preview_clip(output_path, ffmpeg_path))
+def render_preview_clip(
+    output_path: str,
+    ffmpeg_path: str | None = None,
+    layout: str | None = None,
+) -> dict[str, Any]:
+    return _safe_entrypoint(lambda: _render_preview_clip(output_path, ffmpeg_path, layout))
 
 
 def _save_scene(path: str) -> dict[str, Any]:
@@ -772,10 +1118,39 @@ def validate_current_shot() -> dict[str, Any]:
     return _safe_entrypoint(validate)
 
 
-def capture_review_state() -> dict[str, Any]:
+def _capture_review_state(
+    output_path: str | None = None,
+    layout: str | None = None,
+) -> dict[str, Any]:
     from .art_direction import capture_review_state as capture
 
-    return _safe_entrypoint(capture)
+    state = capture()
+    if output_path is None and layout is None:
+        return state
+    if output_path is None or layout is None:
+        raise VisualizerValidationError(
+            "R12 motion capture requires both output path and responsive layout."
+        )
+    from .render_reports import build_r12_motion_report
+
+    output = validate_output_file(output_path, suffix=".json")
+    report = build_r12_motion_report(layout)
+    _atomic_json(output, report)
+    return {
+        "ok": True,
+        "reviewState": state,
+        "motionReport": str(output),
+        "motionReportSha256": _sha256_file(output),
+        "layout": layout,
+        "technicalPass": report["technicalPass"],
+    }
+
+
+def capture_review_state(
+    output_path: str | None = None,
+    layout: str | None = None,
+) -> dict[str, Any]:
+    return _safe_entrypoint(lambda: _capture_review_state(output_path, layout))
 
 
 def save_revision_snapshot(path: str) -> dict[str, Any]:

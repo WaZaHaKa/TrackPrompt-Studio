@@ -197,6 +197,33 @@ explorer.exe "C:\Users\theon\GitHub\TrackPrompt-Studio\test-output\cinematic-v2-
 
 Choose **Director** in Mission Control and select the newest local story plan. Do not use the render-start, calibration, authorization, or cloud actions for this review.
 
+### R12 continuous-motion art-direction contract
+
+The operator's human artistic review overrides the persisted R11 Codex-assisted decision for all subsequent work: R11 remains immutable structural evidence, but its effective artistic decision is **`REVISE`**. R12 does not rewrite or replace any R11 artifact, manifest, review, identifier, or test.
+
+The deterministic R12 implementation and proof contract are rooted at:
+
+```text
+test-output/cinematic-v2-andromeda-r12-20260722-164623/
+```
+
+Its current status is **bounded media proof complete; Codex-assisted Director decision `REVISE`; human review pending**. The completed proof was independently verified against the real source audio without changing R11. Completion here means that the technical media/evidence contract passed; it is not artistic approval.
+
+R12 derives its cue sheet from the real-analysis source window **224.000-266.000 seconds** and rebases that exact 42-second window to local frames 1-1260 at 30 fps. The private full source audio and the ignored 42-second audio extract are separately SHA-256-bound; committed and public-safe records use only the generic label `r12-source-window-audio`, never a private filename or locator. The result continues to use the existing `StoryPlan` and refined 12-shot `ShotPlan` contracts and remains separately identity-bound to the preview-only `space-journey-story` preset.
+
+Only local frames **127-655 inclusive** are in the continuous artistic review: **529 frames / 17.633 seconds**. That range must play continuously as **Awakening -> Departure -> Gate approach -> Gate crossing -> Gate sealing**. It replaces the R11 excerpt edit with authored close-up, wide reveal, rear follow, side track, foreground-obstructed travel, low-angle approach, threshold push, and consequence pullback grammar. Signal is retained only as frames 1-126 of pre-roll plan context. The remaining plan ranges are contract-only compatibility coverage; Rupture, Transformation, and Arrival must not be artistically developed or rendered in R12.
+
+The completed media proof contains two responsive compositions, not a crop-derived pair:
+
+- `landscape`: native 1920x1080, with one continuous H.264/AAC clip, one MCP render receipt, eight full-resolution stills, eight independently downscaled 320x180 phone stills, one exact-range motion report, and one exposure report;
+- `vertical`: native 1080x1920, with one continuous H.264/AAC clip, one MCP render receipt, eight full-resolution stills, eight independently downscaled 180x320 phone stills, one exact-range motion report, and one exposure report.
+
+Across both profiles, that is two receipts, two H.264/AAC clips, 16 full-resolution stills, 16 phone stills, two motion reports, and two exposure reports. Every reference is SHA-256-bound in `build-manifest.json`, whose `mediaProof.status` is `complete`. The clips are `landscape/r12-continuous-preview.mp4` and `vertical/r12-continuous-preview.mp4`; the proof-local `r12-director-review.json` binds the exact still, phone, motion, and exposure evidence.
+
+Each motion report covers camera and protagonist velocity, angular velocity, acceleration discontinuities, one-frame jumps, lens jumps, undeclared cuts, overshoot, and forbidden raw-audio macro-motion links; both exact 529-frame reports pass. Each exposure report decodes all 529 encoded frames and makes clipping and phone-size silhouette separation reviewable; both pass their technical thresholds. The R12 Director packet carries 12 specific criteria covering cinematic appeal, physical believability, protagonist agency, shot-scale variation, depth/parallax, exposure, materials, smoothness, story clarity, native vertical mobile readability, landscape readability, and stimulation without clutter. Its Codex-assisted decision is **`revise`**; human review remains **pending**, `approved` is false, and `artistApproved` remains false.
+
+R12 remains preview-only. It does not start V2 calibration, create production authorization, provision cloud resources, render the full track, or extend the art pass into future acts. Generated audio extracts, Blender scenes, rendered frames, clips, phone derivatives, and proof/report outputs remain private ignored runtime evidence and must not be committed.
+
 ## Local verification
 
 ```powershell
@@ -225,8 +252,8 @@ Local deployment means a current frontend build and loopback Mission Control ser
 
 ## Known limitations and remaining gates
 
-- The real-analysis bounded proof passes its Codex-assisted Director gates, but it is not a human artist-approved film.
-- The protagonist remains intentionally small in the Signal wide shot, and the proof uses review-resolution Eevee output rather than final-quality shading, volumetrics, motion blur, or production sampling.
+- The R12 real-analysis bounded proof passes its technical continuity, encoding, exposure, and evidence-integrity gates, but its Codex-assisted artistic decision is `REVISE` and it is not a human artist-approved film.
+- The procedural/low-poly machinery, simple green membrane/beyond layer, still-graphic orange chamber aperture, dark corridor, and inherited geometric-orb protagonist remain the principal artistic limitations. The proof uses review-quality Eevee output rather than final-quality shading, volumetrics, motion blur, or production sampling.
 - Only Signal through First Gate was revised and reviewed; the later Rupture, Transformation, and Arrival environments still need an equivalent artistic pass before any full-story approval.
 - V2 needs its own render calibration, frozen candidate/profile hashes, and explicit production authorization.
 - Cloud provisioning and a full-track V2 render are outside this implementation and were not run.

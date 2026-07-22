@@ -242,6 +242,96 @@ def _story_preview_plan(cues: dict[str, Any], shot_plan: dict[str, Any]) -> dict
     }
 
 
+def _r12_story_preview_plan(cues: dict[str, Any], shot_plan: dict[str, Any]) -> dict[str, Any]:
+    """Build the exact continuous R12 vertical-slice review contract.
+
+    R12 still uses the versioned StoryPlan/ShotPlan schemas.  The distinguishing
+    signal is deliberately carried by its safe shot identifiers so the R11
+    six-excerpt plan remains byte-for-byte compatible.
+    """
+
+    shots = [shot for shot in shot_plan.get("shots", []) if isinstance(shot, dict)]
+    role_ids = (
+        ("awakening-question", "r12-shot-02-awakening-question"),
+        ("chamber-release", "r12-shot-03-awakening-release"),
+        ("departure-rear-follow", "r12-shot-04-departure-rear-follow"),
+        ("departure-side-track", "r12-shot-05-departure-side-track"),
+        ("departure-foreground-occlusion", "r12-shot-06-departure-occluded"),
+        ("gate-low-approach", "r12-shot-07-gate-approach"),
+        ("gate-threshold-crossing", "r12-shot-08-gate-crossing"),
+        ("gate-sealed-consequence", "r12-shot-09-gate-seal"),
+    )
+    by_id = {str(shot.get("id")): shot for shot in shots}
+    missing = [shot_id for _role, shot_id in role_ids if shot_id not in by_id]
+    if missing:
+        raise ValueError("R12 preview requires the complete bounded shot grammar.")
+
+    roles: list[dict[str, Any]] = []
+    for role, shot_id in role_ids:
+        shot = by_id[shot_id]
+        review_frames = [
+            int(frame)
+            for frame in shot.get("reviewFrames", [])
+            if isinstance(frame, int) and not isinstance(frame, bool)
+        ]
+        frame = review_frames[len(review_frames) // 2] if review_frames else (
+            int(shot["frameStart"]) + int(shot["frameEnd"])
+        ) // 2
+        roles.append(
+            {
+                "role": role,
+                "frame": frame,
+                "actId": shot["actId"],
+                "shotId": shot_id,
+            }
+        )
+
+    start_frame = int(by_id[role_ids[0][1]]["frameStart"])
+    end_frame = int(by_id[role_ids[-1][1]]["frameEnd"])
+    fps = float(cues["timeline"]["fps"])
+    frame_count = end_frame - start_frame + 1
+    duration = frame_count / fps
+    if not 15.0 <= duration <= 20.0 or not 450 <= frame_count <= 600:
+        raise ValueError("R12 continuous preview must remain within its 15-20 second bound.")
+    return {
+        "revisionId": "andromeda-r12-continuous-slice",
+        "stillFrames": [item["frame"] for item in roles],
+        "stillRoles": roles,
+        "continuousRange": {
+            "startFrame": start_frame,
+            "endFrame": end_frame,
+            "frameCount": frame_count,
+            "durationSeconds": duration,
+            "sourceShotIds": [shot_id for _role, shot_id in role_ids],
+        },
+        "formats": {
+            "landscape": {
+                "width": 1920,
+                "height": 1080,
+                "phoneWidth": 320,
+                "phoneHeight": 180,
+                "compositionProfile": "r12-landscape-authored",
+            },
+            "vertical": {
+                "width": 1080,
+                "height": 1920,
+                "phoneWidth": 180,
+                "phoneHeight": 320,
+                "compositionProfile": "r12-vertical-authored",
+            },
+        },
+        "clip": {
+            "startFrame": start_frame,
+            "endFrame": end_frame,
+            "role": "awakening-through-gate-seal",
+            "centerFrame": (start_frame + end_frame) // 2,
+            "reviewEditStrategy": "continuous-authored-motion-range",
+            "sourceEndFrame": end_frame,
+            "maximumOutputFrames": 600,
+        },
+    }
+
+
 def build_preview_plan(
     cues: dict[str, Any],
     preset: str = "abstract-geometry",
@@ -251,6 +341,15 @@ def build_preview_plan(
         return _abstract_preview_plan(cues)
     if preset == "space-journey":
         return _space_journey_preview_plan(cues)
+    if (
+        preset == "space-journey-story"
+        and shot_plan is not None
+        and any(
+            isinstance(shot, dict) and str(shot.get("id", "")).startswith("r12-shot-")
+            for shot in shot_plan.get("shots", [])
+        )
+    ):
+        return _r12_story_preview_plan(cues, shot_plan)
     if preset == "space-journey-story" and shot_plan is not None:
         return _story_preview_plan(cues, shot_plan)
     if preset == "space-journey-story":
@@ -329,4 +428,55 @@ def build_review_edit_spec(
         "outputFrameCount": len(source_frames),
         "durationSeconds": len(source_frames) / fps,
         "audioFilter": ";".join(filters),
+    }
+
+
+def build_continuous_review_spec(
+    preview_plan: dict[str, Any],
+    *,
+    timeline_frame_start: int,
+    timeline_frame_end: int,
+    fps: float,
+) -> dict[str, Any]:
+    """Validate the one-range R12 render and its exactly aligned audio trim."""
+
+    if not math.isfinite(fps) or fps <= 0.0:
+        raise ValueError("Continuous review FPS must be finite and positive.")
+    continuous = preview_plan.get("continuousRange")
+    clip = preview_plan.get("clip")
+    if not isinstance(continuous, dict) or not isinstance(clip, dict):
+        raise ValueError("Continuous review requires an exact declared range.")
+    start = continuous.get("startFrame")
+    end = continuous.get("endFrame")
+    count = continuous.get("frameCount")
+    if (
+        isinstance(start, bool)
+        or not isinstance(start, int)
+        or isinstance(end, bool)
+        or not isinstance(end, int)
+        or isinstance(count, bool)
+        or not isinstance(count, int)
+        or not timeline_frame_start <= start <= end <= timeline_frame_end
+        or count != end - start + 1
+        or clip.get("startFrame") != start
+        or clip.get("endFrame") != end
+        or clip.get("reviewEditStrategy") != "continuous-authored-motion-range"
+    ):
+        raise ValueError("Continuous review range is inconsistent with its clip contract.")
+    duration = count / fps
+    if not 15.0 <= duration <= 20.0 or count > int(clip.get("maximumOutputFrames", 0)):
+        raise ValueError("Continuous review exceeds its bounded duration.")
+    start_seconds = (start - timeline_frame_start) / fps
+    return {
+        "strategy": "continuous-authored-motion-range",
+        "startFrame": start,
+        "endFrame": end,
+        "sourceFrames": list(range(start, end + 1)),
+        "outputFrameCount": count,
+        "durationSeconds": duration,
+        "audioStartSeconds": start_seconds,
+        "audioFilter": (
+            f"[1:a]atrim=start={start_seconds:.9f}:duration={duration:.9f},"
+            "asetpts=PTS-STARTPTS[review_audio]"
+        ),
     }

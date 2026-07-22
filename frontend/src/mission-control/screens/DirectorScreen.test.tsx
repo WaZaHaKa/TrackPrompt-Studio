@@ -67,9 +67,12 @@ describe('DirectorScreen', () => {
     expect(screen.getByLabelText('Representative review frame 50')).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Review shot' })[0]!)
     expect(screen.getByRole('heading', { name: 'Review Signal shot' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Request revision' })).toBeChecked()
+    for (const label of ['Focal readability', 'Depth', 'Silhouette', 'Color hierarchy', 'Visual density', 'Story clarity', 'Mobile readability']) {
+      expect(screen.getByLabelText(label)).toHaveValue('unknown')
+    }
     await user.selectOptions(screen.getByLabelText('Story clarity'), 'needs-revision')
     await user.type(screen.getByLabelText(/Findings/i), 'Strengthen the silhouette.')
-    await user.click(screen.getByRole('radio', { name: 'Request revision' }))
     await user.click(screen.getByRole('button', { name: 'Save local review' }))
 
     await waitFor(() => expect(putDirectorReview).toHaveBeenCalledTimes(1))
@@ -80,5 +83,45 @@ describe('DirectorScreen', () => {
       decision: 'revise',
       findings: ['Strengthen the silhouette.'],
     }))
+  })
+
+  it('loads an existing review exactly and identifies Codex-assisted provenance', async () => {
+    const user = userEvent.setup()
+    const initial = workspace()
+    initial.reviews = [{
+      schemaVersion: '1.0.0',
+      shotId: 'signal-shot',
+      reviewFrame: 50,
+      focalReadability: 'clear',
+      depth: 'acceptable',
+      silhouette: 'clear',
+      colorHierarchy: 'acceptable',
+      visualDensity: 'needs-revision',
+      storyClarity: 'clear',
+      mobileReadability: 'clear',
+      findings: ['Historical bounded review finding.'],
+      decision: 'approve',
+      revisionMetadata: {
+        revision: 6,
+        reviewer: 'codex-assisted',
+        note: 'Historical Codex-assisted review.',
+      },
+    }]
+    render(<DirectorScreen client={makeClient({ getDirectorWorkspace: () => Promise.resolve(initial) })} connection="connected" />)
+
+    expect(await screen.findByText('Codex-assisted pass')).toBeInTheDocument()
+    expect(screen.getByText('Codex-assisted review — not human approval')).toBeInTheDocument()
+    expect(screen.queryByText(/^Approved$/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Revise review' }))
+
+    expect(screen.getByRole('radio', { name: 'Approve' })).toBeChecked()
+    expect(screen.getByLabelText('Focal readability')).toHaveValue('clear')
+    expect(screen.getByLabelText('Depth')).toHaveValue('acceptable')
+    expect(screen.getByLabelText('Silhouette')).toHaveValue('clear')
+    expect(screen.getByLabelText('Color hierarchy')).toHaveValue('acceptable')
+    expect(screen.getByLabelText('Visual density')).toHaveValue('needs-revision')
+    expect(screen.getByLabelText('Story clarity')).toHaveValue('clear')
+    expect(screen.getByLabelText('Mobile readability')).toHaveValue('clear')
+    expect(screen.getByLabelText(/Findings/i)).toHaveValue('Historical bounded review finding.')
   })
 })

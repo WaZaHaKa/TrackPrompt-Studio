@@ -10,7 +10,11 @@ from trackprompt_visualizer.preset_space_journey import (
     build_space_journey_direction_plan,
     deterministic_space_seed_plan,
 )
-from trackprompt_visualizer.preview import build_preview_plan, build_review_edit_spec
+from trackprompt_visualizer.preview import (
+    build_continuous_review_spec,
+    build_preview_plan,
+    build_review_edit_spec,
+)
 
 
 def test_preview_plan_uses_actual_sections_transitions_and_vocals() -> None:
@@ -129,6 +133,82 @@ def test_story_preview_is_bounded_to_signal_through_first_gate() -> None:
     ]
     assert str(edit["audioFilter"]).count("atrim=") == 6
     assert "concat=n=6:v=0:a=1[review_audio]" in str(edit["audioFilter"])
+
+
+def test_r12_story_preview_is_one_exact_continuous_dual_format_range() -> None:
+    cues = {"timeline": {"frameStart": 1, "frameEnd": 1260, "fps": 30}}
+    ranges = (
+        ("r12-shot-01-signal", "signal", 1, 126),
+        ("r12-shot-02-awakening-question", "awakening", 127, 171),
+        ("r12-shot-03-awakening-release", "awakening", 172, 277),
+        ("r12-shot-04-departure-rear-follow", "departure", 278, 334),
+        ("r12-shot-05-departure-side-track", "departure", 335, 394),
+        ("r12-shot-06-departure-occluded", "departure", 395, 454),
+        ("r12-shot-07-gate-approach", "gates", 455, 531),
+        ("r12-shot-08-gate-crossing", "gates", 532, 588),
+        ("r12-shot-09-gate-seal", "gates", 589, 655),
+        ("r12-shot-10-rupture-contract", "rupture", 656, 832),
+        ("r12-shot-11-transformation-contract", "transformation", 833, 1058),
+        ("r12-shot-12-arrival-contract", "arrival", 1059, 1260),
+    )
+    shot_plan = {
+        "shots": [
+            {
+                "id": shot_id,
+                "actId": act_id,
+                "frameStart": start,
+                "frameEnd": end,
+                "reviewFrames": [start, start + (end - start) // 2, end],
+            }
+            for shot_id, act_id, start, end in ranges
+        ]
+    }
+    plan = build_preview_plan(cues, "space-journey-story", shot_plan)
+    assert plan["continuousRange"] == {
+        "startFrame": 127,
+        "endFrame": 655,
+        "frameCount": 529,
+        "durationSeconds": 529 / 30,
+        "sourceShotIds": [item[0] for item in ranges[1:9]],
+    }
+    assert "reviewSegments" not in plan
+    assert len(plan["stillFrames"]) == 8
+    assert [item["role"] for item in plan["stillRoles"]] == [
+        "awakening-question",
+        "chamber-release",
+        "departure-rear-follow",
+        "departure-side-track",
+        "departure-foreground-occlusion",
+        "gate-low-approach",
+        "gate-threshold-crossing",
+        "gate-sealed-consequence",
+    ]
+    assert plan["formats"]["landscape"] == {
+        "width": 1920,
+        "height": 1080,
+        "phoneWidth": 320,
+        "phoneHeight": 180,
+        "compositionProfile": "r12-landscape-authored",
+    }
+    assert plan["formats"]["vertical"] == {
+        "width": 1080,
+        "height": 1920,
+        "phoneWidth": 180,
+        "phoneHeight": 320,
+        "compositionProfile": "r12-vertical-authored",
+    }
+    edit = build_continuous_review_spec(
+        plan,
+        timeline_frame_start=1,
+        timeline_frame_end=1260,
+        fps=30,
+    )
+    assert edit["strategy"] == "continuous-authored-motion-range"
+    assert edit["sourceFrames"] == list(range(127, 656))
+    assert edit["outputFrameCount"] == 529
+    assert edit["audioStartSeconds"] == 4.2
+    assert "concat=" not in edit["audioFilter"]
+    assert "atrim=start=4.200000000:duration=17.633333333" in edit["audioFilter"]
 
 
 def test_space_direction_and_seed_plans_are_deterministic_and_bounded() -> None:

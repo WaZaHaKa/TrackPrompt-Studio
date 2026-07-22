@@ -27,6 +27,7 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--output", required=True)
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
+    parser.add_argument("--layout", choices=("landscape", "vertical"))
     parser.add_argument("--skip-clip", action="store_true")
     parser.add_argument("--ffmpeg", help="Optional absolute FFmpeg path for builds without Blender movie encoding")
     parser.add_argument("--ffprobe", help="Optional absolute ffprobe path used to verify movie streams and duration")
@@ -350,7 +351,11 @@ def main() -> int:
     import bpy  # type: ignore[import-not-found]
 
     args = _arguments()
-    if not 320 <= args.width <= 1920 or not 180 <= args.height <= 1080:
+    if (
+        not 180 <= args.width <= 1920
+        or not 180 <= args.height <= 1920
+        or args.width * args.height > 1920 * 1080
+    ):
         print(json.dumps({"ok": False, "error": {"code": "invalid_resolution"}}))
         return 1
     output = Path(args.output).expanduser()
@@ -366,13 +371,39 @@ def main() -> int:
         print(json.dumps({"ok": False, "error": {"code": "invalid_scene_preset", "message": str(exc)}}))
         return 1
     clip_path = output / preset_definition.preview_clip_name
-    stills = render_preview_stills(str(output))
+    raw_preview_plan = bpy.context.scene.get("trackprompt_preview_plan")
+    preview_plan = json.loads(raw_preview_plan) if isinstance(raw_preview_plan, str) else {}
+    continuous_r12 = isinstance(preview_plan, dict) and "continuousRange" in preview_plan
+    layout = args.layout
+    if continuous_r12:
+        if layout is None:
+            layout = (
+                "landscape"
+                if (args.width, args.height) == (1920, 1080)
+                else "vertical"
+                if (args.width, args.height) == (1080, 1920)
+                else None
+            )
+        format_contract = preview_plan.get("formats", {}).get(layout or "", {})
+        if (
+            layout is None
+            or not isinstance(format_contract, dict)
+            or (format_contract.get("width"), format_contract.get("height"))
+            != (args.width, args.height)
+        ):
+            print(json.dumps({"ok": False, "error": {"code": "invalid_r12_layout_resolution"}}))
+            return 1
+    elif layout is not None:
+        print(json.dumps({"ok": False, "error": {"code": "layout_requires_r12_scene"}}))
+        return 1
+    stills = render_preview_stills(str(output), layout=layout)
     clip: dict[str, object] = {"ok": True, "skipped": True, "reason": "explicit-skip-clip"}
     if not args.skip_clip and stills.get("ok") is True:
         ffmpeg = _resolve_executable(args.ffmpeg, "ffmpeg")
         clip = render_preview_clip(
             str(clip_path),
             ffmpeg_path=str(ffmpeg) if ffmpeg is not None else None,
+            layout=layout,
         )
         if clip.get("ok") is not True and preset_definition.identifier != "space-journey-story":
             clip = _external_ffmpeg_clip(clip_path, args.ffmpeg)
@@ -440,6 +471,7 @@ def main() -> int:
             "width": args.width,
             "height": args.height,
             "fps": bpy.context.scene.render.fps / bpy.context.scene.render.fps_base,
+            "layout": layout,
         },
         "checks": checks,
         "stills": stills,

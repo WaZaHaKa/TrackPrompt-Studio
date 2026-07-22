@@ -27,13 +27,13 @@ const assessmentFields = [
 type AssessmentKey = typeof assessmentFields[number][0]
 
 const defaultAssessments: Record<AssessmentKey, DirectorAssessment> = {
-  focalReadability: 'acceptable',
-  depth: 'acceptable',
-  silhouette: 'acceptable',
-  colorHierarchy: 'acceptable',
-  visualDensity: 'acceptable',
-  storyClarity: 'acceptable',
-  mobileReadability: 'acceptable',
+  focalReadability: 'unknown',
+  depth: 'unknown',
+  silhouette: 'unknown',
+  colorHierarchy: 'unknown',
+  visualDensity: 'unknown',
+  storyClarity: 'unknown',
+  mobileReadability: 'unknown',
 }
 
 function representativeFrame(shot: DirectorShot): number {
@@ -46,7 +46,7 @@ export function DirectorScreen({ client, connection }: { client: MissionControlC
   const [error, setError] = useState<StructuredError | null>(null)
   const [selectedShot, setSelectedShot] = useState<DirectorShot | null>(null)
   const [assessments, setAssessments] = useState(defaultAssessments)
-  const [decision, setDecision] = useState<DirectorDecision>('approve')
+  const [decision, setDecision] = useState<DirectorDecision>('revise')
   const [findings, setFindings] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -72,7 +72,7 @@ export function DirectorScreen({ client, connection }: { client: MissionControlC
   const startReview = (shot: DirectorShot): void => {
     const review = reviewsByShot.get(shot.id)
     setSelectedShot(shot)
-    setDecision(review?.decision ?? 'approve')
+    setDecision(review?.decision ?? 'revise')
     setFindings(review?.findings.join('\n') ?? '')
     setAssessments(review ? Object.fromEntries(
       assessmentFields.map(([key]) => [key, review[key]]),
@@ -158,8 +158,13 @@ export function DirectorScreen({ client, connection }: { client: MissionControlC
                         <p>{shot.storyPurpose}</p>
                         {review ? (
                           <div className="mc-director-review-summary">
-                            <StatusBadge tone={review.decision === 'approve' ? 'success' : 'warning'}>{review.decision === 'approve' ? 'Approved' : 'Revise'}</StatusBadge>
+                            <StatusBadge tone={review.decision === 'approve' ? 'success' : 'warning'}>
+                              {review.revisionMetadata.reviewer === 'human'
+                                ? (review.decision === 'approve' ? 'Human approved' : 'Human requests revision')
+                                : (review.decision === 'approve' ? 'Codex-assisted pass' : 'Codex recommends revision')}
+                            </StatusBadge>
                             <span>Revision {review.revisionMetadata.revision}</span>
+                            <span>{review.revisionMetadata.reviewer === 'human' ? 'Human review' : 'Codex-assisted review — not human approval'}</span>
                             {review.findings.length > 0 ? <ul>{review.findings.map((finding) => <li key={finding}>{finding}</li>)}</ul> : <small>No written findings.</small>}
                           </div>
                         ) : <p className="mc-muted">Awaiting review</p>}

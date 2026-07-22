@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from .cameras import create_camera
@@ -19,7 +20,13 @@ def deterministic_seed_plan(seed: int) -> dict[str, Any]:
     }
 
 
-def build_abstract_geometry(cues: dict[str, Any], bus: Any, seed: int) -> dict[str, Any]:
+def build_abstract_geometry(
+    cues: dict[str, Any],
+    bus: Any,
+    seed: int,
+    parameters: Mapping[str, object] | None = None,
+) -> dict[str, Any]:
+    del parameters
     collections = create_collections()
     geometry = create_geometry(collections, bus, cues, seed)
     camera = create_camera(collections["TP_CAMERAS"], bus, cues, seed)

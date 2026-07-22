@@ -18,6 +18,8 @@ from trackprompt_visualizer.mcp_entrypoints import (  # noqa: E402
     render_preview_clip,
     render_preview_stills,
 )
+from trackprompt_visualizer.preset_registry import get_preset_definition  # noqa: E402
+from trackprompt_visualizer.validation import VisualizerValidationError  # noqa: E402
 
 
 def _arguments() -> argparse.Namespace:
@@ -72,9 +74,8 @@ def _resolve_executable(argument: str | None, name: str) -> Path | None:
 
 
 def _ffprobe_path(ffprobe_argument: str | None, ffmpeg_argument: str | None) -> Path | None:
-    explicit = _resolve_executable(ffprobe_argument, "ffprobe")
-    if explicit is not None or ffprobe_argument:
-        return explicit
+    if ffprobe_argument:
+        return _resolve_executable(ffprobe_argument, "ffprobe")
     if ffmpeg_argument:
         ffmpeg = _resolve_executable(ffmpeg_argument, "ffmpeg")
         if ffmpeg is not None:
@@ -87,6 +88,51 @@ def _ffprobe_path(ffprobe_argument: str | None, ffmpeg_argument: str | None) -> 
             if resolved is not None and resolved.is_file():
                 return resolved
     return _resolve_executable(None, "ffprobe")
+
+
+def _parse_frame_rate(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        result = float(value)
+    elif isinstance(value, str):
+        numerator_text, separator, denominator_text = value.partition("/")
+        try:
+            numerator = float(numerator_text)
+            denominator = float(denominator_text) if separator else 1.0
+        except ValueError:
+            return None
+        if denominator == 0.0:
+            return None
+        result = numerator / denominator
+    else:
+        return None
+    return result if math.isfinite(result) and result > 0.0 else None
+
+
+def _stream_facts(streams: object) -> dict[str, object]:
+    stream_items = [item for item in streams if isinstance(item, dict)] if isinstance(streams, list) else []
+    video = next((item for item in stream_items if item.get("codec_type") == "video"), None)
+    audio = next((item for item in stream_items if item.get("codec_type") == "audio"), None)
+    frame_rate = None
+    if video is not None:
+        frame_rate = _parse_frame_rate(video.get("avg_frame_rate"))
+        if frame_rate is None:
+            frame_rate = _parse_frame_rate(video.get("r_frame_rate"))
+    width = video.get("width") if video is not None else None
+    height = video.get("height") if video is not None else None
+    return {
+        "videoPresent": video is not None,
+        "audioPresent": audio is not None,
+        "hasVideo": video is not None,
+        "hasAudio": audio is not None,
+        "videoCodec": video.get("codec_name") if video is not None else None,
+        "audioCodec": audio.get("codec_name") if audio is not None else None,
+        "width": int(width) if isinstance(width, (int, float)) and not isinstance(width, bool) else None,
+        "height": int(height) if isinstance(height, (int, float)) and not isinstance(height, bool) else None,
+        "frameRate": frame_rate,
+        "fps": frame_rate,
+    }
 
 
 def _probe_clip(
@@ -113,7 +159,7 @@ def _probe_clip(
         "-v",
         "error",
         "-show_entries",
-        "format=duration:stream=codec_type",
+        "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate,r_frame_rate",
         "-of",
         "json",
         str(output),
@@ -151,13 +197,20 @@ def _probe_clip(
             "plannedDurationSeconds": planned_duration,
             "audioRequested": audio_requested,
         }
-    stream_types = [item.get("codec_type") for item in streams if isinstance(item, dict)]
-    video_present = "video" in stream_types
-    audio_present = "audio" in stream_types
+    stream_facts = _stream_facts(streams)
+    video_present = stream_facts["videoPresent"] is True
+    audio_present = stream_facts["audioPresent"] is True
     tolerance = max(0.15, 2.0 / fps)
     duration_matches = math.isfinite(duration) and abs(duration - planned_duration) <= tolerance
     audio_matches = audio_present == audio_requested
-    ok = video_present and duration_matches and audio_matches
+    metadata_present = (
+        isinstance(stream_facts["videoCodec"], str)
+        and isinstance(stream_facts["width"], int)
+        and isinstance(stream_facts["height"], int)
+        and isinstance(stream_facts["frameRate"], float)
+        and (not audio_requested or isinstance(stream_facts["audioCodec"], str))
+    )
+    ok = video_present and duration_matches and audio_matches and metadata_present
     return {
         "ok": ok,
         "status": "verified" if ok else "verification-failed",
@@ -166,10 +219,9 @@ def _probe_clip(
         "durationSeconds": duration,
         "durationToleranceSeconds": tolerance,
         "durationMatches": duration_matches,
-        "videoPresent": video_present,
         "audioRequested": audio_requested,
-        "audioPresent": audio_present,
         "audioMatchesRequest": audio_matches,
+        **stream_facts,
     }
 
 
@@ -274,6 +326,8 @@ def _external_ffmpeg_clip(output: Path, ffmpeg_argument: str | None) -> dict[str
         "clip": str(output),
         "startFrame": start,
         "endFrame": end,
+        "role": clip.get("role"),
+        "centerFrame": clip.get("centerFrame"),
         "encoder": "external-ffmpeg-argument-array",
         "audioRequested": audio_requested,
         "audioMuxStatus": "pending-verification",
@@ -294,15 +348,21 @@ def main() -> int:
     output.mkdir(parents=False, exist_ok=True)
     bpy.context.scene.render.resolution_x = args.width
     bpy.context.scene.render.resolution_y = args.height
+    try:
+        preset_definition = get_preset_definition(bpy.context.scene.get("trackprompt_preset", "abstract-geometry"))
+    except VisualizerValidationError as exc:
+        print(json.dumps({"ok": False, "error": {"code": "invalid_scene_preset", "message": str(exc)}}))
+        return 1
+    clip_path = output / preset_definition.preview_clip_name
     stills = render_preview_stills(str(output))
     clip: dict[str, object] = {"ok": True, "skipped": True, "reason": "explicit-skip-clip"}
     if not args.skip_clip and stills.get("ok") is True:
-        clip = render_preview_clip(str(output / "trackprompt-preview.mp4"))
+        clip = render_preview_clip(str(clip_path))
         if clip.get("ok") is not True:
-            clip = _external_ffmpeg_clip(output / "trackprompt-preview.mp4", args.ffmpeg)
+            clip = _external_ffmpeg_clip(clip_path, args.ffmpeg)
         if clip.get("ok") is True:
             verification = _probe_clip(
-                output / "trackprompt-preview.mp4",
+                clip_path,
                 start_frame=int(clip["startFrame"]),
                 end_frame=int(clip["endFrame"]),
                 fps=bpy.context.scene.render.fps / bpy.context.scene.render.fps_base,
@@ -348,7 +408,17 @@ def main() -> int:
     result = {
         "ok": all(checks.values()),
         "schemaVersion": "1.0.0",
+        "preset": preset_definition.identifier,
+        "visualizerConfig": scene.get("resolvedConfiguration", {}),
+        "warnings": scene.get("warnings", []),
+        "previewRoles": scene.get("previewRoles", []),
+        "previewClipName": preset_definition.preview_clip_name,
         "clipRequested": not args.skip_clip,
+        "render": {
+            "width": args.width,
+            "height": args.height,
+            "fps": bpy.context.scene.render.fps / bpy.context.scene.render.fps_base,
+        },
         "checks": checks,
         "stills": stills,
         "clip": clip,

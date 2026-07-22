@@ -36,6 +36,78 @@ BACKGROUND_COLLECTION_PREFIXES = (
 )
 
 
+def analyze_motion_samples(
+    samples: list[dict[str, Any]],
+    *,
+    fps: float,
+    declared_cut_frames: set[int] | None = None,
+    maximum_velocity: float = 8.0,
+    maximum_acceleration: float = 6.0,
+    maximum_angular_velocity: float = 1.0,
+) -> list[dict[str, Any]]:
+    """Detect sharp transform changes without depending on Blender types."""
+
+    cuts = declared_cut_frames or set()
+    ordered = sorted(samples, key=lambda item: int(item["frame"]))
+    issues: list[dict[str, Any]] = []
+    velocities: list[tuple[int, float]] = []
+    for previous, current in zip(ordered, ordered[1:], strict=False):
+        left_frame = int(previous["frame"])
+        right_frame = int(current["frame"])
+        frame_delta = right_frame - left_frame
+        if frame_delta <= 0:
+            continue
+        seconds = frame_delta / fps
+        left_location = tuple(float(value) for value in previous["location"])
+        right_location = tuple(float(value) for value in current["location"])
+        distance = math.sqrt(sum((right - left) ** 2 for left, right in zip(left_location, right_location, strict=True)))
+        velocity = distance / seconds
+        velocities.append((right_frame, velocity))
+        left_rotation = tuple(float(value) for value in previous["rotation"])
+        right_rotation = tuple(float(value) for value in current["rotation"])
+        angular_distance = math.sqrt(
+            sum((right - left) ** 2 for left, right in zip(left_rotation, right_rotation, strict=True))
+        )
+        angular_velocity = angular_distance / seconds
+        intentional = right_frame in cuts
+        if frame_delta == 1 and velocity > maximum_velocity and not intentional:
+            issues.append(
+                {"code": "undeclared-one-frame-transform-jump", "frame": right_frame, "velocity": velocity}
+            )
+        if velocity > maximum_velocity and not intentional:
+            issues.append({"code": "position-velocity-outlier", "frame": right_frame, "velocity": velocity})
+        if angular_velocity > maximum_angular_velocity and not intentional:
+            issues.append(
+                {"code": "angular-velocity-outlier", "frame": right_frame, "angularVelocity": angular_velocity}
+            )
+    for previous, current in zip(velocities, velocities[1:], strict=False):
+        frame_delta = current[0] - previous[0]
+        if frame_delta <= 0 or current[0] in cuts:
+            continue
+        acceleration = abs(current[1] - previous[1]) / (frame_delta / fps)
+        if acceleration > maximum_acceleration:
+            issues.append(
+                {"code": "acceleration-discontinuity", "frame": current[0], "acceleration": acceleration}
+            )
+    return issues
+
+
+def detect_scalar_overshoot(
+    keyframes: list[tuple[float, float]],
+    evaluate: Any,
+    *,
+    tolerance: float = 1e-4,
+) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    for left, right in zip(keyframes, keyframes[1:], strict=False):
+        midpoint = (left[0] + right[0]) / 2.0
+        value = float(evaluate(midpoint))
+        lower, upper = sorted((left[1], right[1]))
+        if value < lower - tolerance or value > upper + tolerance:
+            issues.append({"code": "unexpected-fcurve-overshoot", "frame": midpoint, "value": value})
+    return issues
+
+
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate a frozen TrackPrompt Blender scene across its timeline without rendering."
@@ -373,10 +445,109 @@ def _camera_health(scene: Any) -> list[dict[str, Any]]:
         or float(clip_end) <= float(clip_start)
     ):
         issues.append({"code": "invalid-camera-clipping", "camera": camera.name})
+    lens = getattr(data, "lens", None)
+    if not _finite_number(lens) or not 12.0 <= float(lens) <= 200.0:
+        issues.append({"code": "invalid-camera-lens", "camera": camera.name, "lens": lens})
     target_name = scene.get("trackprompt_camera_target")
     if not isinstance(target_name, str) or not target_name or scene.objects.get(target_name) is None:
         issues.append({"code": "missing-camera-target", "target": target_name})
     return issues
+
+
+def _story_motion_health(bpy: Any, scene: Any, fps: float) -> list[dict[str, Any]]:
+    raw = scene.get("trackprompt_shot_plan")
+    if not isinstance(raw, str):
+        return []
+    try:
+        shot_plan = json.loads(raw)
+    except json.JSONDecodeError:
+        return [{"code": "invalid-scene-shot-plan"}]
+    shots = shot_plan.get("shots") if isinstance(shot_plan, dict) else None
+    if not isinstance(shots, list):
+        return [{"code": "invalid-scene-shot-plan"}]
+    root = bpy.data.objects.get("TP_STORY_CAMERA_ROOT")
+    target = bpy.data.objects.get("TP_CAMERA_TARGET")
+    camera = scene.camera
+    if root is None or target is None or camera is None:
+        return [{"code": "missing-story-camera-layer"}]
+    issues: list[dict[str, Any]] = []
+    for obj in (root, target, camera):
+        animation = getattr(obj, "animation_data", None)
+        for driver in list(getattr(animation, "drivers", [])) if animation is not None else []:
+            if str(getattr(driver, "data_path", "")) not in {"location", "rotation_euler", "rotation_quaternion"}:
+                continue
+            variables = getattr(getattr(driver, "driver", None), "variables", [])
+            if any(
+                "TP_AUDIO_BUS" in str(getattr(getattr(variable, "targets", [None])[0], "id", ""))
+                for variable in variables
+            ):
+                issues.append(
+                    {"code": "raw-audio-controls-major-camera-transform", "object": obj.name}
+                )
+    cut_frames = {
+        int(shot["frameStart"])
+        for shot in shots
+        if isinstance(shot, dict) and shot.get("transition") == "cut"
+    }
+    frames: set[int] = set()
+    maximum_velocity = 8.0
+    maximum_acceleration = 6.0
+    maximum_angular_velocity = 1.0
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        for boundary in (shot.get("frameStart"), shot.get("frameEnd")):
+            if isinstance(boundary, int):
+                frames.update(
+                    frame
+                    for frame in (boundary - 1, boundary, boundary + 1)
+                    if scene.frame_start <= frame <= scene.frame_end
+                )
+        motion = shot.get("motion")
+        if isinstance(motion, dict):
+            maximum_velocity = max(maximum_velocity, float(motion.get("maximumVelocity", 0.0)))
+            maximum_acceleration = max(maximum_acceleration, float(motion.get("maximumAcceleration", 0.0)))
+            maximum_angular_velocity = max(
+                maximum_angular_velocity,
+                float(motion.get("maximumAngularVelocity", 0.0)),
+            )
+    original = scene.frame_current
+    samples: list[dict[str, Any]] = []
+    try:
+        for frame in sorted(frames):
+            scene.frame_set(frame)
+            bpy.context.view_layer.update()
+            matrix = camera.matrix_world
+            rotation = matrix.to_euler()
+            samples.append(
+                {
+                    "frame": frame,
+                    "location": tuple(float(value) for value in matrix.translation),
+                    "rotation": tuple(float(value) for value in rotation),
+                }
+            )
+    finally:
+        scene.frame_set(original)
+    issues.extend(
+        analyze_motion_samples(
+            samples,
+            fps=fps,
+            declared_cut_frames=cut_frames,
+            maximum_velocity=maximum_velocity,
+            maximum_acceleration=maximum_acceleration,
+            maximum_angular_velocity=maximum_angular_velocity,
+        )
+    )
+    for owner_name, owner in ((root.name, root), (target.name, target), (camera.name, camera)):
+        animation = getattr(owner, "animation_data", None)
+        action = getattr(animation, "action", None) if animation is not None else None
+        if action is None:
+            continue
+        for fcurve in iter_action_fcurves(action):
+            points = [(float(point.co[0]), float(point.co[1])) for point in fcurve.keyframe_points]
+            for issue in detect_scalar_overshoot(points, fcurve.evaluate):
+                issues.append({**issue, "object": owner_name, "dataPath": str(fcurve.data_path)})
+    return _deduplicate_issues(issues)
 
 
 def _foreground_block_health(scene: Any, depsgraph: Any) -> list[dict[str, Any]]:
@@ -570,6 +741,7 @@ def scan_scene(
             {"code": "missing-external-dependencies", "count": dependency_audit["missingCount"]}
         )
     global_issues.extend(_compositor_health(scene))
+    global_issues.extend(_story_motion_health(bpy, scene, expected_fps))
 
     original_frame = scene.frame_current
     samples: list[dict[str, Any]] = []

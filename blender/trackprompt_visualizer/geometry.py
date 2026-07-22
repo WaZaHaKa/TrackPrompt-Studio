@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Iterable
 from typing import Any
 
 from .materials import create_material, drive_emission
@@ -22,20 +23,38 @@ COLLECTION_NAMES = (
 def clear_scene() -> None:
     import bpy  # type: ignore[import-not-found]
 
+    scene = bpy.context.scene
+    editor = getattr(scene, "sequence_editor", None)
+    if editor is not None:
+        strips = getattr(editor, "strips", None)
+        if strips is None:
+            strips = getattr(editor, "sequences", None)
+        if strips is not None:
+            for strip in list(strips):
+                strips.remove(strip)
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     for collection in list(bpy.data.collections):
         bpy.data.collections.remove(collection)
-    for datablocks in (bpy.data.meshes, bpy.data.curves, bpy.data.cameras, bpy.data.lights, bpy.data.materials, bpy.data.textures):
+    for datablocks in (
+        bpy.data.meshes,
+        bpy.data.curves,
+        bpy.data.cameras,
+        bpy.data.lights,
+        bpy.data.materials,
+        bpy.data.textures,
+        bpy.data.sounds,
+    ):
         for block in list(datablocks):
             datablocks.remove(block)
 
 
-def create_collections() -> dict[str, Any]:
+def create_collections(additional_names: Iterable[str] = ()) -> dict[str, Any]:
     import bpy  # type: ignore[import-not-found]
 
     result: dict[str, Any] = {}
-    for name in COLLECTION_NAMES:
+    names = COLLECTION_NAMES + tuple(name for name in additional_names if name not in COLLECTION_NAMES)
+    for name in names:
         collection = bpy.data.collections.new(name)
         bpy.context.scene.collection.children.link(collection)
         result[name] = collection

@@ -37,7 +37,7 @@ describe('MissionControlApp', () => {
     expect(screen.getByText('FFmpeg is not configured; local rendering is still available.')).toBeInTheDocument()
   })
 
-  it('keeps cloud and encode execution honestly disabled and links the analysis fallback', async () => {
+  it('keeps cloud execution disabled while exposing verified local encoding and the analysis fallback', async () => {
     const user = userEvent.setup()
     render(<MissionControlApp client={makeClient({
       getCloudReadiness: () => Promise.resolve({ ...testCloud, status: 'ready' }),
@@ -52,7 +52,8 @@ describe('MissionControlApp', () => {
     expect(screen.getByRole('button', { name: /start cloud render/i })).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'Encode' }))
-    expect(screen.getByText(/encoding is not reported as available/i)).toBeInTheDocument()
+    expect(screen.queryByText(/encoding is not available/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/no complete frame sequence yet/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Settings' }))
     expect(screen.getByRole('link', { name: /open trackprompt analysis workspace/i })).toHaveAttribute('href', '/?workspace=analysis')

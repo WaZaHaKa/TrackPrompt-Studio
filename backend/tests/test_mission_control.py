@@ -20,10 +20,13 @@ from pydantic import TypeAdapter, ValidationError
 
 import app.mission_control.outputs as outputs_module
 import app.mission_control.renderers as renderers_module
+import app.mission_control.service as service_module
 from app.mission_control.config import MissionControlConfig
 from app.mission_control.discovery import load_json_object, sha256_file
 from app.mission_control.errors import MissionControlError
 from app.mission_control.models import (
+    EncodeReadiness,
+    EncodeStartRequest,
     FakeRenderOptions,
     JobRecord,
     JobState,
@@ -235,6 +238,58 @@ def _assert_valid_png(payload: bytes) -> None:
     assert chunk_types[0] == b"IHDR"
     assert chunk_types[-1] == b"IEND"
     assert zlib.decompress(compressed)
+
+
+def test_production_preview_thumbnail_is_bounded_atomic_and_cached(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frames = tmp_path / "thumbnail-output" / "frames"
+    frames.mkdir(parents=True)
+    source = frames / "frame_000001.png"
+    source.write_bytes(renderers_module._FAKE_PREVIEW_PNG)
+    now = datetime.now(UTC)
+    job = JobRecord(
+        id="preview-thumbnail-job",
+        renderer=RendererKind.PRODUCTION,
+        state=JobState.RUNNING,
+        identity=RenderIdentity(
+            project_id="trip-to-andromeda",
+            scene_id=SCENE_ID,
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_id=PROFILE_ID,
+            profile_sha256=mission_fixture.profile_sha256,
+            output_directory=str(frames.parent),
+        ),
+        created_at=now,
+        updated_at=now,
+        frame_start=1,
+        frame_end=2,
+        total_frame_count=2,
+        chunks_total=1,
+    )
+    calls = 0
+
+    def fake_run(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        nonlocal calls
+        calls += 1
+        Path(args[-1]).write_bytes(renderers_module._FAKE_PREVIEW_PNG)
+        return subprocess.CompletedProcess(args, 0, b"", b"")
+
+    monkeypatch.setattr(service_module.shutil, "which", lambda _name: "ffmpeg")
+    monkeypatch.setattr(service_module.subprocess, "run", fake_run)
+
+    first = service._preview_thumbnail(job, source)
+    second = service._preview_thumbnail(job, source)
+
+    assert first == second
+    assert first != source
+    assert first.parent == service.config.state_root / "preview-thumbnails" / job.id
+    assert service._png_dimensions(first) == (1, 1)
+    assert calls == 1
+    assert not list(first.parent.glob(".*.png"))
 
 
 async def _wait_for_state(
@@ -668,7 +723,7 @@ def test_output_manifest_requires_exact_saved_profile_and_frame_contract(
             "frameStart": 1,
             "frameEnd": 13029,
             "frameCount": 13029,
-            "fps": 30,
+            "fps": 30.0,
             "width": 1280,
             "height": 720,
             "filenamePattern": "frame_%06d.png",
@@ -685,6 +740,18 @@ def test_output_manifest_requires_exact_saved_profile_and_frame_contract(
     )
     assert compatible.classification == OutputClassification.COMPATIBLE_RESUMABLE
     assert compatible.usable is True
+
+    manifest["frameContract"]["fps"] = 29.97
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    wrong_fps = service.inspect_output(
+        str(output),
+        profile_id=PROFILE_ID,
+        scene_id=SCENE_ID,
+    )
+    assert wrong_fps.classification == OutputClassification.INCOMPATIBLE_RENDER
+    assert any("fps" in issue for issue in wrong_fps.issues)
+
+    manifest["frameContract"]["fps"] = 30.0
 
     manifest["renderProfile"]["sha256"] = "0" * 64
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -971,6 +1038,111 @@ async def test_complete_manifest_wins_over_stale_stop_and_reports_chunk_output(
     assert nonzero.error is not None
     assert nonzero.error.code == "renderer_process_failed"
     assert service.encode_readiness(nonzero_job.id).frame_sequence_complete is False
+
+
+def test_encode_status_defaults_to_idle_and_persists(service: MissionControlService, mission_fixture: MissionFixture, tmp_path: Path) -> None:
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "encode-status" / "render",
+        job_id="encode-status-job",
+    )
+
+    idle = service.encode_status(job.id)
+    assert idle.status == "idle"
+    assert idle.total_frames == 3
+    assert idle.output_kinds == []
+
+    queued = idle.model_copy(
+        update={
+            "status": "queued",
+            "output_kinds": ["delivery", "master"],
+            "detail": "Queued for local encoding.",
+        }
+    )
+    service._put_encode_status(queued)
+    assert service.encode_status(job.id) == queued
+
+
+@pytest.mark.asyncio
+async def test_encode_start_requires_explicit_operator_confirmation(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "encode-confirmation" / "render",
+        job_id="encode-confirmation-job",
+    )
+
+    with pytest.raises(MissionControlError) as error:
+        await service.start_encode(job.id, EncodeStartRequest())
+
+    assert error.value.error.code == "encode_confirmation_required"
+
+
+@pytest.mark.asyncio
+async def test_encode_start_queues_delivery_then_master_with_managed_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture = _build_config(tmp_path, profile_source=SOURCE_PROFILE)
+    service = MissionControlService(fixture.config)
+    try:
+        job = _stored_job(
+            service,
+            fixture,
+            tmp_path / "encode-sequence" / "render",
+            job_id="encode-sequence-job",
+        )
+        service.store.put_job(
+            job.model_copy(
+                update={
+                    "state": JobState.COMPLETE,
+                    "published_frame_count": 3,
+                    "renderer_active": False,
+                    "watcher_active": False,
+                }
+            )
+        )
+        monkeypatch.setattr(
+            service,
+            "encode_readiness",
+            lambda job_id: EncodeReadiness(
+                job_id=job_id,
+                ready=True,
+                frame_sequence_complete=True,
+                published_frames=3,
+                total_frames=3,
+                ffmpeg_available=True,
+                detail="Ready.",
+            ),
+        )
+        observed = []
+
+        async def capture(status: object) -> None:
+            observed.append(status)
+
+        monkeypatch.setattr(service, "_run_encode_sequence", capture)
+        queued = await service.start_encode(
+            job.id,
+            EncodeStartRequest(operator_confirmed=True),
+        )
+        await asyncio.sleep(0)
+
+        assert queued.status == "queued"
+        assert queued.output_kinds == ["delivery", "master"]
+        assert queued.output_paths["delivery"].endswith(
+            "delivery\\trip-to-andromeda-720p-delivery.mp4"
+        )
+        assert queued.output_paths["master"].endswith(
+            "master\\trip-to-andromeda-720p-master.mov"
+        )
+        assert observed == [queued]
+    finally:
+        service.close()
 
 
 @pytest.mark.asyncio

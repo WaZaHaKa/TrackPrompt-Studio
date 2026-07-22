@@ -4,6 +4,7 @@ export type MissionSection =
   | 'profiles'
   | 'calibration'
   | 'jobs'
+  | 'director'
   | 'encode'
   | 'cloud'
   | 'settings'
@@ -235,6 +236,16 @@ export interface RenderEvent {
   frameStart: number | null
   frameEnd: number | null
   currentFrame: number | null
+  latestRenderedFrame: number | null
+  rendererEventType: string | null
+  rendererEventSequence: number | null
+  rendererStatus: string | null
+  workerId: string | null
+  activeChunkId: string | null
+  currentActId: string | null
+  currentActName: string | null
+  currentShotId: string | null
+  currentShotName: string | null
   lastCompletedFrame: number | null
   renderedFrames: number
   inFlightFrames: number
@@ -251,6 +262,7 @@ export interface RenderEvent {
   metrics: RenderMetrics
   previewUrl: string | null
   previewFrame: number | null
+  latestPreviewAt: string | null
   latestLogLine: string | null
   warning: string | null
   error: StructuredError | null
@@ -279,6 +291,63 @@ export interface LogEntry {
   level: 'debug' | 'info' | 'warning' | 'error'
   message: string
   technicalDetails: string | null
+}
+
+export type DirectorAssessment = 'clear' | 'acceptable' | 'needs-revision' | 'unknown'
+export type DirectorDecision = 'approve' | 'revise'
+
+export interface DirectorAct {
+  id: string
+  name: string
+  frameStart: number
+  frameEnd: number
+  narrativePurpose: string
+  protagonistState: string
+}
+
+export interface DirectorShot {
+  id: string
+  name: string
+  actId: string
+  frameStart: number
+  frameEnd: number
+  storyPurpose: string
+  protagonistState: string
+  reviewFrames: number[]
+}
+
+export interface DirectorReview {
+  schemaVersion: '1.0.0'
+  shotId: string
+  reviewFrame: number
+  focalReadability: DirectorAssessment
+  depth: DirectorAssessment
+  silhouette: DirectorAssessment
+  colorHierarchy: DirectorAssessment
+  visualDensity: DirectorAssessment
+  storyClarity: DirectorAssessment
+  mobileReadability: DirectorAssessment
+  findings: string[]
+  decision: DirectorDecision
+  revisionMetadata: {
+    revision: number
+    reviewer: 'human' | 'codex-assisted'
+    note: string
+  }
+}
+
+export interface DirectorWorkspace {
+  analysisJobId: string
+  updatedAt: string
+  storyPlan: {
+    schemaVersion: string
+    acts: DirectorAct[]
+  }
+  shotPlan: {
+    schemaVersion: string
+    shots: DirectorShot[]
+  }
+  reviews: DirectorReview[]
 }
 
 export interface CalibrationCandidate {
@@ -364,9 +433,19 @@ export interface EncodeCandidate {
 export interface EncodeJob {
   id: string
   renderJobId: string
-  status: 'queued' | 'encoding' | 'muxing' | 'verifying' | 'complete' | 'failed'
+  status: 'idle' | 'queued' | 'encoding' | 'verifying' | 'complete' | 'failed'
   progress: number
+  outputKinds: Array<'delivery' | 'master'>
+  completedKinds: Array<'delivery' | 'master'>
+  currentKind: 'delivery' | 'master' | null
+  currentFrame: number | null
+  totalFrames: number
+  fps: number | null
+  speed: string | null
+  etaSeconds: number | null
+  outputPaths: Record<string, string>
   outputPath: string | null
+  detail: string
   error: StructuredError | null
 }
 
@@ -427,6 +506,8 @@ export interface MissionControlClient {
   listScenes: () => Promise<SceneSummary[]>
   listProfiles: () => Promise<RenderProfileSummary[]>
   listJobs: () => Promise<RenderJob[]>
+  getDirectorWorkspace: () => Promise<DirectorWorkspace | null>
+  putDirectorReview: (analysisJobId: string, shotId: string, review: DirectorReview) => Promise<DirectorWorkspace>
   listCalibrations: () => Promise<CalibrationSummary[]>
   getCloudReadiness: () => Promise<CloudReadiness>
   prepareCloudPackage: (profileId: string, sceneId: string, outputPath: string) => Promise<CloudPackageResult>
@@ -449,6 +530,7 @@ export interface MissionControlClient {
   createCalibrationPlan: () => Promise<CalibrationSummary>
   startCalibrationCandidate: (calibrationId: string, candidateId: string) => Promise<CalibrationSummary>
   startEncode: (jobId: string, includeAudio: boolean) => Promise<EncodeJob>
+  getEncodeJob: (jobId: string) => Promise<EncodeJob>
   openPath: (path: string) => Promise<void>
 }
 

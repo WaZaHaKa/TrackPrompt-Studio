@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -45,6 +46,17 @@ _CHUNK_PUBLISHED_PATTERN = re.compile(
     r"^Published frames (\d+)-(\d+); (\d+) valid of (\d+)\.$"
 )
 _ARTIFACT_PREVIEW_CANDIDATES = 16
+RENDER_EVENT_PREFIX = "WZHK_RENDER_EVENT "
+_RENDER_EVENT_TYPES = {
+    "frame_started",
+    "frame_written",
+    "render_stats",
+    "chunk_complete",
+    "render_cancelled",
+}
+_RENDER_EVENT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_RENDER_EVENT_NAME = re.compile(r"^[^\x00-\x1f\x7f]{1,160}$")
+_RENDER_STATUSES = {"rendering", "awaiting_chunk_validation", "chunk_rendered", "cancelled"}
 
 _FAKE_PREVIEW_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -77,6 +89,115 @@ class CommandResult:
     exit_code: int
     payload: dict[str, Any] | None
     lines: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RendererTelemetryEvent:
+    event_type: str
+    sequence: int
+    job_id: str
+    worker_id: str
+    chunk_id: str
+    chunk_start: int
+    chunk_end: int
+    frame: int | None
+    elapsed_seconds: float | None
+    renderer_status: str
+    act_id: str | None
+    act_name: str | None
+    shot_id: str | None
+    shot_name: str | None
+
+
+def parse_renderer_telemetry_line(
+    line: str,
+    *,
+    expected_job_id: str,
+) -> RendererTelemetryEvent | None:
+    """Parse only the exact, bounded renderer prefix; malformed payloads are inert."""
+    if not line.startswith(RENDER_EVENT_PREFIX) or len(line) > 8_192:
+        return None
+    try:
+        raw = json.loads(line[len(RENDER_EVENT_PREFIX) :])
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(raw, dict) or raw.get("schemaVersion") != "1.0.0":
+        return None
+
+    def identifier(key: str, *, required: bool) -> str | None:
+        value = raw.get(key)
+        if value is None and not required:
+            return None
+        if not isinstance(value, str) or _RENDER_EVENT_ID.fullmatch(value) is None:
+            raise ValueError(key)
+        return value
+
+    def name(key: str) -> str | None:
+        value = raw.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, str) or _RENDER_EVENT_NAME.fullmatch(value) is None:
+            raise ValueError(key)
+        return value
+
+    try:
+        event_type = raw.get("eventType")
+        renderer_status = raw.get("rendererStatus")
+        sequence = raw.get("sequence")
+        chunk_start = raw.get("chunkStart")
+        chunk_end = raw.get("chunkEnd")
+        frame = raw.get("frame")
+        elapsed = raw.get("elapsedSeconds")
+        job_id = identifier("jobId", required=True)
+        worker_id = identifier("workerId", required=True)
+        chunk_id = identifier("chunkId", required=True)
+        if (
+            event_type not in _RENDER_EVENT_TYPES
+            or renderer_status not in _RENDER_STATUSES
+            or job_id != expected_job_id
+            or isinstance(sequence, bool)
+            or not isinstance(sequence, int)
+            or sequence < 1
+            or isinstance(chunk_start, bool)
+            or not isinstance(chunk_start, int)
+            or isinstance(chunk_end, bool)
+            or not isinstance(chunk_end, int)
+            or chunk_start < 1
+            or chunk_end < chunk_start
+            or chunk_end - chunk_start > 10_000
+        ):
+            return None
+        if frame is not None and (
+            isinstance(frame, bool)
+            or not isinstance(frame, int)
+            or not chunk_start <= frame <= chunk_end
+        ):
+            return None
+        if elapsed is not None and (
+            isinstance(elapsed, bool)
+            or not isinstance(elapsed, (int, float))
+            or not math.isfinite(float(elapsed))
+            or not 0.0 <= float(elapsed) <= 86_400.0
+        ):
+            return None
+        return RendererTelemetryEvent(
+            event_type=str(event_type),
+            sequence=sequence,
+            job_id=job_id,
+            worker_id=cast(str, worker_id),
+            chunk_id=cast(str, chunk_id),
+            chunk_start=chunk_start,
+            chunk_end=chunk_end,
+            frame=frame,
+            elapsed_seconds=None if elapsed is None else float(elapsed),
+            renderer_status=str(renderer_status),
+            act_id=identifier("actId", required=False),
+            act_name=name("actName"),
+            shot_id=identifier("shotId", required=False),
+            shot_name=name("shotName"),
+        )
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -400,7 +521,90 @@ def artifact_progress_changes(
                 f"/api/mission-control/render/{job.id}/preview?v={snapshot.latest_preview_frame}"
             ),
         )
+        if snapshot.latest_preview_frame != job.latest_preview_frame:
+            changes["latest_preview_at"] = datetime.now(UTC)
     return changes
+
+
+def telemetry_progress_changes(
+    job: JobRecord,
+    event: RendererTelemetryEvent,
+    *,
+    output_at: datetime,
+) -> dict[str, object]:
+    frame = event.frame
+    changes: dict[str, object] = {
+        "renderer_event_type": event.event_type,
+        "renderer_event_sequence": event.sequence,
+        "renderer_status": event.renderer_status,
+        "worker_id": event.worker_id,
+        "active_chunk_id": event.chunk_id,
+        "chunk_start": event.chunk_start,
+        "chunk_end": event.chunk_end,
+        "last_output_at": output_at,
+        "renderer_active": True,
+        "watcher_active": True,
+    }
+    for key, value in (
+        ("current_act_id", event.act_id),
+        ("current_act_name", event.act_name),
+        ("current_shot_id", event.shot_id),
+        ("current_shot_name", event.shot_name),
+    ):
+        if value is not None:
+            changes[key] = value
+    if event.elapsed_seconds is not None:
+        changes["current_seconds_per_frame"] = event.elapsed_seconds
+    if event.event_type == "frame_started" and frame is not None:
+        changes.update(
+            current_frame=frame,
+            phase=JobPhase.RENDER_FRAME,
+            current_frame_started_at=output_at,
+            latest_log_line=f"Rendering frame {frame}",
+        )
+    elif event.event_type == "frame_written" and frame is not None:
+        rendered = max(job.rendered_frame_count, frame - job.frame_start + 1)
+        changes.update(
+            current_frame=frame,
+            latest_rendered_frame=max(job.latest_rendered_frame or 0, frame),
+            rendered_frame_count=rendered,
+            inflight_frame_count=max(0, rendered - job.published_frame_count),
+            current_chunk_progress=(frame - event.chunk_start + 1)
+            / (event.chunk_end - event.chunk_start + 1),
+            phase=JobPhase.RENDER_FRAME,
+            current_frame_started_at=None,
+            latest_log_line=f"Rendered frame {frame}; awaiting chunk validation",
+        )
+    elif event.event_type == "render_stats":
+        changes.update(
+            phase=JobPhase.RENDER_FRAME,
+            latest_log_line=(
+                f"Rendering frame {frame}" if frame is not None else "Renderer statistics received"
+            ),
+        )
+    elif event.event_type == "chunk_complete":
+        if frame is not None:
+            changes["latest_rendered_frame"] = max(job.latest_rendered_frame or 0, frame)
+        changes.update(
+            phase=JobPhase.PUBLISH_CHUNK,
+            current_chunk_progress=1.0,
+            current_frame_started_at=None,
+            latest_log_line=(
+                f"Chunk {event.chunk_id} rendered; validating before publication"
+            ),
+        )
+    elif event.event_type == "render_cancelled":
+        changes.update(
+            current_frame_started_at=None,
+            latest_log_line=f"Renderer cancelled in chunk {event.chunk_id}",
+        )
+    return changes
+
+
+def telemetry_event_is_new(job: JobRecord, event: RendererTelemetryEvent) -> bool:
+    if job.worker_id != event.worker_id or job.active_chunk_id != event.chunk_id:
+        return True
+    return event.sequence > (job.renderer_event_sequence or 0)
 
 
 class RendererController(Protocol):
@@ -448,6 +652,7 @@ class ProductionRenderer:
         profile_path: Path,
         output_directory: Path,
         authorization_token: str | None = None,
+        job_id: str | None = None,
         mode: Literal["preflight", "dry-run", "production"] = "production",
     ) -> list[str]:
         powershell = self.powershell_path()
@@ -497,6 +702,8 @@ class ProductionRenderer:
                     "Authorize this render configuration, then start again.",
                 )
             arguments.extend(("-AuthorizationToken", authorization_token))
+            if job_id is not None:
+                arguments.extend(("-MissionControlJobId", job_id))
         return arguments
 
     async def inspect(
@@ -579,6 +786,7 @@ class ProductionRenderer:
             profile_path=profile_path,
             output_directory=Path(job.identity.output_directory),
             authorization_token=authorization_token,
+            job_id=job.id,
             mode="production",
         )
         self.tasks[job.id] = asyncio.create_task(
@@ -727,6 +935,7 @@ class ProductionRenderer:
             )
             return
         frame_started_at = datetime.now(UTC)
+        telemetry_sequences: dict[tuple[str, str], int] = {}
         while True:
             try:
                 raw = await asyncio.wait_for(process.stdout.readline(), timeout=1.5)
@@ -745,6 +954,23 @@ class ProductionRenderer:
                 break
             line = raw.decode("utf-8", errors="replace").strip()[:8_192]
             if not line:
+                continue
+            if line.startswith(RENDER_EVENT_PREFIX):
+                event = parse_renderer_telemetry_line(line, expected_job_id=job_id)
+                if event is None:
+                    continue
+                sequence_key = (event.worker_id, event.chunk_id)
+                if event.sequence <= telemetry_sequences.get(sequence_key, 0):
+                    continue
+                telemetry_sequences[sequence_key] = event.sequence
+                output_at = datetime.now(UTC)
+                job = controller.get_job(job_id)
+                if not telemetry_event_is_new(job, event):
+                    continue
+                telemetry_changes = telemetry_progress_changes(job, event, output_at=output_at)
+                if event.event_type == "frame_started":
+                    frame_started_at = output_at
+                await controller.update_job(job_id, **telemetry_changes)
                 continue
             await controller.add_log(job_id, "info", line)
             output_at = datetime.now(UTC)

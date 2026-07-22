@@ -2,6 +2,7 @@ import {
   Activity,
   BarChart3,
   Cloud,
+  Clapperboard,
   Film,
   Gauge,
   History,
@@ -25,6 +26,7 @@ import { createRenderEventSubscriber } from './events'
 import { sentenceCase } from './format'
 import { CalibrationScreen } from './screens/CalibrationScreen'
 import { CloudScreen } from './screens/CloudScreen'
+import { DirectorScreen } from './screens/DirectorScreen'
 import { EncodeScreen } from './screens/EncodeScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { JobsScreen } from './screens/JobsScreen'
@@ -53,6 +55,7 @@ const navItems: Array<{ id: MissionSection; label: string; icon: typeof Home }> 
   { id: 'profiles', label: 'Profiles', icon: SlidersHorizontal },
   { id: 'calibration', label: 'Calibration', icon: BarChart3 },
   { id: 'jobs', label: 'Jobs', icon: History },
+  { id: 'director', label: 'Director', icon: Clapperboard },
   { id: 'encode', label: 'Encode', icon: Film },
   { id: 'cloud', label: 'Cloud', icon: Cloud },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -79,11 +82,12 @@ function mergeJobEvent(job: RenderJob, event: RenderEvent): RenderJob {
     profileName: job.profileName,
     previewUrl: event.previewUrl ?? job.previewUrl,
     previewFrame: event.previewFrame ?? job.previewFrame,
+    latestPreviewAt: event.latestPreviewAt ?? job.latestPreviewAt,
     lastCompletedFrame: event.lastCompletedFrame ?? job.lastCompletedFrame ?? event.previewFrame,
     rendererActive: event.rendererActive ?? job.rendererActive,
     watcherActive: event.watcherActive ?? job.watcherActive,
-    currentFrameStartedAt: event.currentFrameStartedAt ?? job.currentFrameStartedAt,
-    lastOutputAt: event.lastOutputAt ?? (event.previewFrame !== null ? event.timestamp : job.lastOutputAt),
+    currentFrameStartedAt: event.currentFrameStartedAt,
+    lastOutputAt: event.lastOutputAt ?? (event.previewFrame !== null ? event.timestamp : null),
     canResume: event.state === 'paused_safely' || event.state === 'resumable' || job.canResume,
     canEncode: event.state === 'complete' || job.canEncode,
     updatedAt: event.timestamp,
@@ -146,6 +150,18 @@ export function MissionControlApp({
       ])
       const settings = settingsResult.status === 'fulfilled' ? settingsResult.value : null
       const cloud = cloudResult.status === 'fulfilled' ? cloudResult.value : null
+      const encodeCandidates = encodeResult.status === 'fulfilled' ? encodeResult.value : []
+      const encodeStatuses = await Promise.allSettled(
+        encodeCandidates.map((candidate) => client.getEncodeJob(candidate.jobId)),
+      )
+      const reportedEncode = encodeStatuses
+        .filter((result): result is PromiseFulfilledResult<EncodeJob> => result.status === 'fulfilled')
+        .map((result) => result.value)
+        .find((job) => ['queued', 'encoding', 'verifying'].includes(job.status))
+        ?? encodeStatuses
+          .filter((result): result is PromiseFulfilledResult<EncodeJob> => result.status === 'fulfilled')
+          .map((result) => result.value)
+          .find((job) => job.status !== 'idle')
       const fakeModeRequested = settings?.fakeRendererAvailable === true
         && new URLSearchParams(window.location.search).get('renderer') === 'fake'
       const enrichedSystem = {
@@ -155,7 +171,7 @@ export function MissionControlApp({
         capabilities: {
           ...system.capabilities,
           renderExecution: system.capabilities.renderExecution || fakeModeRequested,
-          encode: false,
+          encode: paths.ffmpegPath !== null,
           performanceMode: settings?.performance.supported ?? false,
           cloudPreparation: false,
           cloudLive: cloud?.liveProvisioningVerified === true && cloud.liveFleetVerified,
@@ -180,9 +196,10 @@ export function MissionControlApp({
         calibrations: calibrationResult.status === 'fulfilled' ? calibrationResult.value : [],
         cloud,
         settings,
-        encodeCandidates: encodeResult.status === 'fulfilled' ? encodeResult.value : [],
+        encodeCandidates,
       }
       setData(next)
+      setActiveEncode(reportedEncode ?? null)
       setActiveJob((current) => {
         if (current) return enrichedJobs.find((job) => job.jobId === current.jobId) ?? current
         return reconnectableJob ?? null
@@ -198,6 +215,29 @@ export function MissionControlApp({
   }, [client])
 
   useEffect(() => { void loadDashboard(true) }, [loadDashboard])
+
+  const activeEncodeRenderJobId = activeEncode?.renderJobId
+  const activeEncodeStatus = activeEncode?.status
+
+  useEffect(() => {
+    if (
+      !activeEncodeRenderJobId
+      || !activeEncodeStatus
+      || !['queued', 'encoding', 'verifying'].includes(activeEncodeStatus)
+    ) return
+    let cancelled = false
+    const refresh = (): void => {
+      void client.getEncodeJob(activeEncodeRenderJobId).then((job) => {
+        if (!cancelled) setActiveEncode(job)
+      }).catch(() => undefined)
+    }
+    const timer = window.setInterval(refresh, 1_000)
+    refresh()
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [client, activeEncodeRenderJobId, activeEncodeStatus])
 
   const refreshEncodeCandidates = useCallback(async (): Promise<EncodeCandidate[]> => {
     const encodeCandidates = await client.listEncodeCandidates()
@@ -459,6 +499,8 @@ export function MissionControlApp({
         return <CalibrationScreen calibrations={data.calibrations} busy={busyAction === 'calibration'} onCreatePlan={createCalibration} onRunCandidate={runCalibrationCandidate} onDismissError={(calibrationId) => setData((current) => current ? { ...current, calibrations: current.calibrations.map((item) => item.id === calibrationId ? { ...item, recoverableError: null } : item) } : current)} />
       case 'jobs':
         return <JobsScreen jobs={data.jobs} busyJobId={busyAction?.startsWith('resume:') ? busyAction.slice(7) : null} onView={(job) => { setActiveJob(job); navigate('render') }} onResume={(job) => runJobAction(`resume:${job.jobId}`, () => client.resumeRender(job.jobId))} onOpenOutput={(job) => { if (job.outputPath) openPath(job.outputPath) }} />
+      case 'director':
+        return <DirectorScreen client={client} connection={connection} />
       case 'encode':
         return <EncodeScreen candidates={data.encodeCandidates} capabilityAvailable={data.system.capabilities.encode} activeEncode={activeEncode} busyJobId={busyAction?.startsWith('encode:') ? busyAction.slice(7) : null} onStartEncode={startEncode} onOpenOutput={openPath} />
       case 'cloud':

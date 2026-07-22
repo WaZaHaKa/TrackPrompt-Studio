@@ -5,9 +5,15 @@ import hashlib
 import hmac
 import json
 import math
+import os
+import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
+
+RENDER_EVENT_PREFIX = "WZHK_RENDER_EVENT "
+_EVENT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
@@ -29,8 +35,128 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--output", required=True)
     parser.add_argument("--start", type=int, required=True)
     parser.add_argument("--end", type=int, required=True)
+    parser.add_argument("--job-id", default="standalone")
+    parser.add_argument("--worker-id", default=f"blender-{os.getpid()}")
     arguments = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     return parser.parse_args(arguments)
+
+
+class RenderEventEmitter:
+    """Emit bounded, path-free renderer facts on an exact machine-readable prefix."""
+
+    def __init__(self, scene: Any, *, job_id: str, worker_id: str, start: int, end: int) -> None:
+        if _EVENT_ID.fullmatch(job_id) is None or _EVENT_ID.fullmatch(worker_id) is None:
+            raise ToolingError("invalid-telemetry-identity", "Telemetry job and worker IDs must be safe identifiers.")
+        self.scene = scene
+        self.job_id = job_id
+        self.worker_id = worker_id
+        self.start = start
+        self.end = end
+        self.chunk_id = f"{start:06d}-{end:06d}"
+        self.sequence = 0
+        self.frame_started_monotonic: float | None = None
+        self.last_stats_monotonic = 0.0
+        self.shots = self._load_shots(scene)
+
+    @staticmethod
+    def _load_shots(scene: Any) -> tuple[dict[str, Any], ...]:
+        raw = scene.get("trackprompt_shot_plan", "")
+        if not isinstance(raw, str) or len(raw) > 2_000_000:
+            return ()
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return ()
+        shots = payload.get("shots") if isinstance(payload, dict) else None
+        if not isinstance(shots, list):
+            return ()
+        return tuple(shot for shot in shots if isinstance(shot, dict))
+
+    def _story_context(self, frame: int) -> dict[str, object]:
+        for shot in self.shots:
+            start = shot.get("frameStart")
+            end = shot.get("frameEnd")
+            if isinstance(start, int) and isinstance(end, int) and start <= frame <= end:
+                act_id = str(shot.get("actId", ""))[:128]
+                shot_id = str(shot.get("id", ""))[:128]
+                return {
+                    "actId": act_id or None,
+                    "actName": act_id.replace("-", " ").title() or None,
+                    "shotId": shot_id or None,
+                    "shotName": str(shot.get("name", ""))[:160] or None,
+                }
+        return {"actId": None, "actName": None, "shotId": None, "shotName": None}
+
+    def emit(self, event_type: str, *, frame: int | None = None, **facts: object) -> None:
+        self.sequence += 1
+        payload: dict[str, object] = {
+            "schemaVersion": "1.0.0",
+            "eventType": event_type,
+            "sequence": self.sequence,
+            "jobId": self.job_id,
+            "workerId": self.worker_id,
+            "processId": os.getpid(),
+            "chunkId": self.chunk_id,
+            "chunkStart": self.start,
+            "chunkEnd": self.end,
+            "frame": frame,
+            "rendererStatus": {
+                "frame_started": "rendering",
+                "frame_written": "awaiting_chunk_validation",
+                "render_stats": "rendering",
+                "chunk_complete": "chunk_rendered",
+                "render_cancelled": "cancelled",
+            }.get(event_type, "unknown"),
+            **(self._story_context(frame) if frame is not None else {}),
+            **facts,
+        }
+        print(RENDER_EVENT_PREFIX + json.dumps(payload, ensure_ascii=True, separators=(",", ":")), flush=True)
+
+    def render_pre(self, *_: object) -> None:
+        frame = int(self.scene.frame_current)
+        self.frame_started_monotonic = time.monotonic()
+        self.emit("frame_started", frame=frame)
+
+    def render_write(self, *_: object) -> None:
+        frame = int(self.scene.frame_current)
+        elapsed = None
+        if self.frame_started_monotonic is not None:
+            elapsed = max(0.0, time.monotonic() - self.frame_started_monotonic)
+        self.emit(
+            "frame_written",
+            frame=frame,
+            elapsedSeconds=elapsed,
+            outputIdentity=f"frame-{frame:06d}",
+        )
+
+    def render_stats(self, *_: object) -> None:
+        now = time.monotonic()
+        if now - self.last_stats_monotonic < 1.0:
+            return
+        self.last_stats_monotonic = now
+        elapsed = None if self.frame_started_monotonic is None else max(0.0, now - self.frame_started_monotonic)
+        self.emit("render_stats", frame=int(self.scene.frame_current), elapsedSeconds=elapsed)
+
+    def render_cancel(self, *_: object) -> None:
+        self.emit("render_cancelled", frame=int(self.scene.frame_current))
+
+
+def _install_event_handlers(bpy: Any, emitter: RenderEventEmitter) -> tuple[tuple[Any, Any], ...]:
+    handlers = (
+        (bpy.app.handlers.render_pre, emitter.render_pre),
+        (bpy.app.handlers.render_write, emitter.render_write),
+        (bpy.app.handlers.render_stats, emitter.render_stats),
+        (bpy.app.handlers.render_cancel, emitter.render_cancel),
+    )
+    for collection, handler in handlers:
+        collection.append(handler)
+    return handlers
+
+
+def _remove_event_handlers(handlers: tuple[tuple[Any, Any], ...]) -> None:
+    for collection, handler in handlers:
+        if handler in collection:
+            collection.remove(handler)
 
 
 def _absolute_existing_file(value: str, label: str) -> Path:
@@ -485,6 +611,7 @@ def _apply_render_profile(scene: Any, profile: Any, output: Path, start: int, en
 def main() -> int:
     import bpy  # type: ignore[import-not-found]
 
+    handlers: tuple[tuple[Any, Any], ...] = ()
     try:
         args = _arguments()
         profile_path = _absolute_existing_file(args.profile, "Render profile")
@@ -501,11 +628,24 @@ def main() -> int:
             args.end,
         )
         _apply_render_profile(bpy.context.scene, profile, output, args.start, args.end)
+        emitter = RenderEventEmitter(
+            bpy.context.scene,
+            job_id=args.job_id,
+            worker_id=args.worker_id,
+            start=args.start,
+            end=args.end,
+        )
+        handlers = _install_event_handlers(bpy, emitter)
         bpy.ops.render.render(animation=True)
         expected = [output / profile.image.filename(frame) for frame in range(args.start, args.end + 1)]
         missing = [path.name for path in expected if not path.is_file() or path.stat().st_size <= 0]
         if missing:
             raise ToolingError("chunk-render-incomplete", f"Blender did not produce {len(missing)} expected frame(s).")
+        emitter.emit(
+            "chunk_complete",
+            frame=args.end,
+            renderedFrameCount=args.end - args.start + 1,
+        )
         result = {
             "ok": True,
             "startFrame": args.start,
@@ -533,6 +673,8 @@ def main() -> int:
             )
         )
         return 3
+    finally:
+        _remove_event_handlers(handlers)
     print(json.dumps(result, ensure_ascii=True, separators=(",", ":")))
     return 0
 

@@ -92,6 +92,7 @@ export function LiveProgress({
         ? `Rendering chunk ${Math.min(job.chunksCompleted + 1, job.chunksTotal)} of ${job.chunksTotal}`
         : sentenceCase(job.phase)
     : sentenceCase(job.state)
+  const storyPosition = [job.currentActName, job.currentShotName].filter(Boolean).join(' · ')
 
   const copyLogs = async (): Promise<void> => {
     const text = filteredLogs.map((entry) => `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}`).join('\n')
@@ -152,7 +153,8 @@ export function LiveProgress({
           <div className="mc-live-primary-metrics">
             <Metric label="Time remaining" value={job.estimatedCompletionAt ? formatDuration(Math.max(0, (new Date(job.estimatedCompletionAt).valueOf() - now) / 1000)) : 'Calculating…'} detail={`${sentenceCase(job.etaConfidence)} confidence`} />
             <Metric label="Expected finish" value={formatClock(job.estimatedCompletionAt)} detail={job.estimatedCompletionAt ? formatDateTime(job.estimatedCompletionAt) : undefined} />
-            <Metric label="Current chunk" value={job.chunksTotal > 0 ? `${Math.min(job.chunksCompleted + 1, job.chunksTotal)} of ${job.chunksTotal}` : 'Preparing'} detail={job.chunkStart !== null && job.chunkEnd !== null ? `Frames ${job.chunkStart}–${job.chunkEnd}` : undefined} />
+            <Metric label="Current chunk" value={job.chunksTotal > 0 ? `${Math.min(job.chunksCompleted + 1, job.chunksTotal)} of ${job.chunksTotal}` : 'Preparing'} detail={job.activeChunkId ?? (job.chunkStart !== null && job.chunkEnd !== null ? `Frames ${job.chunkStart}–${job.chunkEnd}` : undefined)} />
+            <Metric label="Story position" value={storyPosition || 'Not reported'} detail={job.currentShotId ?? undefined} />
           </div>
           {activeStatus && running ? (
             <div className="mc-heartbeat" aria-live="polite">
@@ -179,7 +181,7 @@ export function LiveProgress({
           </div>
           <figcaption>
             <span><strong>Latest complete preview</strong><small>{job.previewFrame ?? job.lastCompletedFrame ? `Frame ${(job.previewFrame ?? job.lastCompletedFrame)?.toLocaleString()}` : 'Waiting for a structurally valid frame'}</small></span>
-            <span>{job.lastOutputAt ? formatDateTime(job.lastOutputAt) : 'Not available'}</span>
+            <span>{job.latestPreviewAt ? formatDateTime(job.latestPreviewAt) : 'Not available'}</span>
           </figcaption>
         </figure>
       </section>
@@ -187,11 +189,11 @@ export function LiveProgress({
       <section className="mc-safety-progress">
         <div className="mc-safety-progress__item mc-safety-progress__item--flight">
           <Gauge aria-hidden="true" />
-          <div><span>In progress</span><strong>{job.inFlightFrames.toLocaleString()} frames</strong><p>Rendered inside the active chunk but not yet validated and saved as recoverable.</p></div>
+          <div><span>Rendered, not yet safe</span><strong>{job.inFlightFrames.toLocaleString()} frames</strong><p>Written inside the active chunk, but not yet validated and published as recoverable.</p></div>
         </div>
         <div className="mc-safety-progress__item mc-safety-progress__item--safe">
           <ShieldCheck aria-hidden="true" />
-          <div><span>Safe</span><strong>{job.publishedFrames.toLocaleString()} frames</strong><p>Validated and published. These frames will not need to be rendered again.</p></div>
+          <div><span>Safe, preserved on resume</span><strong>{job.publishedFrames.toLocaleString()} frames</strong><p>Validated and published. These frames will not need to be rendered again.</p></div>
         </div>
         <div className="mc-safety-progress__bar"><ProgressBar value={safeProgress} label="Validated and published frame progress" /><span>{Math.round(safeProgress)}% safely published</span></div>
       </section>
@@ -236,6 +238,10 @@ export function LiveProgress({
               <div><dt>Profile</dt><dd><code>{job.profileId ?? 'Unavailable'} · {job.profileSha256 ?? 'hash unavailable'}</code></dd></div>
               <div><dt>Renderer</dt><dd>{job.rendererActive === null ? 'Not reported' : job.rendererActive ? 'Active' : 'Not active'}</dd></div>
               <div><dt>Watcher</dt><dd>{job.watcherActive === null ? 'Not reported' : job.watcherActive ? 'Active' : 'Not active'}</dd></div>
+              <div><dt>Telemetry worker</dt><dd><code>{job.workerId ?? 'Not reported'}</code></dd></div>
+              <div><dt>Latest renderer event</dt><dd>{job.rendererEventType ? `${sentenceCase(job.rendererEventType)} · ${job.rendererEventSequence ?? 'sequence unavailable'}` : 'Not reported'}</dd></div>
+              <div><dt>Renderer status</dt><dd>{job.rendererStatus ? sentenceCase(job.rendererStatus) : 'Not reported'}</dd></div>
+              <div><dt>Latest rendered frame</dt><dd>{job.latestRenderedFrame?.toLocaleString() ?? 'Not reported'}</dd></div>
               <div><dt>Event sequence</dt><dd>{job.sequence.toLocaleString()}</dd></div>
             </dl>
           </AdvancedDetails>

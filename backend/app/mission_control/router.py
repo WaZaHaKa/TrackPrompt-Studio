@@ -12,6 +12,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
+from ..cinematic.schemas import ArtDirectionReview
 from .config import MissionControlConfig
 from .errors import MissionControlError
 from .models import (
@@ -27,8 +28,11 @@ from .models import (
     CloudPackageRequest,
     CloudReadiness,
     CloudValidateRequest,
+    DirectorWorkspace,
     DryRunResult,
+    EncodeJobStatus,
     EncodeReadiness,
+    EncodeStartRequest,
     ErrorEnvelope,
     JobRecord,
     LogPage,
@@ -304,6 +308,24 @@ async def jobs(request: Request) -> list[JobRecord]:
     return _service(request).jobs()
 
 
+@router.get("/director/workspace", response_model=DirectorWorkspace | None)
+async def director_workspace(request: Request) -> DirectorWorkspace | None:
+    return _service(request).director_workspace()
+
+
+@router.put(
+    "/director/workspace/{analysis_job_id}/reviews/{shot_id}",
+    response_model=DirectorWorkspace,
+)
+async def put_director_review(
+    analysis_job_id: str,
+    shot_id: str,
+    payload: ArtDirectionReview,
+    request: Request,
+) -> DirectorWorkspace:
+    return _service(request).put_director_review(analysis_job_id, shot_id, payload)
+
+
 @router.get("/render/{job_id}/logs", response_model=LogPage)
 async def render_logs(
     job_id: str,
@@ -497,6 +519,20 @@ async def cloud_validate(
 @router.get("/encode/{job_id}/readiness", response_model=EncodeReadiness)
 async def encode_readiness(job_id: str, request: Request) -> EncodeReadiness:
     return _service(request).encode_readiness(job_id)
+
+
+@router.get("/encode/{job_id}", response_model=EncodeJobStatus)
+async def encode_status(job_id: str, request: Request) -> EncodeJobStatus:
+    return _service(request).encode_status(job_id)
+
+
+@router.post("/encode/{job_id}/start", response_model=EncodeJobStatus)
+async def encode_start(
+    job_id: str,
+    payload: EncodeStartRequest,
+    request: Request,
+) -> EncodeJobStatus:
+    return await _service(request).start_encode(job_id, payload)
 
 
 @router.get("/performance/status", response_model=PerformanceStatus)

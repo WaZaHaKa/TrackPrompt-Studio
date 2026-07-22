@@ -7,6 +7,12 @@ import type {
   CloudPackageResult,
   CloudReadiness,
   DryRunResult,
+  DirectorAct,
+  DirectorAssessment,
+  DirectorDecision,
+  DirectorReview,
+  DirectorShot,
+  DirectorWorkspace,
   EncodeCandidate,
   EncodeJob,
   FolderSelection,
@@ -132,6 +138,7 @@ export function parseSystemStatus(value: unknown): SystemStatus {
   const component = (id: string): Record<string, unknown> | undefined => components.find((entry) => entry.id === id)
   const blender = component('blender')
   const powershell = component('powershell')
+  const ffmpeg = component('ffmpeg')
   const ready = normalizeToken(item.status) === 'ready'
   return {
     serviceName: stringValue(first(item, 'service_name', 'serviceName'), 'WZHK Media Mission Control'),
@@ -141,7 +148,7 @@ export function parseSystemStatus(value: unknown): SystemStatus {
     startedAt: nullableString(first(item, 'started_at', 'startedAt')),
     machineName: nullableString(first(item, 'machine_name', 'machineName')),
     blenderReady: normalizeToken(blender?.status) === 'pass',
-    ffmpegReady: false,
+    ffmpegReady: normalizeToken(ffmpeg?.status) === 'pass',
     rendererBusy: booleanValue(first(item, 'renderer_busy', 'rendererBusy')),
     activeJobId: nullableString(first(item, 'active_job_id', 'activeJobId', 'current_job_id', 'currentJobId')),
     capabilities: {
@@ -397,6 +404,16 @@ export function parseRenderEvent(value: unknown): RenderEvent {
     frameStart: nullableNumber(first(item, 'frame_start', 'frameStart')),
     frameEnd: nullableNumber(first(item, 'frame_end', 'frameEnd')),
     currentFrame: nullableNumber(first(item, 'current_frame', 'currentFrame')),
+    latestRenderedFrame: nullableNumber(first(item, 'latest_rendered_frame', 'latestRenderedFrame')),
+    rendererEventType: nullableString(first(item, 'renderer_event_type', 'rendererEventType')),
+    rendererEventSequence: nullableNumber(first(item, 'renderer_event_sequence', 'rendererEventSequence')),
+    rendererStatus: nullableString(first(item, 'renderer_status', 'rendererStatus')),
+    workerId: nullableString(first(item, 'worker_id', 'workerId')),
+    activeChunkId: nullableString(first(item, 'active_chunk_id', 'activeChunkId')),
+    currentActId: nullableString(first(item, 'current_act_id', 'currentActId')),
+    currentActName: nullableString(first(item, 'current_act_name', 'currentActName')),
+    currentShotId: nullableString(first(item, 'current_shot_id', 'currentShotId')),
+    currentShotName: nullableString(first(item, 'current_shot_name', 'currentShotName')),
     lastCompletedFrame: nullableNumber(first(item, 'last_completed_frame', 'lastCompletedFrame')),
     renderedFrames: numberValue(first(item, 'rendered_frames', 'renderedFrames', 'rendered_frame_count', 'renderedFrameCount')),
     inFlightFrames: numberValue(first(item, 'in_flight_frames', 'inFlightFrames', 'in_flight_frame_count', 'inflight_frame_count', 'inflightFrameCount')),
@@ -414,6 +431,7 @@ export function parseRenderEvent(value: unknown): RenderEvent {
     previewUrl,
     previewFrame: nullableNumber(first(item, 'preview_frame', 'previewFrame', 'latest_preview_frame', 'latestPreviewFrame'))
       ?? (previewMatch?.[1] ? Number.parseInt(previewMatch[1], 10) : null),
+    latestPreviewAt: nullableString(first(item, 'latest_preview_at', 'latestPreviewAt')),
     latestLogLine: nullableString(first(item, 'latest_log_line', 'latestLogLine')),
     warning: nullableString(item.warning),
     error: rawError === null || rawError === undefined ? null : parseStructuredError(rawError, 'Render issue'),
@@ -447,6 +465,95 @@ export function parseRenderJob(value: unknown): RenderJob {
     canResume: resumable || booleanValue(first(item, 'can_resume', 'canResume')),
     canEncode: event.state === 'complete' || booleanValue(first(item, 'can_encode', 'canEncode')),
     dryRun: booleanValue(first(item, 'dry_run', 'dryRun'), normalizeToken(item.renderer) === 'fake'),
+  }
+}
+
+function directorAssessment(value: unknown): DirectorAssessment {
+  return value === 'clear' || value === 'acceptable' || value === 'needs-revision' ? value : 'unknown'
+}
+
+function directorDecision(value: unknown): DirectorDecision {
+  if (value !== 'approve' && value !== 'revise') throw new Error('Director review decision is invalid.')
+  return value
+}
+
+function parseDirectorAct(value: unknown): DirectorAct {
+  const item = asRecord(value)
+  return {
+    id: stringValue(item.id),
+    name: stringValue(item.name),
+    frameStart: numberValue(first(item, 'frame_start', 'frameStart')),
+    frameEnd: numberValue(first(item, 'frame_end', 'frameEnd')),
+    narrativePurpose: stringValue(first(item, 'narrative_purpose', 'narrativePurpose')),
+    protagonistState: stringValue(first(item, 'protagonist_state', 'protagonistState')),
+  }
+}
+
+function parseDirectorShot(value: unknown): DirectorShot {
+  const item = asRecord(value)
+  return {
+    id: stringValue(item.id),
+    name: stringValue(item.name),
+    actId: stringValue(first(item, 'act_id', 'actId')),
+    frameStart: numberValue(first(item, 'frame_start', 'frameStart')),
+    frameEnd: numberValue(first(item, 'frame_end', 'frameEnd')),
+    storyPurpose: stringValue(first(item, 'story_purpose', 'storyPurpose')),
+    protagonistState: stringValue(first(item, 'protagonist_state', 'protagonistState')),
+    reviewFrames: Array.isArray(first(item, 'review_frames', 'reviewFrames'))
+      ? (first(item, 'review_frames', 'reviewFrames') as unknown[]).map((frame) => numberValue(frame)).filter((frame) => frame > 0)
+      : [],
+  }
+}
+
+function parseDirectorReview(value: unknown): DirectorReview {
+  const item = asRecord(value)
+  const revision = asRecord(first(item, 'revision_metadata', 'revisionMetadata'))
+  const reviewer = first(revision, 'reviewer') === 'human' ? 'human' : 'codex-assisted'
+  return {
+    schemaVersion: '1.0.0',
+    shotId: stringValue(first(item, 'shot_id', 'shotId')),
+    reviewFrame: numberValue(first(item, 'review_frame', 'reviewFrame')),
+    focalReadability: directorAssessment(first(item, 'focal_readability', 'focalReadability')),
+    depth: directorAssessment(item.depth),
+    silhouette: directorAssessment(item.silhouette),
+    colorHierarchy: directorAssessment(first(item, 'color_hierarchy', 'colorHierarchy')),
+    visualDensity: directorAssessment(first(item, 'visual_density', 'visualDensity')),
+    storyClarity: directorAssessment(first(item, 'story_clarity', 'storyClarity')),
+    mobileReadability: directorAssessment(first(item, 'mobile_readability', 'mobileReadability')),
+    findings: strings(item.findings),
+    decision: directorDecision(item.decision),
+    revisionMetadata: {
+      revision: numberValue(revision.revision, 1),
+      reviewer,
+      note: stringValue(revision.note),
+    },
+  }
+}
+
+export function parseDirectorWorkspace(value: unknown): DirectorWorkspace | null {
+  if (value === null || value === undefined) return null
+  const item = asRecord(value)
+  const storyPlan = asRecord(first(item, 'story_plan', 'storyPlan'))
+  const shotPlan = asRecord(first(item, 'shot_plan', 'shotPlan'))
+  const reviews = asRecord(item.reviews)
+  const analysisJobId = stringValue(first(item, 'analysis_job_id', 'analysisJobId'))
+  const acts = records(first(storyPlan, 'acts')).map(parseDirectorAct)
+  const shots = records(first(shotPlan, 'shots')).map(parseDirectorShot)
+  if (!analysisJobId || acts.length !== 7 || shots.length < 7 || acts.some((act) => !act.id || !act.name) || shots.some((shot) => !shot.id || !shot.actId || shot.reviewFrames.length === 0)) {
+    throw new Error('Director workspace schema is invalid.')
+  }
+  return {
+    analysisJobId,
+    updatedAt: stringValue(first(item, 'updated_at', 'updatedAt')),
+    storyPlan: {
+      schemaVersion: stringValue(first(storyPlan, 'schema_version', 'schemaVersion')),
+      acts,
+    },
+    shotPlan: {
+      schemaVersion: stringValue(first(shotPlan, 'schema_version', 'schemaVersion')),
+      shots,
+    },
+    reviews: records(first(reviews, 'reviews')).map(parseDirectorReview),
   }
 }
 
@@ -596,6 +703,47 @@ function parseEncodeCandidate(value: unknown): EncodeCandidate {
   }
 }
 
+function parseEncodeJob(value: unknown): EncodeJob {
+  const item = asRecord(value)
+  const rawStatus = normalizeToken(item.status)
+  const status = ['idle', 'queued', 'encoding', 'verifying', 'complete', 'failed'].includes(rawStatus)
+    ? rawStatus as EncodeJob['status']
+    : 'failed'
+  const currentKindValue = normalizeToken(first(item, 'current_kind', 'currentKind'))
+  const currentKind = currentKindValue === 'delivery' || currentKindValue === 'master' ? currentKindValue : null
+  const outputPathsRecord = asRecord(first(item, 'output_paths', 'outputPaths'))
+  const outputPaths = Object.fromEntries(
+    Object.entries(outputPathsRecord).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  )
+  const completedKinds = strings(first(item, 'completed_kinds', 'completedKinds'))
+    .map(normalizeToken)
+    .filter((kind): kind is 'delivery' | 'master' => kind === 'delivery' || kind === 'master')
+  const outputKinds = strings(first(item, 'output_kinds', 'outputKinds'))
+    .map(normalizeToken)
+    .filter((kind): kind is 'delivery' | 'master' => kind === 'delivery' || kind === 'master')
+  const preferredOutput = currentKind
+    ? outputPaths[currentKind] ?? null
+    : outputPaths.delivery ?? outputPaths.master ?? null
+  return {
+    id: stringValue(item.id),
+    renderJobId: stringValue(first(item, 'render_job_id', 'renderJobId')),
+    status,
+    progress: numberValue(item.progress),
+    outputKinds,
+    completedKinds,
+    currentKind,
+    currentFrame: nullableNumber(first(item, 'current_frame', 'currentFrame')),
+    totalFrames: numberValue(first(item, 'total_frames', 'totalFrames')),
+    fps: nullableNumber(item.fps),
+    speed: nullableString(item.speed),
+    etaSeconds: nullableNumber(first(item, 'eta_seconds', 'etaSeconds')),
+    outputPaths,
+    outputPath: preferredOutput,
+    detail: stringValue(item.detail),
+    error: item.error ? parseStructuredError(item.error) : null,
+  }
+}
+
 export class MissionControlApiError extends Error {
   readonly structured: StructuredError
   readonly status: number
@@ -674,6 +822,19 @@ class HttpMissionControlClient implements MissionControlClient {
     return records(await this.request('/jobs'), 'jobs').map(parseRenderJob)
   }
 
+  async getDirectorWorkspace(): Promise<DirectorWorkspace | null> {
+    return parseDirectorWorkspace(await this.request('/director/workspace'))
+  }
+
+  async putDirectorReview(analysisJobId: string, shotId: string, review: DirectorReview): Promise<DirectorWorkspace> {
+    const workspace = parseDirectorWorkspace(await this.request(
+      `/director/workspace/${encodeURIComponent(analysisJobId)}/reviews/${encodeURIComponent(shotId)}`,
+      { method: 'PUT', body: JSON.stringify(review) },
+    ))
+    if (!workspace) throw new Error('Director workspace disappeared after saving the review.')
+    return workspace
+  }
+
   async listCalibrations(): Promise<CalibrationSummary[]> {
     return records(await this.request('/calibrations'), 'calibrations').map(parseCalibration)
   }
@@ -729,7 +890,7 @@ class HttpMissionControlClient implements MissionControlClient {
         frame_count: first(readiness, 'published_frames', 'publishedFrames'),
         total_frames: first(readiness, 'total_frames', 'totalFrames'),
         verified: readiness.ready,
-        audio_mux_available: false,
+        audio_mux_available: readiness.ready,
       })
     }))
   }
@@ -868,15 +1029,15 @@ class HttpMissionControlClient implements MissionControlClient {
   }
 
   startEncode(jobId: string, includeAudio: boolean): Promise<EncodeJob> {
-    void jobId
-    void includeAudio
-    return Promise.reject(new MissionControlApiError(parseStructuredError({
-      code: 'encode_execution_unavailable',
-      title: 'Encoding is not connected yet',
-      summary: 'The backend verifies frame-sequence readiness but does not expose an encode start action.',
-      recommended_action: 'Keep the verified sequence and use the validated encode workflow until the server adapter is connected.',
-      retryable: false,
-    })))
+    return this.post(`/encode/${encodeURIComponent(jobId)}/start`, {
+      output_kinds: ['delivery', 'master'],
+      include_audio: includeAudio,
+      operator_confirmed: true,
+    }).then(parseEncodeJob)
+  }
+
+  async getEncodeJob(jobId: string): Promise<EncodeJob> {
+    return parseEncodeJob(await this.request(`/encode/${encodeURIComponent(jobId)}`))
   }
 
   async openPath(path: string): Promise<void> {

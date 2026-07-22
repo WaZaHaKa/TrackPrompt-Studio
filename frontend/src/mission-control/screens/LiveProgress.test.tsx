@@ -36,7 +36,10 @@ describe('LiveProgress', () => {
     expect(screen.getByText('Rendering is still active')).toBeInTheDocument()
     expect(screen.getByText('110 frames')).toBeInTheDocument()
     expect(screen.getByText('8,000 frames')).toBeInTheDocument()
-    expect(screen.getByText(/rendered inside the active chunk but not yet validated/i)).toBeInTheDocument()
+    expect(screen.getByText('Rendered, not yet safe')).toBeInTheDocument()
+    expect(screen.getByText('Safe, preserved on resume')).toBeInTheDocument()
+    expect(screen.getByText('Rupture · The impossible fall')).toBeInTheDocument()
+    expect(screen.getByText(/written inside the active chunk, but not yet validated/i)).toBeInTheDocument()
     expect(screen.getByText(/these frames will not need to be rendered again/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /stop after current chunk/i }))

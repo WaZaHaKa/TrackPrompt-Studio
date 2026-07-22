@@ -7,6 +7,8 @@ from typing import Any, Literal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from ..cinematic.schemas import ArtDirectionReviewCollection, ShotPlan, StoryPlan
+
 MISSION_CONTROL_SCHEMA_VERSION = "1.0.0"
 
 
@@ -16,6 +18,14 @@ class MissionModel(BaseModel):
         populate_by_name=True,
         extra="forbid",
     )
+
+
+class DirectorWorkspace(MissionModel):
+    analysis_job_id: str
+    story_plan: StoryPlan
+    shot_plan: ShotPlan
+    reviews: ArtDirectionReviewCollection
+    updated_at: datetime
 
 
 class JobState(StrEnum):
@@ -439,6 +449,16 @@ class JobRecord(MissionModel):
     frame_start: int
     frame_end: int
     current_frame: int | None = None
+    latest_rendered_frame: int | None = None
+    renderer_event_type: str | None = None
+    renderer_event_sequence: int | None = None
+    renderer_status: str | None = None
+    worker_id: str | None = None
+    active_chunk_id: str | None = None
+    current_act_id: str | None = None
+    current_act_name: str | None = None
+    current_shot_id: str | None = None
+    current_shot_name: str | None = None
     rendered_frame_count: int = 0
     inflight_frame_count: int = 0
     validated_frame_count: int = 0
@@ -465,6 +485,7 @@ class JobRecord(MissionModel):
     ram_used_mib: int | None = None
     latest_frame_preview: str | None = None
     latest_preview_frame: int | None = None
+    latest_preview_at: datetime | None = None
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
@@ -490,6 +511,16 @@ class RenderEvent(MissionModel):
     frame_start: int
     frame_end: int
     current_frame: int | None = None
+    latest_rendered_frame: int | None = None
+    renderer_event_type: str | None = None
+    renderer_event_sequence: int | None = None
+    renderer_status: str | None = None
+    worker_id: str | None = None
+    active_chunk_id: str | None = None
+    current_act_id: str | None = None
+    current_act_name: str | None = None
+    current_shot_id: str | None = None
+    current_shot_name: str | None = None
     rendered_frame_count: int = 0
     inflight_frame_count: int = 0
     validated_frame_count: int = 0
@@ -516,6 +547,7 @@ class RenderEvent(MissionModel):
     ram_used_mib: int | None = None
     latest_frame_preview: str | None = None
     latest_preview_frame: int | None = None
+    latest_preview_at: datetime | None = None
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
@@ -651,3 +683,39 @@ class EncodeReadiness(MissionModel):
     total_frames: int
     ffmpeg_available: bool
     detail: str
+
+
+def _default_encode_output_kinds() -> list[Literal["delivery", "master"]]:
+    return ["delivery", "master"]
+
+
+class EncodeStartRequest(MissionModel):
+    output_kinds: list[Literal["delivery", "master"]] = Field(
+        default_factory=_default_encode_output_kinds,
+        min_length=1,
+        max_length=2,
+    )
+    include_audio: bool = True
+    operator_confirmed: bool = False
+
+
+class EncodeJobStatus(MissionModel):
+    id: str
+    render_job_id: str
+    status: Literal["idle", "queued", "encoding", "verifying", "complete", "failed"]
+    output_kinds: list[Literal["delivery", "master"]] = Field(default_factory=list)
+    completed_kinds: list[Literal["delivery", "master"]] = Field(default_factory=list)
+    current_kind: Literal["delivery", "master"] | None = None
+    progress: float = Field(default=0.0, ge=0.0, le=100.0)
+    current_frame: int | None = None
+    total_frames: int
+    fps: float | None = None
+    speed: str | None = None
+    eta_seconds: float | None = None
+    output_paths: dict[str, str] = Field(default_factory=dict)
+    process_id: int | None = None
+    started_at: datetime | None = None
+    updated_at: datetime
+    completed_at: datetime | None = None
+    detail: str
+    error: StructuredError | None = None

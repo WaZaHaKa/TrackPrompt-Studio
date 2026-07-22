@@ -9,6 +9,7 @@ param(
     [int]$ChunkSize = 0,
     [string]$ChunkSizeRationale = "",
     [ValidateRange(1, 32)][int]$FrameScanWorkers = 4,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$')][string]$MissionControlJobId = "standalone",
     [string]$BlenderExecutable = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$PythonExecutable = ""
 )
@@ -420,12 +421,14 @@ try {
             "--render-manifest", $renderManifest,
             "--output", $temporaryFrames,
             "--start", [string]$startFrame,
-            "--end", [string]$endFrame
+            "--end", [string]$endFrame,
+            "--job-id", $MissionControlJobId,
+            "--worker-id", ("local-{0}" -f $PID)
         )
         $previousPreference = $ErrorActionPreference
         try {
             $ErrorActionPreference = "Continue"
-            & $resolvedBlender @blenderArguments 1> $stdoutLog 2> $stderrLog
+            & $resolvedBlender @blenderArguments 2> $stderrLog | Tee-Object -FilePath $stdoutLog
             $blenderExitCode = $LASTEXITCODE
         }
         finally {

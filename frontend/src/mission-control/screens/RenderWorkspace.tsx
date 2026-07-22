@@ -272,7 +272,7 @@ export function RenderWorkspace({
       fake: data.system.capabilities.demoMode ? {
         totalFrames: 120,
         framesPerChunk: 30,
-        stepDelaySeconds: 0.02,
+        stepDelaySeconds: 0.1,
         longFrameAt: 8,
       } : undefined,
     }

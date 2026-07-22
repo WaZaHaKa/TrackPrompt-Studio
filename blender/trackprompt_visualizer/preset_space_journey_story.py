@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .camera_rigs import build_story_camera_rig
+from .curve_importer import iter_action_fcurves
 from .narrative_environments import build_narrative_environments
 from .preset_space_journey import build_space_journey
 from .protagonist import animate_protagonist
@@ -28,6 +29,85 @@ def _collection(name: str) -> Any:
     return collection
 
 
+def _remove_stale_v2_orphans() -> None:
+    """Keep repeated MCP builds deterministic without touching any V1 object."""
+
+    import bpy  # type: ignore[import-not-found]
+
+    prefixes = ("TP_ENV_", "TP_STORY_CAMERA_")
+    for obj in list(bpy.data.objects):
+        if len(obj.users_collection) == 0 and obj.name.startswith(prefixes):
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+
+def _author_v2_baseline_visibility(shot_plan: dict[str, Any]) -> dict[str, Any]:
+    """Restrain V1 travel ornament only inside the additive V2 scene."""
+
+    import bpy  # type: ignore[import-not-found]
+
+    categories = {
+        "orbits": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_ORBIT_")
+        ),
+        "travel": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_TRAVEL")
+        ),
+        "debris": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_DEBRIS")
+        ),
+        "dust": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_ORBITAL_DUST")
+        ),
+        "wisps": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_VOCAL")
+        ),
+        "revelation": tuple(
+            obj for obj in bpy.data.objects
+            if obj.name.startswith("TP_SPACE_REVELATION")
+        ),
+    }
+    for shot in shot_plan["shots"]:
+        act_id = str(shot["actId"])
+        frame = int(shot["frameStart"])
+        reviewed = act_id in {"signal", "awakening", "departure", "gates"}
+        visibility = {
+            "orbits": not reviewed,
+            "travel": act_id in {"departure", "gates"} or not reviewed,
+            "debris": act_id in {"departure", "gates"} or not reviewed,
+            "dust": act_id in {"departure", "gates"} or not reviewed,
+            "wisps": not reviewed,
+            "revelation": not reviewed,
+        }
+        for category, objects in categories.items():
+            for obj in objects:
+                obj.hide_viewport = not visibility[category]
+                obj.hide_render = not visibility[category]
+                obj.keyframe_insert("hide_viewport", frame=frame)
+                obj.keyframe_insert("hide_render", frame=frame)
+    for objects in categories.values():
+        for obj in objects:
+            animation = getattr(obj, "animation_data", None)
+            action = getattr(animation, "action", None) if animation is not None else None
+            if action is None:
+                continue
+            for fcurve in iter_action_fcurves(action):
+                if fcurve.data_path in {"hide_viewport", "hide_render"}:
+                    for point in fcurve.keyframe_points:
+                        point.interpolation = "CONSTANT"
+            obj["trackprompt_story_visibility_authored"] = True
+    return {
+        "policy": "v2-stage-landmarks-prioritized",
+        "categoryObjectCounts": {
+            name: len(objects) for name, objects in categories.items()
+        },
+    }
+
+
 def build_space_journey_story(
     cues: dict[str, Any],
     bus: Any,
@@ -41,6 +121,7 @@ def build_space_journey_story(
         raise ValueError("space-journey-story requires a validated shot plan")
     validate_shot_plan(shot_plan)
     baseline = build_space_journey(cues, bus, seed, parameters)
+    _remove_stale_v2_orphans()
     collections = {name: _collection(name) for name in STORY_COLLECTIONS}
     hero = bpy.data.objects.get("TP_SPACE_CORE_SHELL")
     camera = bpy.data.objects.get("TP_CAMERA")
@@ -48,6 +129,7 @@ def build_space_journey_story(
     if hero is None or camera is None or target is None:
         raise RuntimeError("Space Journey V1 components required by V2 are unavailable.")
     protagonist = animate_protagonist(hero, shot_plan)
+    baseline_visibility = _author_v2_baseline_visibility(shot_plan)
     environments = build_narrative_environments(
         shot_plan,
         collections["TP_NARRATIVE_ENVIRONMENTS"],
@@ -93,6 +175,7 @@ def build_space_journey_story(
         "actCount": len(seen_acts),
         "timelineMarkerCount": len(scene.timeline_markers),
         "protagonist": protagonist,
+        "baselineVisibility": baseline_visibility,
         "environments": environments,
         "storyCameraRig": camera_rig,
         "collections": sorted(set(baseline["collections"]) | set(STORY_COLLECTIONS)),

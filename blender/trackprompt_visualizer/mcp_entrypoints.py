@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import shutil
+import subprocess
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any, Callable
+from uuid import uuid4
 
 from .cue_loader import load_cue_sheet
 from .curve_importer import CONTROL_CURVES, create_audio_bus
 from .diagnostics import audio_strip_present, scene_summary as collect_scene_summary
 from .geometry import clear_scene, move_to_collection
 from .preset_registry import DEFAULT_PRESET, DEFAULT_SEED, resolve_visualizer_config
-from .preview import build_preview_plan
+from .preview import build_preview_plan, build_review_edit_spec
 from .shot_plan import active_shot, load_shot_plan, validate_shot_plan
 from .timeline import attach_audio, configure_timeline
 from .validation import (
@@ -20,6 +26,45 @@ from .validation import (
 )
 
 AUDIO_SUFFIXES = {".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg"}
+MCP_RENDER_RECEIPT_NAME = "mcp-render-receipt.json"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _canonical_payload_sha256(payload: object) -> str:
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=True,
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    temporary = path.parent / f".{path.name}.{uuid4().hex}.tmp"
+    data = json.dumps(
+        payload,
+        indent=2,
+        ensure_ascii=True,
+        allow_nan=False,
+        sort_keys=True,
+    ) + "\n"
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _safe_entrypoint(operation: Callable[[], dict[str, Any]]) -> dict[str, Any]:
@@ -265,12 +310,314 @@ def render_preview_stills(output_directory: str) -> dict[str, Any]:
     return _safe_entrypoint(lambda: _render_preview_stills(output_directory))
 
 
-def _render_preview_clip(output_path: str) -> dict[str, Any]:
+def _scene_audio_path() -> Path | None:
+    import bpy  # type: ignore[import-not-found]
+
+    scene = bpy.context.scene
+    editor = getattr(scene, "sequence_editor", None)
+    strips = getattr(editor, "strips", None) if editor is not None else None
+    if strips is None and editor is not None:
+        strips = getattr(editor, "sequences", None)
+    for strip in strips or []:
+        sound = getattr(strip, "sound", None)
+        filepath = getattr(sound, "filepath", None)
+        if getattr(strip, "type", "") == "SOUND" and isinstance(filepath, str):
+            candidate = Path(bpy.path.abspath(filepath)).resolve()
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def _build_story_render_receipt(
+    *,
+    scene_file: Path,
+    shot_plan: dict[str, Any],
+    preview_plan: dict[str, Any],
+    review_edit: dict[str, Any],
+    rendered_frame_sequence: dict[str, Any],
+    clip: Path,
+) -> dict[str, Any]:
+    """Build the privacy-safe receipt for the canonical six-excerpt MCP render."""
+
+    validate_shot_plan(shot_plan)
+    roles = preview_plan.get("stillRoles")
+    segments = review_edit.get("segments")
+    source_frames = review_edit.get("sourceFrames")
+    if (
+        not scene_file.is_file()
+        or scene_file.suffix.casefold() != ".blend"
+        or not clip.is_file()
+        or not isinstance(roles, list)
+        or len(roles) != 6
+        or not isinstance(segments, list)
+        or len(segments) != 6
+        or not isinstance(source_frames, list)
+        or len(source_frames) != int(review_edit.get("outputFrameCount", -1))
+    ):
+        raise RuntimeError("The story render receipt inputs are incomplete.")
+    representative_frames: list[dict[str, Any]] = []
+    for role in roles:
+        if not isinstance(role, dict) or isinstance(role.get("frame"), bool):
+            raise RuntimeError("The story render receipt has an invalid representative role.")
+        frame = int(role["frame"])
+        still = clip.parent / f"frame_{frame:06d}.png"
+        if not still.is_file() or still.stat().st_size <= 0:
+            raise RuntimeError("Render the six canonical stills before the story preview clip.")
+        representative_frames.append(
+            {
+                "frame": frame,
+                "file": still.name,
+                "sha256": _sha256_file(still),
+                "sizeBytes": still.stat().st_size,
+                **{
+                    key: role[key]
+                    for key in ("role", "actId", "shotId")
+                    if isinstance(role.get(key), str) and role.get(key)
+                },
+            }
+        )
+    sequence_count = rendered_frame_sequence.get("count")
+    sequence_sha256 = rendered_frame_sequence.get("sha256")
+    if (
+        sequence_count != len(source_frames)
+        or not isinstance(sequence_sha256, str)
+        or len(sequence_sha256) != 64
+    ):
+        raise RuntimeError("The ordered rendered-frame digest is incomplete.")
+    return {
+        "schemaVersion": "1.0.0",
+        "kind": "trackprompt-blender-mcp-preview-render-receipt",
+        "preset": "space-journey-story",
+        "previewOnly": True,
+        "scene": {
+            "file": scene_file.name,
+            "sha256": _sha256_file(scene_file),
+            "sizeBytes": scene_file.stat().st_size,
+        },
+        "shotPlan": {
+            "schemaVersion": shot_plan["schemaVersion"],
+            "canonicalSha256": _canonical_payload_sha256(shot_plan),
+            "inputDigest": shot_plan["inputDigest"],
+            "seed": shot_plan["seed"],
+            "shotCount": len(shot_plan["shots"]),
+        },
+        "reviewEdit": {
+            "strategy": review_edit["strategy"],
+            "segments": segments,
+            "outputFrameCount": len(source_frames),
+            "durationSeconds": review_edit["durationSeconds"],
+            "orderedSourceFramesSha256": _canonical_payload_sha256(source_frames),
+        },
+        "renderedFrames": {
+            "count": sequence_count,
+            "orderedPngSha256": sequence_sha256,
+            "hashScope": "ordered-output-index-source-frame-png-sha256-v1",
+            "representativeFrames": representative_frames,
+        },
+        "clip": {
+            "file": clip.name,
+            "sha256": _sha256_file(clip),
+            "sizeBytes": clip.stat().st_size,
+        },
+        "encoding": {
+            "strategy": "external-ffmpeg-argument-array",
+            "videoCodec": "libx264",
+            "videoPreset": "fast",
+            "constantRateFactor": 23,
+            "pixelFormat": "yuv420p",
+            "audioCodec": "aac",
+            "audioBitrate": "160k",
+            "audioEdit": "source-segment-atrim-concat",
+            "fastStart": True,
+        },
+    }
+
+
+def _render_review_edit(
+    output: Path,
+    ffmpeg: Path,
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    import bpy  # type: ignore[import-not-found]
+
+    scene = bpy.context.scene
+    fps = scene.render.fps / scene.render.fps_base
+    edit = build_review_edit_spec(
+        plan,
+        timeline_frame_start=scene.frame_start,
+        timeline_frame_end=scene.frame_end,
+        fps=fps,
+    )
+    audio = _scene_audio_path()
+    if audio is None:
+        raise VisualizerValidationError("Story review edit requires the attached local audio strip.")
+    temporary = output.parent / f".{output.stem}.review-{uuid4().hex}"
+    temporary.mkdir(exist_ok=False)
+    original_frame = scene.frame_current
+    original_start, original_end = scene.frame_start, scene.frame_end
+    original_filepath = scene.render.filepath
+    original_format = scene.render.image_settings.file_format
+    output_index = 1
+    rendered_sequence_digest = hashlib.sha256()
+    try:
+        _configure_preview_scene()
+        for segment in edit["segments"]:
+            prefix = temporary / f"segment-{int(segment['index']):02d}-"
+            scene.render.filepath = str(prefix)
+            scene.frame_start = int(segment["startFrame"])
+            scene.frame_end = int(segment["endFrame"])
+            bpy.ops.render.render(animation=True)
+            rendered = sorted(temporary.glob(f"{prefix.name}*.png"))
+            if len(rendered) != int(segment["durationFrames"]):
+                raise RuntimeError("Blender did not write a complete review-edit segment.")
+            source_frames = range(int(segment["startFrame"]), int(segment["endFrame"]) + 1)
+            for source_frame, source in zip(source_frames, rendered, strict=True):
+                destination = temporary / f"frame_{output_index:06d}.png"
+                os.replace(source, destination)
+                frame_digest = _sha256_file(destination)
+                rendered_sequence_digest.update(
+                    (
+                        json.dumps(
+                            {
+                                "outputFrame": output_index,
+                                "sourceFrame": source_frame,
+                                "pngSha256": frame_digest,
+                            },
+                            separators=(",", ":"),
+                            sort_keys=True,
+                        )
+                        + "\n"
+                    ).encode("utf-8")
+                )
+                output_index += 1
+        if output_index - 1 != int(edit["outputFrameCount"]):
+            raise RuntimeError("Review-edit frame publication is incomplete.")
+        encoded = temporary / output.name
+        command = [
+            str(ffmpeg),
+            "-y",
+            "-nostdin",
+            "-loglevel",
+            "error",
+            "-framerate",
+            f"{fps:.8g}",
+            "-start_number",
+            "1",
+            "-i",
+            str(temporary / "frame_%06d.png"),
+            "-i",
+            str(audio),
+            "-filter_complex",
+            str(edit["audioFilter"]),
+            "-map",
+            "0:v:0",
+            "-map",
+            "[review_audio]",
+            "-frames:v",
+            str(edit["outputFrameCount"]),
+            "-t",
+            f"{float(edit['durationSeconds']):.9f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-movflags",
+            "+faststart",
+            "-shortest",
+            str(encoded),
+        ]
+        completed = subprocess.run(
+            command,
+            shell=False,
+            check=False,
+            capture_output=True,
+            timeout=1800,
+        )
+        if (
+            completed.returncode != 0
+            or len(completed.stdout) > 1_000_000
+            or len(completed.stderr) > 1_000_000
+            or not encoded.is_file()
+            or encoded.stat().st_size <= 0
+        ):
+            raise RuntimeError("External FFmpeg did not encode the bounded review edit.")
+        os.replace(encoded, output)
+    finally:
+        scene.frame_start, scene.frame_end = original_start, original_end
+        scene.frame_set(original_frame)
+        scene.render.filepath = original_filepath
+        try:
+            scene.render.image_settings.file_format = original_format
+        except TypeError:
+            scene.render.image_settings.file_format = "PNG"
+        shutil.rmtree(temporary, ignore_errors=True)
+    return {
+        "ok": True,
+        "clip": str(output),
+        "strategy": edit["strategy"],
+        "sourceSegments": edit["segments"],
+        "outputFrameCount": edit["outputFrameCount"],
+        "plannedDurationSeconds": edit["durationSeconds"],
+        "encoder": "external-ffmpeg-argument-array",
+        "audioRequested": True,
+        "audioMuxStatus": "requested-unverified",
+        "verification": {"ok": False, "status": "not-probed-by-mcp-entrypoint"},
+        "renderedFrameSequence": {
+            "count": int(edit["outputFrameCount"]),
+            "sha256": rendered_sequence_digest.hexdigest(),
+        },
+    }
+
+
+def _render_preview_clip(output_path: str, ffmpeg_path: str | None = None) -> dict[str, Any]:
     import bpy  # type: ignore[import-not-found]
 
     output = validate_output_file(output_path, suffix=".mp4")
     scene = bpy.context.scene
-    plan = _preview_plan()["clip"]
+    preview_plan = _preview_plan()
+    if preview_plan.get("reviewSegments"):
+        if ffmpeg_path is None:
+            raise VisualizerValidationError("Story review edit requires an explicit local FFmpeg path.")
+        ffmpeg = validate_input_file(ffmpeg_path, label="FFmpeg")
+        result = _render_review_edit(output, ffmpeg, preview_plan)
+        raw_shot_plan = scene.get("trackprompt_shot_plan")
+        if not isinstance(raw_shot_plan, str):
+            raise VisualizerValidationError("The story scene has no identity-bound shot plan.")
+        shot_plan = json.loads(raw_shot_plan)
+        if not isinstance(shot_plan, dict):
+            raise VisualizerValidationError("The story scene shot plan is invalid.")
+        scene_file = Path(bpy.data.filepath).resolve()
+        review_edit = build_review_edit_spec(
+            preview_plan,
+            timeline_frame_start=scene.frame_start,
+            timeline_frame_end=scene.frame_end,
+            fps=scene.render.fps / scene.render.fps_base,
+        )
+        sequence = result.get("renderedFrameSequence")
+        if not isinstance(sequence, dict):
+            raise RuntimeError("The canonical story render has no ordered frame digest.")
+        receipt = _build_story_render_receipt(
+            scene_file=scene_file,
+            shot_plan=shot_plan,
+            preview_plan=preview_plan,
+            review_edit=review_edit,
+            rendered_frame_sequence=sequence,
+            clip=output,
+        )
+        receipt_path = output.parent / MCP_RENDER_RECEIPT_NAME
+        _atomic_json(receipt_path, receipt)
+        result["renderReceiptFile"] = receipt_path.name
+        result["renderReceiptSha256"] = _sha256_file(receipt_path)
+        return result
+    plan = preview_plan["clip"]
     audio_requested = audio_strip_present(scene)
     original_start, original_end = scene.frame_start, scene.frame_end
     _configure_preview_scene()
@@ -304,8 +651,8 @@ def _render_preview_clip(output_path: str) -> dict[str, Any]:
     }
 
 
-def render_preview_clip(output_path: str) -> dict[str, Any]:
-    return _safe_entrypoint(lambda: _render_preview_clip(output_path))
+def render_preview_clip(output_path: str, ffmpeg_path: str | None = None) -> dict[str, Any]:
+    return _safe_entrypoint(lambda: _render_preview_clip(output_path, ffmpeg_path))
 
 
 def _save_scene(path: str) -> dict[str, Any]:

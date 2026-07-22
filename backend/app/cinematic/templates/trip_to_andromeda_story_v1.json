@@ -2,12 +2,89 @@
   "schemaVersion": "1.0.0",
   "templateId": "trip-to-andromeda-story-v1",
   "acts": [
-    {"id":"signal","name":"Signal","weight":0.10,"purpose":"A dormant orb detects a distant impossible transmission.","state":"signalled","environment":"dead_moon","cameraRig":"establishing_reveal","motion":"cinematic_drift"},
-    {"id":"awakening","name":"Awakening","weight":0.12,"purpose":"Ancient ruins answer and the orb awakens to agency.","state":"awakened","environment":"signal_ruins","cameraRig":"slow_orbit","motion":"weightless_float"},
-    {"id":"departure","name":"Departure","weight":0.14,"purpose":"The protagonist leaves safety and commits to the journey.","state":"travelling","environment":"launch_structure","cameraRig":"subject_follow","motion":"slow_acceleration"},
-    {"id":"gates","name":"Gates","weight":0.16,"purpose":"Successive thresholds test speed, scale, and resolve.","state":"travelling","environment":"gate_corridor","cameraRig":"gate_approach","motion":"controlled_chase"},
-    {"id":"rupture","name":"Rupture","weight":0.14,"purpose":"The route breaks and the protagonist is visibly damaged.","state":"damaged","environment":"broken_void","cameraRig":"rupture_fall","motion":"impact_recoil"},
-    {"id":"transformation","name":"Transformation","weight":0.18,"purpose":"The broken orb is rebuilt into a new luminous form.","state":"transforming","environment":"transformation_megastructure","cameraRig":"transformation_closeup","motion":"transformation_orbit"},
-    {"id":"arrival","name":"Arrival","weight":0.16,"purpose":"The transformed protagonist reaches Andromeda and finds scale beyond itself.","state":"arrived","environment":"andromeda_arrival","cameraRig":"arrival_reveal","motion":"cinematic_drift"}
+    {
+      "id":"signal","name":"Signal","weight":0.10,"purpose":"A dormant orb detects a distant impossible transmission.","state":"signalled","environment":"dead_moon","cameraRig":"establishing_reveal","motion":"cinematic_drift",
+      "secondaryAction":"A single distant beacon sweeps across the dead moon while the surrounding ruins remain still.",
+      "dominantShape":"dead-moon crescent cut by a needle beacon",
+      "foreground":"black regolith ledge and fractured ruin silhouettes",
+      "midgroundSubject":"small dormant orb isolated against lunar shadow",
+      "backgroundLandmark":"dead moon horizon and distant signal beacon",
+      "atmosphere":"sparse cold dust with near-vacuum stillness",
+      "focalHierarchy":["protagonist","beacon","dead moon"],
+      "lightingPalette":"cold-slate-beacon-amber",
+      "keyDirection":"hard lunar rim from the upper right with one warm distant beacon"
+    },
+    {
+      "id":"awakening","name":"Awakening","weight":0.12,"purpose":"Ancient ruins answer and the orb awakens to agency.","state":"awakened","environment":"signal_ruins","cameraRig":"slow_orbit","motion":"weightless_float",
+      "secondaryAction":"Sealed chamber petals open and reactivation bands climb around the protagonist.",
+      "dominantShape":"opening iris chamber enclosing the orb",
+      "foreground":"dark chamber ribs crossing the near frame",
+      "midgroundSubject":"awakened orb held inside the opening structure",
+      "backgroundLandmark":"reactivating amber chamber aperture",
+      "atmosphere":"enclosed teal haze with warm reactivation spill",
+      "focalHierarchy":["protagonist","opening iris","reactivation bands"],
+      "lightingPalette":"enclosed-teal-reactivation-amber",
+      "keyDirection":"warm chamber light opening from below against a cool teal rim"
+    },
+    {
+      "id":"departure","name":"Departure","weight":0.14,"purpose":"The protagonist leaves safety and commits to the journey.","state":"travelling","environment":"launch_structure","cameraRig":"subject_follow","motion":"slow_acceleration",
+      "secondaryAction":"Guide packets ignite in sequence and race down the monumental travel corridor.",
+      "dominantShape":"repeating launch ribs converging on a vanishing point",
+      "foreground":"monumental near pylons and converging floor rails",
+      "midgroundSubject":"travelling orb advancing between illuminated guide lanes",
+      "backgroundLandmark":"deep cobalt launch corridor vanishing point",
+      "atmosphere":"lengthening cobalt depth haze with hot white guide light",
+      "focalHierarchy":["protagonist","vanishing point","passing pylons"],
+      "lightingPalette":"cobalt-depth-hot-white-guides",
+      "keyDirection":"repeating corridor ribs backlight the subject along the travel axis"
+    },
+    {
+      "id":"gates","name":"Gates","weight":0.16,"purpose":"The first threshold tests speed, scale, and resolve, then changes the route behind the protagonist.","state":"travelling","environment":"gate_corridor","cameraRig":"gate_approach","motion":"controlled_chase",
+      "secondaryAction":"The split monolith reacts, releases an expanding shockwave, and seals the route behind the crossing.",
+      "dominantShape":"split monolith diamond threshold larger than frame",
+      "foreground":"asymmetric black gate occluders on both frame edges",
+      "midgroundSubject":"orb crossing the bright threshold membrane",
+      "backgroundLandmark":"green-white gate aperture and altered space beyond",
+      "atmosphere":"compressed indigo haze ruptured by an emerald-white shockwave",
+      "focalHierarchy":["protagonist","threshold membrane","closing monoliths"],
+      "lightingPalette":"indigo-emerald-threshold",
+      "keyDirection":"threshold backlight silhouettes the subject and foreground monoliths"
+    },
+    {
+      "id":"rupture","name":"Rupture","weight":0.14,"purpose":"The route breaks and the protagonist is visibly damaged.","state":"damaged","environment":"broken_void","cameraRig":"rupture_fall","motion":"impact_recoil",
+      "secondaryAction":"A fractured route plane shears away behind the damaged protagonist.",
+      "dominantShape":"diagonal void fracture",
+      "foreground":"falling dark fragments",
+      "midgroundSubject":"damaged orb tumbling across the fracture",
+      "backgroundLandmark":"broken route plane",
+      "atmosphere":"desaturated vacuum with red fracture glints",
+      "focalHierarchy":["protagonist","fracture","falling fragments"],
+      "lightingPalette":"desaturated-void-fracture-red",
+      "keyDirection":"sharp fracture light from below"
+    },
+    {
+      "id":"transformation","name":"Transformation","weight":0.18,"purpose":"The broken orb is rebuilt into a new luminous form.","state":"transforming","environment":"transformation_megastructure","cameraRig":"transformation_closeup","motion":"transformation_orbit",
+      "secondaryAction":"Megastructure arms align and rebuild the orb layer by layer.",
+      "dominantShape":"radial reconstruction cradle",
+      "foreground":"mechanical arms crossing the near frame",
+      "midgroundSubject":"orb rebuilding inside the cradle",
+      "backgroundLandmark":"luminous transformation lattice",
+      "atmosphere":"dense violet particulate bloom",
+      "focalHierarchy":["protagonist","reconstruction arms","lattice"],
+      "lightingPalette":"violet-reconstruction-white-core",
+      "keyDirection":"radial reconstruction light converges on the subject"
+    },
+    {
+      "id":"arrival","name":"Arrival","weight":0.16,"purpose":"The transformed protagonist reaches Andromeda and finds scale beyond itself.","state":"arrived","environment":"andromeda_arrival","cameraRig":"arrival_reveal","motion":"cinematic_drift",
+      "secondaryAction":"A distant galactic horizon unfolds beyond the now transformed protagonist.",
+      "dominantShape":"vast Andromeda horizon arc",
+      "foreground":"quiet transformed fragments",
+      "midgroundSubject":"transformed orb suspended in calm space",
+      "backgroundLandmark":"Andromeda horizon and impossible scale markers",
+      "atmosphere":"soft blue-white galactic haze",
+      "focalHierarchy":["protagonist","Andromeda horizon","scale markers"],
+      "lightingPalette":"blue-white-arrival-soft-violet",
+      "keyDirection":"broad galactic backlight with a soft frontal return"
+    }
   ]
 }

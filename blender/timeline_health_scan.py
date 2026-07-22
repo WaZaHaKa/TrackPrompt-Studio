@@ -82,7 +82,10 @@ def analyze_motion_samples(
             )
     for previous, current in zip(velocities, velocities[1:], strict=False):
         frame_delta = current[0] - previous[0]
-        if frame_delta <= 0 or current[0] in cuts:
+        # A declared cut changes both the velocity ending on the cut frame and
+        # the acceleration comparison that immediately follows it. Neither is
+        # evidence of an unintended camera discontinuity.
+        if frame_delta <= 0 or current[0] in cuts or previous[0] in cuts:
             continue
         acceleration = abs(current[1] - previous[1]) / (frame_delta / fps)
         if acceleration > maximum_acceleration:
@@ -644,7 +647,7 @@ def _audio_bus_health(bpy: Any) -> list[dict[str, Any]]:
 def _dependency_audit(bpy: Any) -> dict[str, Any]:
     dependencies: list[dict[str, Any]] = []
 
-    def record(kind: str, name: str, raw_path: object, packed: bool) -> None:
+    def record(kind: str, raw_path: object, packed: bool) -> None:
         if not isinstance(raw_path, str) or not raw_path:
             return
         resolved_text = bpy.path.abspath(raw_path)
@@ -652,9 +655,9 @@ def _dependency_audit(bpy: Any) -> dict[str, Any]:
         dependencies.append(
             {
                 "kind": kind,
-                "name": name,
+                "reference": f"{kind}-{len(dependencies) + 1}",
                 "sourcePathKind": "relative" if raw_path.startswith("//") else "absolute",
-                "fileName": resolved.name,
+                "suffix": resolved.suffix.casefold(),
                 "packed": packed,
                 "exists": packed or resolved.is_file(),
             }
@@ -662,14 +665,14 @@ def _dependency_audit(bpy: Any) -> dict[str, Any]:
 
     for image in bpy.data.images:
         if image.source == "FILE":
-            record("image", image.name, image.filepath, bool(image.packed_file))
+            record("image", image.filepath, bool(image.packed_file))
     for sound in bpy.data.sounds:
-        record("sound", sound.name, sound.filepath, bool(getattr(sound, "packed_file", None)))
+        record("sound", sound.filepath, bool(getattr(sound, "packed_file", None)))
     for font in bpy.data.fonts:
         if font.name != "Bfont":
-            record("font", font.name, font.filepath, bool(getattr(font, "packed_file", None)))
+            record("font", font.filepath, bool(getattr(font, "packed_file", None)))
     for library in bpy.data.libraries:
-        record("library", library.name, library.filepath, False)
+        record("library", library.filepath, False)
 
     missing = [item for item in dependencies if item["exists"] is not True]
     return {

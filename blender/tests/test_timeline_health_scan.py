@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from timeline_health_scan import (
     _compositor_health,
+    _dependency_audit,
     _iter_animation_owners,
     analyze_motion_samples,
     build_sample_plan,
@@ -71,6 +72,34 @@ def test_timeline_scanner_has_no_render_or_save_operation() -> None:
     assert "bpy.ops.wm.save" not in source
 
 
+def test_dependency_audit_does_not_publish_source_names_or_paths(tmp_path: Path) -> None:
+    private_audio = tmp_path / "private source title.wav"
+    private_audio.write_bytes(b"audio")
+    bpy = SimpleNamespace(
+        path=SimpleNamespace(abspath=lambda _value: str(private_audio)),
+        data=SimpleNamespace(
+            images=[],
+            sounds=[SimpleNamespace(name=private_audio.name, filepath=str(private_audio), packed_file=None)],
+            fonts=[],
+            libraries=[],
+        ),
+    )
+    audit = _dependency_audit(bpy)
+    serialized = str(audit)
+    assert private_audio.name not in serialized
+    assert str(private_audio) not in serialized
+    assert audit["dependencies"] == [
+        {
+            "kind": "sound",
+            "reference": "sound-1",
+            "sourcePathKind": "absolute",
+            "suffix": ".wav",
+            "packed": False,
+            "exists": True,
+        }
+    ]
+
+
 def test_motion_scan_detects_undeclared_jump_velocity_and_acceleration() -> None:
     issues = analyze_motion_samples(
         [
@@ -95,6 +124,7 @@ def test_declared_cut_avoids_motion_false_positive() -> None:
         [
             {"frame": 10, "location": (0, 0, 0), "rotation": (0, 0, 0)},
             {"frame": 11, "location": (100, 0, 0), "rotation": (0, 0, 3)},
+            {"frame": 12, "location": (100.1, 0, 0), "rotation": (0, 0, 3)},
         ],
         fps=30,
         declared_cut_frames={11},

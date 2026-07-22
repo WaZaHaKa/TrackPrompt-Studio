@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 
@@ -187,9 +188,9 @@ def _story_preview_plan(cues: dict[str, Any], shot_plan: dict[str, Any]) -> dict
         ("signal", signal, review_frame(signal, 1)),
         ("awakening", awakening, review_frame(awakening, 1)),
         ("departure-commit", departure, review_frame(departure, 0)),
-        ("departure-passage", departure, review_frame(departure, 1)),
-        ("first-gate-approach", gates, review_frame(gates, 0)),
-        ("first-gate", gates, review_frame(gates, 1)),
+        ("departure-passage", departure, review_frame(departure, -1)),
+        ("first-gate-approach", gates, review_frame(gates, 1)),
+        ("first-gate", gates, review_frame(gates, -1)),
     )
     roles = [
         {
@@ -200,19 +201,43 @@ def _story_preview_plan(cues: dict[str, Any], shot_plan: dict[str, Any]) -> dict
         }
         for role, shot, frame in role_targets
     ]
+    shot_by_id = {str(shot["id"]): shot for shot in first_four}
     frame_start = int(signal["frameStart"])
     frame_end = int(gates["frameEnd"])
     fps = int(cues["timeline"]["fps"])
     maximum_frames = fps * 10
     clip_end = min(frame_end, frame_start + maximum_frames - 1)
+    review_segments: list[dict[str, Any]] = []
+    segment_frames = max(1, fps)
+    for item in roles:
+        shot = shot_by_id[str(item["shotId"])]
+        shot_start = int(shot["frameStart"])
+        shot_end = int(shot["frameEnd"])
+        desired = min(segment_frames, shot_end - shot_start + 1)
+        selected = int(item["frame"])
+        segment_start = max(shot_start, selected - desired // 2)
+        segment_end = min(shot_end, segment_start + desired - 1)
+        segment_start = max(shot_start, segment_end - desired + 1)
+        review_segments.append(
+            {
+                **item,
+                "startFrame": segment_start,
+                "endFrame": segment_end,
+                "durationFrames": segment_end - segment_start + 1,
+            }
+        )
     return {
         "stillFrames": [item["frame"] for item in roles],
         "stillRoles": roles,
+        "reviewSegments": review_segments,
         "clip": {
             "startFrame": frame_start,
             "endFrame": clip_end,
             "role": "signal-through-first-gate",
             "centerFrame": (frame_start + clip_end) // 2,
+            "reviewEditStrategy": "six-authored-motion-excerpts",
+            "sourceEndFrame": frame_end,
+            "maximumOutputFrames": maximum_frames,
         },
     }
 
@@ -231,3 +256,77 @@ def build_preview_plan(
     if preset == "space-journey-story":
         raise ValueError("Space Journey Story preview requires a shot plan.")
     raise ValueError("Unsupported visualizer preset.")
+
+
+def build_review_edit_spec(
+    preview_plan: dict[str, Any],
+    *,
+    timeline_frame_start: int,
+    timeline_frame_end: int,
+    fps: float,
+) -> dict[str, Any]:
+    """Validate and flatten a non-contiguous authored-motion review edit."""
+
+    if not math.isfinite(fps) or fps <= 0.0:
+        raise ValueError("Review-edit FPS must be finite and positive.")
+    segments = preview_plan.get("reviewSegments")
+    if not isinstance(segments, list) or not segments:
+        raise ValueError("Review edit requires declared source segments.")
+    maximum_frames = int(preview_plan.get("clip", {}).get("maximumOutputFrames", round(fps * 10.0)))
+    if maximum_frames < 1:
+        raise ValueError("Review edit maximum frame count is invalid.")
+    validated: list[dict[str, Any]] = []
+    source_frames: list[int] = []
+    for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            raise ValueError("Review edit contains an invalid segment.")
+        start = segment.get("startFrame")
+        end = segment.get("endFrame")
+        duration = segment.get("durationFrames")
+        if (
+            isinstance(start, bool)
+            or not isinstance(start, int)
+            or isinstance(end, bool)
+            or not isinstance(end, int)
+            or isinstance(duration, bool)
+            or not isinstance(duration, int)
+            or not timeline_frame_start <= start <= end <= timeline_frame_end
+            or duration != end - start + 1
+        ):
+            raise ValueError("Review edit segment is outside the source timeline.")
+        source_frames.extend(range(start, end + 1))
+        validated.append(
+            {
+                "index": index,
+                "startFrame": start,
+                "endFrame": end,
+                "durationFrames": duration,
+                **{
+                    key: segment[key]
+                    for key in ("role", "actId", "shotId", "frame")
+                    if key in segment
+                },
+            }
+        )
+    if len(source_frames) > maximum_frames:
+        raise ValueError("Review edit exceeds its bounded frame count.")
+    source_labels = "".join(f"[review_source_{index}]" for index in range(len(validated)))
+    filters = [f"[1:a]asplit={len(validated)}{source_labels}"]
+    for segment in validated:
+        index = int(segment["index"])
+        start_seconds = (int(segment["startFrame"]) - timeline_frame_start) / fps
+        duration_seconds = int(segment["durationFrames"]) / fps
+        filters.append(
+            f"[review_source_{index}]atrim=start={start_seconds:.9f}:duration={duration_seconds:.9f},"
+            f"asetpts=PTS-STARTPTS[review_audio_{index}]"
+        )
+    audio_inputs = "".join(f"[review_audio_{index}]" for index in range(len(validated)))
+    filters.append(f"{audio_inputs}concat=n={len(validated)}:v=0:a=1[review_audio]")
+    return {
+        "strategy": "six-authored-motion-excerpts",
+        "segments": validated,
+        "sourceFrames": source_frames,
+        "outputFrameCount": len(source_frames),
+        "durationSeconds": len(source_frames) / fps,
+        "audioFilter": ";".join(filters),
+    }

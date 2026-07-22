@@ -79,6 +79,19 @@ def test_story_and_shot_compilation_is_deterministic_contiguous_and_private(clic
         for previous, current in zip(shots.shots, shots.shots[1:], strict=False)
     )
     assert max(layer.strength for shot in shots.shots for layer in shot.reactive_layers) <= 0.25
+    reviewed = shots.shots[:4]
+    assert [shot.act_id for shot in reviewed] == ["signal", "awakening", "departure", "gates"]
+    assert len({shot.composition.dominant_shape for shot in reviewed}) == 4
+    assert len({shot.composition.foreground for shot in reviewed}) == 4
+    assert len({shot.composition.background_landmark for shot in reviewed}) == 4
+    assert len({shot.environment.secondary_action for shot in reviewed}) == 4
+    assert len({shot.lighting.palette for shot in reviewed}) == 4
+    assert all("protagonist" in shot.composition.focal_hierarchy for shot in reviewed)
+    assert reviewed[0].environment.environment.value == "dead_moon"
+    assert "beacon" in reviewed[0].composition.dominant_shape
+    assert "opening" in reviewed[1].composition.dominant_shape
+    assert "converging" in reviewed[2].composition.dominant_shape
+    assert "threshold" in reviewed[3].composition.dominant_shape
     serialized = json.dumps(
         {"story": story.model_dump(mode="json", by_alias=True), "shots": shots.model_dump(mode="json", by_alias=True)},
         allow_nan=False,

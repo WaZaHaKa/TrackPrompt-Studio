@@ -121,7 +121,7 @@ def compile_cinematic_plan(
                 protagonist_state=state,
                 environment=EnvironmentDirective(
                     environment=NarrativeEnvironment(str(item["environment"])),
-                    secondary_action="Bounded orbital structures and atmospheric layers evolve behind the protagonist.",
+                    secondary_action=str(item["secondaryAction"]),
                 ),
                 camera=CameraDirective(
                     rig=rig,
@@ -130,16 +130,16 @@ def compile_cinematic_plan(
                     movement_profile=motion,
                 ),
                 composition=CompositionDirective(
-                    dominant_shape="orb and threshold arc",
-                    foreground="sparse parallax fragments",
-                    midground_subject="persistent orb protagonist",
-                    background_landmark=NarrativeEnvironment(str(item["environment"])).value,
-                    atmosphere="layered restrained nebula depth",
-                    focal_hierarchy=["protagonist", "threshold", "environment"],
+                    dominant_shape=str(item["dominantShape"]),
+                    foreground=str(item["foreground"]),
+                    midground_subject=str(item["midgroundSubject"]),
+                    background_landmark=str(item["backgroundLandmark"]),
+                    atmosphere=str(item["atmosphere"]),
+                    focal_hierarchy=[str(value) for value in item["focalHierarchy"]],
                 ),
                 lighting=LightingDirective(
-                    palette=palette,
-                    key_direction="off-axis rim with restrained cyan-violet separation",
+                    palette=str(item.get("lightingPalette", palette)),
+                    key_direction=str(item["keyDirection"]),
                     intensity=min(1.0, 0.35 + energy * 0.45),
                 ),
                 motion=MotionDirective(

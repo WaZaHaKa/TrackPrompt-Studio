@@ -8,6 +8,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import UUID, uuid4
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_ROOT = REPOSITORY_ROOT / "backend"
@@ -23,6 +24,7 @@ from app.visualizer.presets import (  # noqa: E402
     resolve_visualizer_config,
 )
 from app.visualizer.schemas import TrackPromptVisualCueSheet  # noqa: E402
+from app.visualizer.validation import validate_public_cue_sheet  # noqa: E402
 
 
 def _synthetic_cues() -> TrackPromptVisualCueSheet:
@@ -146,15 +148,112 @@ def _write_json(path: Path, payload: dict[str, Any], *, validate_privacy: bool =
         temporary.unlink(missing_ok=True)
 
 
+def _write_json_exclusive(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    validate_privacy: bool = True,
+) -> bool:
+    """Publish a complete JSON file without replacing a concurrently created target."""
+    if validate_privacy:
+        validate_cinematic_privacy(payload)
+    temporary = path.parent / f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp"
+    data = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n"
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            return False
+        return True
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _register_director_artifacts(
+    jobs_root: Path,
+    job_id: str,
+    story_payload: dict[str, Any],
+    shot_payload: dict[str, Any],
+    review_payload: dict[str, Any],
+) -> dict[str, Any]:
+    resolved_jobs_root = jobs_root.resolve(strict=True)
+    director_job_root = (resolved_jobs_root / str(UUID(job_id))).resolve()
+    if director_job_root.parent != resolved_jobs_root:
+        raise RuntimeError("Director job root escaped the configured jobs directory.")
+    director_job_root.mkdir(exist_ok=True)
+
+    plan_artifacts = [
+        (director_job_root / name, payload)
+        for name, payload in (("story-plan.json", story_payload), ("shot-plan.json", shot_payload))
+    ]
+    def validate_plan(path: Path, payload: dict[str, Any]) -> None:
+        existing = json.loads(path.read_text(encoding="utf-8-sig"))
+        if existing != payload:
+            raise RuntimeError("Director already contains a different identity-bound cinematic plan.")
+
+    for path, payload in plan_artifacts:
+        if path.exists():
+            validate_plan(path, payload)
+
+    review_path = director_job_root / "art-direction-reviews.json"
+    expected_shots = {
+        str(shot["id"])
+        for shot in shot_payload.get("shots", [])
+        if isinstance(shot, dict) and shot.get("actId") in {"signal", "awakening", "departure", "gates"}
+    }
+
+    def validate_reviews() -> None:
+        existing_reviews = ArtDirectionReviewCollection.model_validate_json(
+            review_path.read_text(encoding="utf-8-sig")
+        )
+        validate_cinematic_privacy(existing_reviews.model_dump(mode="json", by_alias=True))
+        if {review.shot_id for review in existing_reviews.reviews} != expected_shots:
+            raise RuntimeError("Director reviews do not match the identity-bound bounded shots.")
+
+    # Publish the safe initial review before exposing either half of the plan pair.
+    # The hard-link is an atomic create: if Director wins the race, its review is
+    # preserved and validated instead of being replaced by the generator.
+    reviews_preserved = not _write_json_exclusive(review_path, review_payload)
+    validate_reviews()
+
+    for path, payload in plan_artifacts:
+        if not _write_json_exclusive(path, payload):
+            validate_plan(path, payload)
+    return {
+        "jobRoot": director_job_root,
+        "reviewsPreserved": reviews_preserved,
+    }
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate bounded synthetic Cinematic Visualizer V2 proof artifacts.")
+    parser = argparse.ArgumentParser(description="Generate bounded Cinematic Visualizer V2 proof artifacts.")
     parser.add_argument("--audio", type=Path, required=True)
+    parser.add_argument(
+        "--cue-sheet",
+        type=Path,
+        help="Use an existing privacy-minimized TrackPrompt cue sheet instead of synthetic proof cues.",
+    )
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--director-jobs-root",
+        type=Path,
+        help="Optionally register the validated plan pair in Mission Control's UUID job root.",
+    )
     parser.add_argument("--seed", type=int, default=84291)
     args = parser.parse_args()
     audio_path = args.audio.resolve(strict=True)
     output = args.output.resolve()
-    cues = _synthetic_cues()
+    cue_source = args.cue_sheet.resolve(strict=True) if args.cue_sheet is not None else None
+    cues = (
+        TrackPromptVisualCueSheet.model_validate_json(cue_source.read_text(encoding="utf-8-sig"))
+        if cue_source is not None
+        else _synthetic_cues()
+    )
+    validate_public_cue_sheet(cues)
     resolved = resolve_visualizer_config(
         SpaceJourneyStoryVisualizerConfigRequest(
             preset="space-journey-story",
@@ -186,7 +285,11 @@ def main() -> int:
                 revision_metadata={
                     "revision": 1,
                     "reviewer": "codex-assisted",
-                    "note": "Synthetic proof initialized without claiming artist approval.",
+                    "note": (
+                        "Real-analysis proof initialized for bounded local review."
+                        if cue_source is not None
+                        else "Synthetic proof initialized without claiming artist approval."
+                    ),
                 },
             )
             for shot in shots.shots
@@ -199,6 +302,34 @@ def main() -> int:
     _write_json(story_path, story.model_dump(mode="json", by_alias=True))
     _write_json(shot_path, shots.model_dump(mode="json", by_alias=True))
     _write_json(review_path, reviews.model_dump(mode="json", by_alias=True))
+    source_inputs = (
+        {
+            "analysisInputs": {
+                "jobId": cues.source.job_id,
+                "analysisSchemaVersion": cues.source.analysis_schema_version,
+                "analysisVersion": cues.source.analysis_version,
+                "requestedMode": cues.source.requested_mode,
+                "effectiveMode": cues.source.effective_mode,
+                "sourceCueSha256": _sha256(cue_source),
+                "cueSha256": _sha256(cue_path),
+                "cueSizeBytes": cue_path.stat().st_size,
+                "audioSha256": _sha256(audio_path),
+                "audioSizeBytes": audio_path.stat().st_size,
+                "durationSeconds": cues.timeline.duration_seconds,
+                "frameStart": cues.timeline.frame_start,
+                "frameEnd": cues.timeline.frame_end,
+                "fps": cues.timeline.fps,
+            }
+        }
+        if cue_source is not None
+        else {
+            "syntheticInputs": {
+                "cueSha256": _sha256(cue_path),
+                "audioSha256": _sha256(audio_path),
+                "audioSizeBytes": audio_path.stat().st_size,
+            }
+        }
+    )
     manifest = {
         "schemaVersion": "1.0.0",
         "kind": "trackprompt-cinematic-v2-bounded-proof",
@@ -206,11 +337,7 @@ def main() -> int:
         "preset": "space-journey-story",
         "previewOnly": True,
         "fullTimelineRenderAuthorized": False,
-        "syntheticInputs": {
-            "cueSha256": _sha256(cue_path),
-            "audioSha256": _sha256(audio_path),
-            "audioSizeBytes": audio_path.stat().st_size,
-        },
+        **source_inputs,
         "storyPlan": {"sha256": _sha256(story_path), "actCount": len(story.acts)},
         "shotPlan": {"sha256": _sha256(shot_path), "shotCount": len(shots.shots)},
         "reviewArtifact": {"sha256": _sha256(review_path), "reviewCount": len(reviews.reviews)},
@@ -218,6 +345,18 @@ def main() -> int:
     }
     manifest_path = output / "build-manifest.json"
     _write_json(manifest_path, manifest)
+    director_job_root: Path | None = None
+    director_reviews_preserved = False
+    if args.director_jobs_root is not None:
+        registration = _register_director_artifacts(
+            args.director_jobs_root,
+            str(cues.source.job_id),
+            story.model_dump(mode="json", by_alias=True),
+            shots.model_dump(mode="json", by_alias=True),
+            reviews.model_dump(mode="json", by_alias=True),
+        )
+        director_job_root = registration["jobRoot"]
+        director_reviews_preserved = bool(registration["reviewsPreserved"])
     print(
         json.dumps(
             {
@@ -227,6 +366,8 @@ def main() -> int:
                 "shotPlan": str(shot_path),
                 "reviews": str(review_path),
                 "manifest": str(manifest_path),
+                "directorRegistered": director_job_root is not None,
+                "directorReviewsPreserved": director_reviews_preserved,
             },
             separators=(",", ":"),
         )

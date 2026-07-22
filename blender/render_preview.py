@@ -334,6 +334,18 @@ def _external_ffmpeg_clip(output: Path, ffmpeg_argument: str | None) -> dict[str
     }
 
 
+def _privacy_safe_runner_result(value: object) -> object:
+    """Keep the V2 runner record useful without persisting private absolute paths."""
+
+    if isinstance(value, dict):
+        return {str(key): _privacy_safe_runner_result(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_privacy_safe_runner_result(item) for item in value]
+    if isinstance(value, str) and Path(value).is_absolute():
+        return Path(value).name
+    return value
+
+
 def main() -> int:
     import bpy  # type: ignore[import-not-found]
 
@@ -357,14 +369,24 @@ def main() -> int:
     stills = render_preview_stills(str(output))
     clip: dict[str, object] = {"ok": True, "skipped": True, "reason": "explicit-skip-clip"}
     if not args.skip_clip and stills.get("ok") is True:
-        clip = render_preview_clip(str(clip_path))
-        if clip.get("ok") is not True:
+        ffmpeg = _resolve_executable(args.ffmpeg, "ffmpeg")
+        clip = render_preview_clip(
+            str(clip_path),
+            ffmpeg_path=str(ffmpeg) if ffmpeg is not None else None,
+        )
+        if clip.get("ok") is not True and preset_definition.identifier != "space-journey-story":
             clip = _external_ffmpeg_clip(clip_path, args.ffmpeg)
         if clip.get("ok") is True:
+            output_frame_count_value = clip.get("outputFrameCount")
+            output_frame_count = (
+                int(output_frame_count_value)
+                if isinstance(output_frame_count_value, int | float)
+                else int(clip["endFrame"]) - int(clip["startFrame"]) + 1
+            )
             verification = _probe_clip(
                 clip_path,
-                start_frame=int(clip["startFrame"]),
-                end_frame=int(clip["endFrame"]),
+                start_frame=1,
+                end_frame=output_frame_count,
                 fps=bpy.context.scene.render.fps / bpy.context.scene.render.fps_base,
                 audio_requested=bool(clip["audioRequested"]),
                 ffprobe_argument=args.ffprobe,
@@ -424,8 +446,10 @@ def main() -> int:
         "clip": clip,
         "scene": scene,
     }
-    manifest = output / "preview-manifest.json"
-    manifest.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    is_story_v2 = preset_definition.identifier == "space-journey-story"
+    manifest = output / ("preview-runner-manifest.json" if is_story_v2 else "preview-manifest.json")
+    stored_result = _privacy_safe_runner_result(result) if is_story_v2 else result
+    manifest.write_text(json.dumps(stored_result, indent=2), encoding="utf-8")
     result["manifest"] = str(manifest)
     print(json.dumps(result, ensure_ascii=True, separators=(",", ":")))
     return 0 if result["ok"] else 1

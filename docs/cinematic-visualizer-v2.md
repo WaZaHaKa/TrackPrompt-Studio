@@ -90,6 +90,8 @@ edit source/config
 
 MCP entrypoints validate every input before the explicit scene-clear/build boundary. They never initiate the production renderer. Scene reset removes prior objects, collections, sound strips, and sound datablocks so repeated bounded builds do not accumulate private audio strips.
 
+For `space-journey-story`, `render_preview_clip(output_path, ffmpeg_path=...)` consumes the six declared non-contiguous `reviewSegments` itself. It renders only those source frames, assembles the matching six local audio excerpts, and atomically publishes the bounded H.264/AAC edit through an argument-array FFmpeg call. The runner does not fall back to a contiguous or unrelated clip for this preset.
+
 ## Renderer telemetry
 
 The production Blender chunk worker emits bounded JSON on one exact stdout prefix:
@@ -134,6 +136,67 @@ It contains synthetic cues and click-audio identity, story/shot/review artifacts
 
 The art-direction decision is deliberately `revise`: the protagonist reads clearly, but narrative landmarks need stronger shot-to-shot differentiation. This is not artist approval and is not a V2 calibration result.
 
+### Real-analysis artistic revision
+
+The deterministic revision that answers those findings is ignored runtime evidence under:
+
+```text
+test-output/cinematic-v2-andromeda-revision-20260722-134911/
+```
+
+It is compiled from the completed deep analysis job `5ec62fcc-8230-4581-9d2c-60f1484b0879` for the real “Trip to Andromeda” timeline. The safe build manifest records only job, schema, mode, duration, frame range, and content identities; it does not disclose the private audio locator. The StoryPlan and ShotPlan remain separately identity-bound to `space-journey-story`, which remains preview-only.
+
+The revision gives the four bounded stages distinct deterministic environment contracts:
+
+- **Signal:** a dead-moon mass, regolith ruins, and a distant amber needle beacon;
+- **Awakening:** an enclosed teal chamber whose petals and amber rings visibly reactivate;
+- **Departure:** repeated cobalt monumental ribs, converging guide rails, and authored guide packets;
+- **First Gate:** a frame-scale split-monolith diamond threshold, black foreground occlusion, an emerald membrane, and an authored shockwave/route-seal consequence.
+
+The proof contains six 640×360 stills, six independently reviewed 320×180 phone stills, six one-second authored-motion excerpts, and their bounded six-second H.264/yuv420p + AAC review edit:
+
+```text
+preview-signal-to-gate/frame_000652.png
+preview-signal-to-gate/frame_002085.png
+preview-signal-to-gate/frame_002867.png
+preview-signal-to-gate/frame_004690.png
+preview-signal-to-gate/frame_005733.png
+preview-signal-to-gate/frame_006775.png
+preview-signal-to-gate/phone/
+preview-signal-to-gate/signal-to-first-gate-preview.mp4
+preview-signal-to-gate/mcp-render-receipt.json
+```
+
+The existing high-level Blender MCP build/review entrypoints produced and structurally validated `trackprompt-space-journey-story-r11.blend`. Major camera roots and aim targets use authored smooth keyframes; only the camera micro-reaction child has the exact bounded Z-axis audio driver. Each reviewed stage reports a dominant landmark, readable protagonist, foreground/midground/background geometry, a secondary narrative action, and a distinct light identity. A read-only, source-name-redacted Blender 5.2 dependency-graph scan passes all 481 full-timeline samples with no failing sample or global motion issue; it renders and saves nothing.
+
+The canonical preview entrypoint emits `mcp-render-receipt.json` separately from the proof's `preview-manifest.json`. The receipt binds the R11 scene, canonical embedded ShotPlan, exact six source segments, ordered 180-frame PNG render digest, representative stills, FFmpeg strategy, and final MP4 by SHA-256. Before either proof manifest can be written, the verifier also recompiles the StoryPlan and ShotPlan from the bound cue sheet, stored resolved configuration, seed, and repository template and requires exact equality. The preview and build manifests then hash-bind the MCP receipt; a substituted cue, plan, scene, segment edit, still, clip, or receipt fails verification.
+
+The persisted Director revision-6 reviews record specific R11 findings for all four shots. Their decision is `approve`, with every mobile-readability and story-differentiation field `clear`; the proof verifier independently passes those gates without rewriting the review. This is a bounded Codex-assisted Director decision, not human artist approval: `artistApproved` remains `false`.
+
+Finalize a changed proof once, then verify its stored identities without mutation:
+
+```powershell
+backend\.venv\Scripts\python.exe .\tools\verify_cinematic_v2_proof.py `
+  --root .\test-output\cinematic-v2-andromeda-revision-20260722-134911 `
+  --ffprobe (Get-Command ffprobe.exe).Source `
+  --scene .\test-output\cinematic-v2-andromeda-revision-20260722-134911\trackprompt-space-journey-story-r11.blend `
+  --write-manifests
+
+backend\.venv\Scripts\python.exe .\tools\verify_cinematic_v2_proof.py `
+  --root .\test-output\cinematic-v2-andromeda-revision-20260722-134911 `
+  --ffprobe (Get-Command ffprobe.exe).Source `
+  --scene .\test-output\cinematic-v2-andromeda-revision-20260722-134911\trackprompt-space-journey-story-r11.blend
+```
+
+Open Mission Control and the bounded review folder without invoking calibration or a render:
+
+```powershell
+.\WZHK-Media-Launcher.cmd
+explorer.exe "C:\Users\theon\GitHub\TrackPrompt-Studio\test-output\cinematic-v2-andromeda-revision-20260722-134911\preview-signal-to-gate"
+```
+
+Choose **Director** in Mission Control and select the newest local story plan. Do not use the render-start, calibration, authorization, or cloud actions for this review.
+
 ## Local verification
 
 ```powershell
@@ -162,7 +225,8 @@ Local deployment means a current frontend build and loopback Mission Control ser
 
 ## Known limitations and remaining gates
 
-- The bounded proof is a review artifact, not a final artist-approved film.
-- V2 needs stronger narrative-environment landmarks and another human art-direction pass.
+- The real-analysis bounded proof passes its Codex-assisted Director gates, but it is not a human artist-approved film.
+- The protagonist remains intentionally small in the Signal wide shot, and the proof uses review-resolution Eevee output rather than final-quality shading, volumetrics, motion blur, or production sampling.
+- Only Signal through First Gate was revised and reviewed; the later Rupture, Transformation, and Arrival environments still need an equivalent artistic pass before any full-story approval.
 - V2 needs its own render calibration, frozen candidate/profile hashes, and explicit production authorization.
 - Cloud provisioning and a full-track V2 render are outside this implementation and were not run.

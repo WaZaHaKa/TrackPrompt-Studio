@@ -10,7 +10,7 @@ from trackprompt_visualizer.preset_space_journey import (
     build_space_journey_direction_plan,
     deterministic_space_seed_plan,
 )
-from trackprompt_visualizer.preview import build_preview_plan
+from trackprompt_visualizer.preview import build_preview_plan, build_review_edit_spec
 
 
 def test_preview_plan_uses_actual_sections_transitions_and_vocals() -> None:
@@ -84,7 +84,7 @@ def test_story_preview_is_bounded_to_signal_through_first_gate() -> None:
         ]
     }
     plan = build_preview_plan(cues, "space-journey-story", shots)
-    assert plan["stillFrames"] == [15, 48, 67, 87, 109, 132]
+    assert plan["stillFrames"] == [15, 48, 67, 108, 132, 156]
     assert [item["role"] for item in plan["stillRoles"]] == [
         "signal", "awakening", "departure-commit", "departure-passage", "first-gate-approach", "first-gate"
     ]
@@ -93,7 +93,42 @@ def test_story_preview_is_bounded_to_signal_through_first_gate() -> None:
         "endFrame": 156,
         "role": "signal-through-first-gate",
         "centerFrame": 78,
+        "reviewEditStrategy": "six-authored-motion-excerpts",
+        "sourceEndFrame": 156,
+        "maximumOutputFrames": 300,
     }
+    assert [segment["role"] for segment in plan["reviewSegments"]] == [
+        "signal", "awakening", "departure-commit", "departure-passage",
+        "first-gate-approach", "first-gate",
+    ]
+    assert all(segment["durationFrames"] == 30 for segment in plan["reviewSegments"])
+    assert all(
+        next(
+            shot for shot in shots["shots"] if shot["id"] == segment["shotId"]
+        )["frameStart"]
+        <= segment["startFrame"]
+        <= segment["endFrame"]
+        <= next(
+            shot for shot in shots["shots"] if shot["id"] == segment["shotId"]
+        )["frameEnd"]
+        for segment in plan["reviewSegments"]
+    )
+    edit = build_review_edit_spec(
+        plan,
+        timeline_frame_start=1,
+        timeline_frame_end=300,
+        fps=30,
+    )
+    assert edit["strategy"] == "six-authored-motion-excerpts"
+    assert edit["outputFrameCount"] == 180
+    assert edit["durationSeconds"] == 6.0
+    assert edit["sourceFrames"] == [
+        frame
+        for segment in plan["reviewSegments"]
+        for frame in range(segment["startFrame"], segment["endFrame"] + 1)
+    ]
+    assert str(edit["audioFilter"]).count("atrim=") == 6
+    assert "concat=n=6:v=0:a=1[review_audio]" in str(edit["audioFilter"])
 
 
 def test_space_direction_and_seed_plans_are_deterministic_and_bounded() -> None:

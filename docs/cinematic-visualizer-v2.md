@@ -220,6 +220,19 @@ The completed media proof contains two responsive compositions, not a crop-deriv
 
 Across both profiles, that is two receipts, two H.264/AAC clips, 16 full-resolution stills, 16 phone stills, two motion reports, and two exposure reports. Every reference is SHA-256-bound in `build-manifest.json`, whose `mediaProof.status` is `complete`. The clips are `landscape/r12-continuous-preview.mp4` and `vertical/r12-continuous-preview.mp4`; the proof-local `r12-director-review.json` binds the exact still, phone, motion, and exposure evidence.
 
+The separately reconciled vertical authority is `r12-continuous-vertical-proof-manifest.json` in the same ignored proof directory. It is deterministic and overwrite-resistant: creation is idempotent only while every calculated local hash and inspected media field remains identical, and verification reconstructs the complete manifest instead of trusting stored metadata. Its SHA-256 is `80da1b97ce91f240e6bdb1ef638d6279db78690a5cc861f55751209de978e316`. It binds the R12 scene and scene-manifest hashes, StoryPlan and ShotPlan hashes, original analysis frames 6721-7980, reviewed source frames 6847-7375, local frames 127-655, the exact affine mapping to output frames 1-529, ordered-render hashes, native vertical media metadata, eight representative still identities and hashes, motion/exposure evidence, and the Director/human status. The calculated local vertical-preview SHA-256 is `c53996521114496f69da011154dc4e2ded00695fd5044fba1bfebfa583ee2efc`.
+
+Reconcile or independently verify the ignored vertical manifest with:
+
+```powershell
+backend\.venv\Scripts\python.exe tools\reconcile_cinematic_v2_r12_evidence.py `
+  --root test-output\cinematic-v2-andromeda-r12-20260722-164623 `
+  --ffprobe C:\path\to\ffprobe.exe `
+  --verify-only
+```
+
+The reconciled status is structural `pass`, continuous-motion proof `pass`, vertical proof `pass`, Codex-assisted artistic recommendation `revise`, human artist approval `pending`, calibration readiness `blocked-pending-human-artistic-approval`, and production authorization `false`.
+
 Each motion report covers camera and protagonist velocity, angular velocity, acceleration discontinuities, one-frame jumps, lens jumps, undeclared cuts, overshoot, and forbidden raw-audio macro-motion links; both exact 529-frame reports pass. Each exposure report decodes all 529 encoded frames and makes clipping and phone-size silhouette separation reviewable; both pass their technical thresholds. The R12 Director packet carries 12 specific criteria covering cinematic appeal, physical believability, protagonist agency, shot-scale variation, depth/parallax, exposure, materials, smoothness, story clarity, native vertical mobile readability, landscape readability, and stimulation without clutter. Its Codex-assisted decision is **`revise`**; human review remains **pending**, `approved` is false, and `artistApproved` remains false.
 
 R12 remains preview-only. It does not start V2 calibration, create production authorization, provision cloud resources, render the full track, or extend the art pass into future acts. Generated audio extracts, Blender scenes, rendered frames, clips, phone derivatives, and proof/report outputs remain private ignored runtime evidence and must not be committed.

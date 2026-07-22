@@ -29,6 +29,11 @@ param(
     [ValidateSet("compact", "balanced", "detailed")]
     [string]$CurveDetail = "balanced",
 
+    [ValidateSet("abstract-geometry", "space-journey")]
+    [string]$VisualizerPreset = "abstract-geometry",
+
+    [string]$VisualizerConfigPath = "",
+
     [int]$Seed = 84291,
 
     [int]$PreviewWidth = 1280,
@@ -40,6 +45,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$visualizerPresetWasExplicit = $PSBoundParameters.ContainsKey("VisualizerPreset")
+$seedWasExplicit = $PSBoundParameters.ContainsKey("Seed")
 
 function Write-Step {
     param([Parameter(Mandatory = $true)][string]$Message)
@@ -52,10 +59,16 @@ function Invoke-NativeChecked {
     param(
         [Parameter(Mandatory = $true)][string]$Executable,
         [Parameter(Mandatory = $true)][string[]]$ArgumentList,
-        [Parameter(Mandatory = $true)][string]$Description
+        [Parameter(Mandatory = $true)][string]$Description,
+        [string]$DisplayCommand = ""
     )
 
-    Write-Host "> $Executable $($ArgumentList -join ' ')" -ForegroundColor DarkGray
+    if ([string]::IsNullOrWhiteSpace($DisplayCommand)) {
+        Write-Host "> $Executable $($ArgumentList -join ' ')" -ForegroundColor DarkGray
+    }
+    else {
+        Write-Host "> $DisplayCommand" -ForegroundColor DarkGray
+    }
 
     $previousPreference = $ErrorActionPreference
 
@@ -148,6 +161,371 @@ function Resolve-FfmpegExecutable {
     return $null
 }
 
+function New-VisualizerConfigRequest {
+    param(
+        [Parameter(Mandatory = $true)][string]$Preset,
+        [Parameter(Mandatory = $true)][int]$SeedValue,
+        [string]$ConfigPath = "",
+        [bool]$PresetWasExplicit = $false,
+        [bool]$SeedWasExplicit = $false
+    )
+
+    $payload = [pscustomobject]@{}
+
+    if (-not [string]::IsNullOrWhiteSpace($ConfigPath)) {
+        if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+            throw "VisualizerConfigPath does not identify an existing file."
+        }
+
+        $resolvedPath = (Resolve-Path -LiteralPath $ConfigPath).Path
+        $item = Get-Item -LiteralPath $resolvedPath
+
+        if ($item.Extension -ne ".json" -or $item.Length -le 0 -or $item.Length -gt 65536) {
+            throw "VisualizerConfigPath must be a non-empty .json file no larger than 64 KiB."
+        }
+
+        try {
+            $payload = Get-Content -LiteralPath $resolvedPath -Raw | ConvertFrom-Json
+        }
+        catch {
+            throw "VisualizerConfigPath does not contain valid JSON."
+        }
+
+        if (
+            $null -eq $payload -or
+            $payload -is [System.Array] -or
+            $payload -is [string] -or
+            $payload -is [ValueType]
+        ) {
+            throw "VisualizerConfigPath must contain a JSON object."
+        }
+
+        foreach ($property in @($payload.PSObject.Properties)) {
+            if ($property.Name -notin @(
+                "schemaVersion", "preset", "parameters", "seed",
+                "defaultedParameters", "warnings"
+            )) {
+                throw "VisualizerConfigPath contains an unsupported top-level field: $($property.Name)"
+            }
+        }
+    }
+
+    $schemaVersion = if ($null -ne $payload.PSObject.Properties["schemaVersion"]) {
+        [string]$payload.schemaVersion
+    }
+    else {
+        "1.0.0"
+    }
+
+    if ($schemaVersion -ne "1.0.0") {
+        throw "Visualizer configuration schemaVersion must be 1.0.0."
+    }
+
+    $effectivePreset = $Preset
+
+    if ($null -ne $payload.PSObject.Properties["preset"]) {
+        $filePreset = [string]$payload.preset
+
+        if ($filePreset -notin @("abstract-geometry", "space-journey")) {
+            throw "Visualizer configuration contains an unsupported preset."
+        }
+
+        if ($PresetWasExplicit -and $filePreset -ne $Preset) {
+            throw "VisualizerPreset conflicts with the preset in VisualizerConfigPath."
+        }
+
+        $effectivePreset = $filePreset
+    }
+
+    $effectiveSeed = $SeedValue
+
+    if ($null -ne $payload.PSObject.Properties["seed"]) {
+        $fileSeed = $payload.seed
+
+        if (
+            -not ($fileSeed -is [int] -or $fileSeed -is [long]) -or
+            [long]$fileSeed -lt 0 -or
+            [long]$fileSeed -gt 2147483647
+        ) {
+            throw "Visualizer configuration seed must be an integer between 0 and 2147483647."
+        }
+
+        if ($SeedWasExplicit -and [int]$fileSeed -ne $SeedValue) {
+            throw "Seed conflicts with the seed in VisualizerConfigPath."
+        }
+
+        $effectiveSeed = [int]$fileSeed
+    }
+
+    $parameters = if ($null -ne $payload.PSObject.Properties["parameters"]) {
+        $payload.parameters
+    }
+    else {
+        [pscustomobject]@{}
+    }
+
+    if (
+        $null -eq $parameters -or
+        $parameters -is [System.Array] -or
+        $parameters -is [string] -or
+        $parameters -is [ValueType]
+    ) {
+        throw "Visualizer configuration parameters must be a JSON object."
+    }
+
+    return [ordered]@{
+        schemaVersion = "1.0.0"
+        preset = $effectivePreset
+        parameters = $parameters
+        seed = $effectiveSeed
+    }
+}
+
+function ConvertTo-CanonicalJsonValue {
+    param($Value, [int]$Depth = 0)
+
+    if ($Depth -gt 64) {
+        throw "Visualizer configuration exceeds the safe nesting limit."
+    }
+
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) {
+        return $Value
+    }
+
+    if ($Value -is [System.Collections.IDictionary]) {
+        $result = [ordered]@{}
+
+        foreach ($key in @($Value.Keys | Sort-Object)) {
+            $result[[string]$key] = ConvertTo-CanonicalJsonValue `
+                -Value $Value[$key] `
+                -Depth ($Depth + 1)
+        }
+
+        return $result
+    }
+
+    if ($Value -is [System.Collections.IEnumerable]) {
+        return @(
+            foreach ($item in $Value) {
+                ConvertTo-CanonicalJsonValue -Value $item -Depth ($Depth + 1)
+            }
+        )
+    }
+
+    $result = [ordered]@{}
+
+    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
+        $result[[string]$property.Name] = ConvertTo-CanonicalJsonValue `
+            -Value $property.Value `
+            -Depth ($Depth + 1)
+    }
+
+    return $result
+}
+
+function Test-JsonSemanticMatch {
+    param(
+        [Parameter(Mandatory = $true)]$Actual,
+        [Parameter(Mandatory = $true)]$Expected
+    )
+
+    $actualJson = ConvertTo-CanonicalJsonValue -Value $Actual |
+        ConvertTo-Json -Depth 20 -Compress
+    $expectedJson = ConvertTo-CanonicalJsonValue -Value $Expected |
+        ConvertTo-Json -Depth 20 -Compress
+    return $actualJson -ceq $expectedJson
+}
+
+function Assert-FreshNonEmptyFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][DateTime]$StartedAt,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$Description was not created."
+    }
+
+    $item = Get-Item -LiteralPath $Path
+
+    if ($item.Length -le 0 -or $item.LastWriteTimeUtc -lt $StartedAt) {
+        throw "$Description is empty or predates the current Blender invocation."
+    }
+
+    return $item.FullName
+}
+
+function Read-FreshJsonArtifact {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][DateTime]$StartedAt,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    [void](Assert-FreshNonEmptyFile `
+        -Path $Path `
+        -StartedAt $StartedAt `
+        -Description $Description)
+
+    try {
+        return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "$Description is not valid JSON."
+    }
+}
+
+function Assert-CurrentBuildArtifacts {
+    param(
+        [Parameter(Mandatory = $true)][string]$BlendPath,
+        [Parameter(Mandatory = $true)][string]$ManifestPath,
+        [Parameter(Mandatory = $true)]$ExpectedConfig,
+        [Parameter(Mandatory = $true)][string]$ExpectedPreset,
+        [Parameter(Mandatory = $true)][int]$ExpectedSeed,
+        [Parameter(Mandatory = $true)][DateTime]$StartedAt
+    )
+
+    $resolvedBlend = Assert-FreshNonEmptyFile `
+        -Path $BlendPath `
+        -StartedAt $StartedAt `
+        -Description "Blender scene"
+    $manifest = Read-FreshJsonArtifact `
+        -Path $ManifestPath `
+        -StartedAt $StartedAt `
+        -Description "Blender scene manifest"
+
+    if (
+        $manifest.ok -ne $true -or
+        [string]$manifest.schemaVersion -ne "1.0.0" -or
+        [string]$manifest.preset -ne $ExpectedPreset -or
+        [int]$manifest.seed -ne $ExpectedSeed -or
+        $null -eq $manifest.visualizerConfig -or
+        -not (Test-JsonSemanticMatch `
+            -Actual $manifest.visualizerConfig `
+            -Expected $ExpectedConfig) -or
+        $null -eq $manifest.scene -or
+        $manifest.scene.ok -ne $true -or
+        [string]$manifest.scene.preset -ne $ExpectedPreset -or
+        [int]$manifest.scene.seed -ne $ExpectedSeed -or
+        -not [IO.Path]::GetFullPath([string]$manifest.scene.outputFile).Equals(
+            [IO.Path]::GetFullPath($resolvedBlend),
+            [StringComparison]::OrdinalIgnoreCase
+        )
+    ) {
+        throw "The current Blender scene manifest does not match the resolved visualizer configuration."
+    }
+
+    $checks = @($manifest.checks.PSObject.Properties)
+
+    if ($checks.Count -lt 10 -or @($checks | Where-Object { $_.Value -ne $true }).Count -gt 0) {
+        throw "The current Blender scene manifest contains failed or missing contract checks."
+    }
+
+    return $manifest
+}
+
+function Assert-CurrentPreviewArtifacts {
+    param(
+        [Parameter(Mandatory = $true)][string]$PreviewDirectory,
+        [Parameter(Mandatory = $true)][string]$ManifestPath,
+        [Parameter(Mandatory = $true)]$ExpectedConfig,
+        [Parameter(Mandatory = $true)][string]$ExpectedPreset,
+        [Parameter(Mandatory = $true)][string]$ExpectedClipName,
+        [Parameter(Mandatory = $true)][int]$ExpectedWidth,
+        [Parameter(Mandatory = $true)][int]$ExpectedHeight,
+        [Parameter(Mandatory = $true)][int]$ExpectedFps,
+        [Parameter(Mandatory = $true)][DateTime]$StartedAt
+    )
+
+    $manifest = Read-FreshJsonArtifact `
+        -Path $ManifestPath `
+        -StartedAt $StartedAt `
+        -Description "Blender preview manifest"
+
+    if (
+        $manifest.ok -ne $true -or
+        [string]$manifest.preset -ne $ExpectedPreset -or
+        $null -eq $manifest.visualizerConfig -or
+        -not (Test-JsonSemanticMatch `
+            -Actual $manifest.visualizerConfig `
+            -Expected $ExpectedConfig) -or
+        [int]$manifest.render.width -ne $ExpectedWidth -or
+        [int]$manifest.render.height -ne $ExpectedHeight -or
+        [math]::Abs([double]$manifest.render.fps - $ExpectedFps) -gt 0.01 -or
+        $manifest.clip.ok -ne $true -or
+        $manifest.clip.verification.ok -ne $true -or
+        [IO.Path]::GetFileName([string]$manifest.clip.clip) -cne $ExpectedClipName
+    ) {
+        throw "The current Blender preview manifest does not match the requested render."
+    }
+
+    $checks = @($manifest.checks.PSObject.Properties)
+
+    if ($checks.Count -lt 10 -or @($checks | Where-Object { $_.Value -ne $true }).Count -gt 0) {
+        throw "The current Blender preview manifest contains failed or missing contract checks."
+    }
+
+    $previewRoot = (Resolve-Path -LiteralPath $PreviewDirectory).Path.TrimEnd('\', '/')
+    $artifacts = @($manifest.stills.stillFrames) + @([string]$manifest.clip.clip)
+
+    if (@($manifest.stills.stillFrames).Count -lt 1) {
+        throw "The current Blender preview manifest contains no stills."
+    }
+
+    foreach ($artifact in $artifacts) {
+        $resolvedArtifact = Assert-FreshNonEmptyFile `
+            -Path ([string]$artifact) `
+            -StartedAt $StartedAt `
+            -Description "Blender preview artifact"
+
+        if (-not $resolvedArtifact.StartsWith(
+            $previewRoot + [IO.Path]::DirectorySeparatorChar,
+            [StringComparison]::OrdinalIgnoreCase
+        )) {
+            throw "The preview manifest references an artifact outside its preset output directory."
+        }
+    }
+
+    if ($ExpectedPreset -eq "space-journey") {
+        $expectedRoles = @(
+            "opening", "early-development", "main-groove",
+            "breakdown", "peak", "outro"
+        )
+        $entries = @($manifest.stills.stills)
+
+        if (
+            $entries.Count -ne 6 -or
+            @($manifest.stills.stillFrames).Count -ne 6 -or
+            @($entries | ForEach-Object { $_.role }).Count -ne 6
+        ) {
+            throw "The Space Journey preview must contain six role-labelled stills."
+        }
+
+        for ($index = 0; $index -lt 6; $index++) {
+            if ([string]$entries[$index].role -cne $expectedRoles[$index]) {
+                throw "The Space Journey preview still roles are incomplete or out of order."
+            }
+        }
+
+        $verification = $manifest.clip.verification
+
+        if (
+            [string]$verification.videoCodec -cne "h264" -or
+            [string]$verification.audioCodec -cne "aac" -or
+            [int]$verification.width -ne $ExpectedWidth -or
+            [int]$verification.height -ne $ExpectedHeight -or
+            [math]::Abs([double]$verification.fps - $ExpectedFps) -gt 0.01 -or
+            $verification.audioMatchesRequest -ne $true -or
+            [double]$manifest.clip.durationSeconds -gt 10.1
+        ) {
+            throw "The Space Journey preview lacks verified bounded H.264/AAC evidence."
+        }
+    }
+
+    return $manifest
+}
+
 try {
     $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -170,10 +548,39 @@ try {
         }
     }
 
-    $outputDirectory = Join-Path $RepoRoot "test-output\private-real-track"
+    $visualizerConfigRequest = New-VisualizerConfigRequest `
+        -Preset $VisualizerPreset `
+        -SeedValue $Seed `
+        -ConfigPath $VisualizerConfigPath `
+        -PresetWasExplicit $visualizerPresetWasExplicit `
+        -SeedWasExplicit $seedWasExplicit
+    $VisualizerPreset = [string]$visualizerConfigRequest.preset
+    $Seed = [int]$visualizerConfigRequest.seed
+
+    $blendFileName = if ($VisualizerPreset -eq "space-journey") {
+        "trip-to-andromeda-space-journey.blend"
+    }
+    else {
+        "trip-to-andromeda-abstract.blend"
+    }
+    $previewClipName = if ($VisualizerPreset -eq "space-journey") {
+        "space-journey-preview.mp4"
+    }
+    else {
+        "trackprompt-preview.mp4"
+    }
+
+    $legacyOutputDirectory = Join-Path $RepoRoot "test-output\private-real-track"
+    $outputDirectory = if ($VisualizerPreset -eq "space-journey") {
+        Join-Path $legacyOutputDirectory "space-journey"
+    }
+    else {
+        $legacyOutputDirectory
+    }
     $previewDirectory = Join-Path $outputDirectory "preview"
     $cuePath = Join-Path $outputDirectory "visual-cues.json"
-    $blendPath = Join-Path $outputDirectory "trip-to-andromeda-abstract.blend"
+    $blendPath = Join-Path $outputDirectory $blendFileName
+    $resolvedConfigPath = Join-Path $outputDirectory "visualizer-config.resolved.json"
 
     New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
     New-Item -ItemType Directory -Force -Path $previewDirectory | Out-Null
@@ -203,6 +610,51 @@ Start it with:
     }
 
     Write-Host ($health | ConvertTo-Json -Depth 10)
+
+    try {
+        $resolvedVisualizerConfig = Invoke-RestMethod `
+            -Method Post `
+            -Uri "$ApiBase/api/visualizer/config/resolve" `
+            -ContentType "application/json" `
+            -Body ($visualizerConfigRequest | ConvertTo-Json -Depth 20 -Compress) `
+            -TimeoutSec 30
+    }
+    catch {
+        throw @"
+The backend could not resolve the $VisualizerPreset visualizer configuration.
+
+Make sure the API build exposes POST /api/visualizer/config/resolve and that
+VisualizerConfigPath uses schema 1.0.0.
+"@
+    }
+
+    $expectedConfigFields = @(
+        "schemaVersion", "preset", "parameters", "seed",
+        "defaultedParameters", "warnings"
+    )
+    $actualConfigFields = @($resolvedVisualizerConfig.PSObject.Properties.Name)
+
+    if (
+        $actualConfigFields.Count -ne $expectedConfigFields.Count -or
+        @($actualConfigFields | Where-Object { $_ -notin $expectedConfigFields }).Count -gt 0 -or
+        [string]$resolvedVisualizerConfig.schemaVersion -ne "1.0.0" -or
+        [string]$resolvedVisualizerConfig.preset -ne $VisualizerPreset -or
+        [int]$resolvedVisualizerConfig.seed -ne $Seed -or
+        $null -eq $resolvedVisualizerConfig.parameters -or
+        $null -eq $resolvedVisualizerConfig.defaultedParameters -or
+        $null -eq $resolvedVisualizerConfig.warnings
+    ) {
+        throw "The backend returned an invalid or mismatched resolved visualizer configuration."
+    }
+
+    [IO.File]::WriteAllText(
+        $resolvedConfigPath,
+        ($resolvedVisualizerConfig | ConvertTo-Json -Depth 20),
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+
+    Write-Host "Visualizer preset: $VisualizerPreset" -ForegroundColor Green
+    Write-Host "Resolved config: $resolvedConfigPath" -ForegroundColor Green
 
     try {
         $job = Invoke-RestMethod `
@@ -292,34 +744,47 @@ reconstruct the Deep stem curves.
     Write-Host "Transitions: $transitionCount"
     Write-Host "Curves: $($curveNames -join ', ')"
 
-    Write-Step "Building the Blender scene"
+    Write-Step "Building the Blender $VisualizerPreset scene"
+
+    $sceneManifestPath = [IO.Path]::ChangeExtension($blendPath, ".manifest.json")
+    $buildStartedAt = [DateTime]::UtcNow
 
     Invoke-NativeChecked `
         -Executable $resolvedBlender `
         -ArgumentList @(
             "--background",
+            "--python-exit-code", "1",
             "--python", $buildScript,
             "--",
             "--cues", $cuePath,
             "--audio", $resolvedAudio,
-            "--preset", "abstract-geometry",
+            "--preset", $VisualizerPreset,
             "--seed", [string]$Seed,
+            "--config", $resolvedConfigPath,
             "--output", $blendPath
         ) `
-        -Description "Blender visualizer build"
+        -Description "Blender visualizer build" `
+        -DisplayCommand "blender.exe (scene build; local audio input redacted)"
 
-    if (-not (Test-Path -LiteralPath $blendPath -PathType Leaf)) {
-        throw "Blender returned success but did not create $blendPath."
-    }
+    [void](Assert-CurrentBuildArtifacts `
+        -BlendPath $blendPath `
+        -ManifestPath $sceneManifestPath `
+        -ExpectedConfig $resolvedVisualizerConfig `
+        -ExpectedPreset $VisualizerPreset `
+        -ExpectedSeed $Seed `
+        -StartedAt $buildStartedAt)
 
-    Write-Host "Created: $blendPath" -ForegroundColor Green
+    Write-Host "Created and validated: $blendPath" -ForegroundColor Green
 
     if (-not $SkipPreview) {
         Write-Step "Rendering the bounded preview"
 
+        $previewStartedAt = [DateTime]::UtcNow
+
         $renderArguments = @(
             "--background",
             $blendPath,
+            "--python-exit-code", "1",
             "--python", $renderScript,
             "--",
             "--output", $previewDirectory,
@@ -342,11 +807,25 @@ reconstruct the Deep stem curves.
             -ArgumentList $renderArguments `
             -Description "Blender preview render"
 
-        Write-Host "Preview directory: $previewDirectory" -ForegroundColor Green
+        $previewManifestPath = Join-Path $previewDirectory "preview-manifest.json"
+        [void](Assert-CurrentPreviewArtifacts `
+            -PreviewDirectory $previewDirectory `
+            -ManifestPath $previewManifestPath `
+            -ExpectedConfig $resolvedVisualizerConfig `
+            -ExpectedPreset $VisualizerPreset `
+            -ExpectedClipName $previewClipName `
+            -ExpectedWidth $PreviewWidth `
+            -ExpectedHeight $PreviewHeight `
+            -ExpectedFps $Fps `
+            -StartedAt $previewStartedAt)
+
+        Write-Host "Preview validated: $previewDirectory" -ForegroundColor Green
     }
 
     Write-Host ""
     Write-Host "Completed successfully." -ForegroundColor Green
+    Write-Host "Preset: $VisualizerPreset"
+    Write-Host "Config: $resolvedConfigPath"
     Write-Host "Cue sheet: $cuePath"
     Write-Host "Blend file: $blendPath"
 

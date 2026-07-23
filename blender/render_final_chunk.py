@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -42,14 +43,47 @@ def _arguments() -> argparse.Namespace:
 
 
 class RenderEventEmitter:
-    """Emit bounded, path-free renderer facts on an exact machine-readable prefix."""
+    """Emit bounded renderer facts with an exact, relative artifact identity."""
 
-    def __init__(self, scene: Any, *, job_id: str, worker_id: str, start: int, end: int) -> None:
-        if _EVENT_ID.fullmatch(job_id) is None or _EVENT_ID.fullmatch(worker_id) is None:
+    def __init__(
+        self,
+        scene: Any,
+        *,
+        job_id: str,
+        worker_id: str,
+        project_id: str,
+        scene_sha256: str,
+        profile_sha256: str,
+        output_variant_id: str,
+        width: int,
+        height: int,
+        composition_profile_id: str,
+        artifact_directory: str,
+        artifact_filename_pattern: str,
+        start: int,
+        end: int,
+    ) -> None:
+        identities = (
+            job_id,
+            worker_id,
+            project_id,
+            output_variant_id,
+            composition_profile_id,
+        )
+        if any(_EVENT_ID.fullmatch(value) is None for value in identities):
             raise ToolingError("invalid-telemetry-identity", "Telemetry job and worker IDs must be safe identifiers.")
         self.scene = scene
         self.job_id = job_id
         self.worker_id = worker_id
+        self.project_id = project_id
+        self.scene_sha256 = scene_sha256
+        self.profile_sha256 = profile_sha256
+        self.output_variant_id = output_variant_id
+        self.width = width
+        self.height = height
+        self.composition_profile_id = composition_profile_id
+        self.artifact_directory = artifact_directory
+        self.artifact_filename_pattern = artifact_filename_pattern
         self.start = start
         self.end = end
         self.chunk_id = f"{start:06d}-{end:06d}"
@@ -61,6 +95,8 @@ class RenderEventEmitter:
     @staticmethod
     def _load_shots(scene: Any) -> tuple[dict[str, Any], ...]:
         raw = scene.get("trackprompt_shot_plan", "")
+        if not raw:
+            raw = scene.get("trackprompt_shot_plan_json", "")
         if not isinstance(raw, str) or len(raw) > 2_000_000:
             return ()
         try:
@@ -84,13 +120,22 @@ class RenderEventEmitter:
                     "actName": act_id.replace("-", " ").title() or None,
                     "shotId": shot_id or None,
                     "shotName": str(shot.get("name", ""))[:160] or None,
+                    "complexityClass": (
+                        str(shot.get("complexityClass", ""))[:128] or None
+                    ),
                 }
-        return {"actId": None, "actName": None, "shotId": None, "shotName": None}
+        return {
+            "actId": None,
+            "actName": None,
+            "shotId": None,
+            "shotName": None,
+            "complexityClass": None,
+        }
 
     def emit(self, event_type: str, *, frame: int | None = None, **facts: object) -> None:
         self.sequence += 1
         payload: dict[str, object] = {
-            "schemaVersion": "1.0.0",
+            "schemaVersion": "2.0.0",
             "eventType": event_type,
             "sequence": self.sequence,
             "jobId": self.job_id,
@@ -107,6 +152,14 @@ class RenderEventEmitter:
                 "chunk_complete": "chunk_rendered",
                 "render_cancelled": "cancelled",
             }.get(event_type, "unknown"),
+            "projectId": self.project_id,
+            "sceneSha256": self.scene_sha256,
+            "profileSha256": self.profile_sha256,
+            "outputVariantId": self.output_variant_id,
+            "width": self.width,
+            "height": self.height,
+            "compositionProfileId": self.composition_profile_id,
+            "emittedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             **(self._story_context(frame) if frame is not None else {}),
             **facts,
         }
@@ -127,6 +180,10 @@ class RenderEventEmitter:
             frame=frame,
             elapsedSeconds=elapsed,
             outputIdentity=f"frame-{frame:06d}",
+            artifactRelativePath=(
+                f"{self.artifact_directory}/"
+                f"{self.artifact_filename_pattern % frame}"
+            ),
         )
 
     def render_stats(self, *_: object) -> None:
@@ -628,10 +685,41 @@ def main() -> int:
             args.end,
         )
         _apply_render_profile(bpy.context.scene, profile, output, args.start, args.end)
+        output_variant = profile.raw.get("outputVariant")
+        output_variant_settings = (
+            output_variant if isinstance(output_variant, dict) else {}
+        )
+        composition_profile = profile.raw.get("compositionProfile")
+        composition_settings = (
+            composition_profile if isinstance(composition_profile, dict) else {}
+        )
+        output_variant_id = str(
+            output_variant_settings.get(
+                "id",
+                profile.raw.get("outputVariantId", "primary"),
+            )
+        )
+        composition_profile_id = str(
+            composition_settings.get(
+                "id",
+                profile.raw.get("compositionProfileId", "primary"),
+            )
+        )
+        artifact_root = output.parents[2]
+        artifact_directory = output.relative_to(artifact_root).as_posix()
         emitter = RenderEventEmitter(
             bpy.context.scene,
             job_id=args.job_id,
             worker_id=args.worker_id,
+            project_id=profile.project,
+            scene_sha256=profile.approved_scene_sha256,
+            profile_sha256=profile.source_sha256,
+            output_variant_id=output_variant_id,
+            width=profile.width,
+            height=profile.height,
+            composition_profile_id=composition_profile_id,
+            artifact_directory=artifact_directory,
+            artifact_filename_pattern=profile.image.filename_pattern,
             start=args.start,
             end=args.end,
         )

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-motion-health-report",
+  "projectId": "trip-to-andromeda-v2",
+  "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+  "timeline": {
+    "frameStart": 1,
+    "frameEnd": 13029,
+    "fps": 30,
+    "shotCount": 35,
+    "intentionalCutCount": 7,
+    "nonCutBoundaryCount": 28
+  },
+  "checks": {
+    "protagonistContinuityAtNonCutBoundaries": "pass",
+    "horizontalCameraTransformAndLensContinuityAtNonCutBoundaries": "pass",
+    "verticalCameraTransformAndLensContinuityAtNonCutBoundaries": "pass",
+    "declaredIntentionalCutsEmbedded": "pass",
+    "fcurveOvershoot": "pass-no-bezier-keyframes",
+    "rawAudioControlsMajorCameraTravel": false,
+    "rawAudioControlsMajorProtagonistTravel": false,
+    "boundedSmoothedCueLighting": "pass",
+    "maximumCueInfluenceFraction": 0.12
+  },
+  "evidence": {
+    "linearKeyframePointCount": 6406,
+    "nonLinearKeyframePointCount": 0,
+    "cueLightingKeyframePointCount": 3190,
+    "focusedBuilderTests": 14,
+    "focusedBuilderTestsPassed": true
+  },
+  "technicalPass": true,
+  "humanArtisticApproval": false
+}

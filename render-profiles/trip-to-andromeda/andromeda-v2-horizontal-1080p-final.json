@@ -1,0 +1,191 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-render-profile",
+  "project": "trip-to-andromeda-v2",
+  "preset": "andromeda-story-v2",
+  "profileId": "ANDROMEDA-V2-HORIZONTAL-1080P-FINAL",
+  "displayName": "Andromeda V2 Horizontal 1080p Final",
+  "blenderVersion": "5.2.0 LTS",
+  "frameStart": 1,
+  "frameEnd": 13029,
+  "fps": 30,
+  "durationSeconds": 434.3,
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "percentage": 100,
+    "pixelAspectX": 1,
+    "pixelAspectY": 1
+  },
+  "imageSequence": {
+    "format": "PNG",
+    "extension": "png",
+    "bitDepth": 16,
+    "colorMode": "RGB",
+    "compression": 15,
+    "filenamePattern": "frame_%06d.png",
+    "colorManagement": {
+      "displayTransformBaked": true,
+      "encodedColorSpace": "sRGB"
+    }
+  },
+  "approvedSceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+  "sourceIdentities": {
+    "builderSourceSha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "sceneBuildReceiptSha256": "176806209aa4cd9e606154a2742127cb29ee916353673d29a2207dde1697936b",
+    "sceneSpecSha256": "ba466a4f09a6d798c9dcc441f9b2c683b5bfdf8deb4004cf8a23deb74deb7428",
+    "sourceCueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2"
+  },
+  "outputVariant": {
+    "id": "horizontal-16x9-1080p",
+    "compositionMode": "authored",
+    "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+    "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+    "cropPolicy": "native-authored-never-crop"
+  },
+  "chunking": {
+    "framesPerChunk": 300,
+    "rationale": "Five-minute bounded checkpoints at the measured sub-second P90, with 44 independent resume units."
+  },
+  "storage": {
+    "plannedFrameSequenceGiB": 46.825,
+    "projectedMasterGiB": 0.1,
+    "projectedDeliveryGiB": 1.5,
+    "supportReserveGiB": 4.0,
+    "contingencyMultiplier": 1.25,
+    "minimumLaunchFreeGiB": 66.0
+  },
+  "render": {
+    "engine": "BLENDER_EEVEE",
+    "samples": 64,
+    "motionBlur": false,
+    "useCompositing": false,
+    "filmTransparent": false,
+    "ditherIntensity": 1.0,
+    "volumetricSamples": 32
+  },
+  "colorManagement": {
+    "displayDevice": "sRGB",
+    "viewTransform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "exposure": 0.65,
+    "gamma": 1.0,
+    "sequencerColorSpace": "sRGB"
+  },
+  "audio": {
+    "sha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "codec": "pcm_s16le",
+    "sampleRate": 44100,
+    "channels": 2,
+    "durationSeconds": 434.285714,
+    "creativeProcessing": "none"
+  },
+  "encoding": {
+    "master": {
+      "enabled": false
+    },
+    "delivery": {
+      "enabled": true,
+      "container": "mp4",
+      "fileExtension": ".mp4",
+      "videoCodec": "libx264",
+      "expectedVideoCodec": "h264",
+      "profile": "high",
+      "preset": "slow",
+      "crf": 16,
+      "pixelFormat": "yuv420p",
+      "audioCodec": "aac",
+      "audioBitrate": "320k",
+      "fastStart": true,
+      "requireRec709Metadata": true,
+      "displayToDeliveryFilter": "colorspace=ispace=gbr:iprimaries=bt709:itrc=iec61966-2-1:irange=pc:space=bt709:primaries=bt709:trc=bt709:range=tv:format=yuv420p",
+      "color": {
+        "primaries": "bt709",
+        "transfer": "bt709",
+        "space": "bt709",
+        "range": "tv"
+      }
+    }
+  },
+  "production": {
+    "resumeEnabled": true,
+    "resumePolicy": "validated-missing-frames-only",
+    "verifyExistingFrames": true,
+    "overwriteValidFrames": false,
+    "overwriteInvalidFrames": false,
+    "atomicChunkCommit": true,
+    "atomicPublication": true,
+    "stopOnValidationFailure": true,
+    "maximumFramesPerChunk": 300
+  },
+  "workerRequirement": {
+    "deviceClass": "gpu",
+    "renderer": "BLENDER_EEVEE",
+    "blenderVersion": "5.2",
+    "minimumVramMiB": 8192,
+    "maximumWorkersPerDevice": 1,
+    "deterministicSeed": 84291
+  },
+  "visualQa": {
+    "humanReviewRequired": true,
+    "namedFrames": [
+      {
+        "frame": 652,
+        "role": "signal"
+      },
+      {
+        "frame": 1950,
+        "role": "awakening"
+      },
+      {
+        "frame": 3779,
+        "role": "departure"
+      },
+      {
+        "frame": 6150,
+        "role": "gate-compression"
+      },
+      {
+        "frame": 7688,
+        "role": "rupture-peak"
+      },
+      {
+        "frame": 8834,
+        "role": "transformation"
+      },
+      {
+        "frame": 11987,
+        "role": "arrival-depth"
+      }
+    ],
+    "sectionAndTransitionFrames": [
+      1304,
+      2867,
+      4691,
+      6776,
+      8600,
+      10945
+    ],
+    "highMotionRanges": [
+      {
+        "startFrame": 6750,
+        "endFrame": 6805
+      },
+      {
+        "startFrame": 8575,
+        "endFrame": 8629
+      },
+      {
+        "startFrame": 10915,
+        "endFrame": 10974
+      }
+    ]
+  },
+  "authorization": {
+    "status": "pending-operator-approval",
+    "project": "TRIP-TO-ANDROMEDA-V2",
+    "preset": "ANDROMEDA-STORY-V2",
+    "profile": "ANDROMEDA-V2-HORIZONTAL-1080P-FINAL",
+    "reason": "Technical readiness and an exact operator start authorization are both required."
+  }
+}

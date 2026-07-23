@@ -380,6 +380,12 @@ class MissionDiscovery:
         )
         width = _integer(resolution.get("width"))
         height = _integer(resolution.get("height"))
+        output_variant = profile.get("outputVariant")
+        output_variant_settings = output_variant if isinstance(output_variant, dict) else {}
+        composition_profile = profile.get("compositionProfile")
+        composition_settings = (
+            composition_profile if isinstance(composition_profile, dict) else {}
+        )
         return ProfileSummary(
             id=profile_id,
             project_id=project,
@@ -417,6 +423,32 @@ class MissionDiscovery:
             authorized=authorized,
             authorization_issues=authorization_issues,
             recommended=profile_id == recommended_id,
+            output_variant_id=_string(
+                _first(
+                    output_variant_settings,
+                    "id",
+                    default=profile.get("outputVariantId"),
+                ),
+                "primary",
+            ),
+            composition_profile_id=_string(
+                _first(
+                    composition_settings,
+                    "id",
+                    default=profile.get("compositionProfileId"),
+                ),
+                "primary",
+            ),
+            composition_profile_sha256=(
+                _string(
+                    _first(
+                        composition_settings,
+                        "sha256",
+                        default=profile.get("compositionProfileSha256"),
+                    )
+                )
+                or None
+            ),
         )
 
     def list_profiles(self) -> list[ProfileSummary]:

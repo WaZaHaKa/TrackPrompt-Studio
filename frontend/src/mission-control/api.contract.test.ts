@@ -61,6 +61,127 @@ describe('Mission Control API contract', () => {
     })
   })
 
+  it('parses enabled output variants, stage progress, workers, and robust matrix ETA bounds', () => {
+    const job = parseRenderJob({
+      id: 'job-variants',
+      state: 'RUNNING',
+      phase: 'RENDER_FRAME',
+      activeVariantId: 'horizontal-16x9-1080p',
+      frameStart: 1,
+      frameEnd: 13029,
+      totalFrames: 26058,
+      outputVariants: [{
+        schemaVersion: '1.0.0',
+        id: 'horizontal-16x9-1080p',
+        enabled: true,
+        required: true,
+        width: 1920,
+        height: 1080,
+        fps: 30,
+        compositionMode: 'authored',
+        deliverableRole: 'primary-master',
+        renderProfileId: 'horizontal-final',
+        renderProfileSha256: 'A'.repeat(64),
+        outputVariantSha256: 'B'.repeat(64),
+        compositionProfile: {
+          id: 'andromeda-horizontal',
+          compositionSha256: 'C'.repeat(64),
+        },
+        progress: {
+          totalFrames: 13029,
+          renderedFrames: 110,
+          validatedFrames: 100,
+          inFlightFrames: [101, 102, 103],
+          previewUrl: '/api/mission-control/render/job-variants/preview?v=110',
+          fullFrameUrl: '/api/mission-control/render/job-variants/frame?v=110',
+          retryCount: 2,
+          failureCount: 1,
+          activeWorkerIds: ['worker-a'],
+          latestPreview: {
+            url: '/api/mission-control/render/job-variants/variants/horizontal-16x9-1080p/preview',
+            frame: 110,
+          },
+          stages: [{
+            stage: 'image_sequence_render',
+            state: 'running',
+            completedUnits: 110,
+            totalUnits: 13029,
+            unit: 'frames',
+            throughputPerSecond: 0.25,
+            elapsedSeconds: 440,
+            etaP50Seconds: 3600,
+            etaP90Seconds: 5400,
+            updatedAt: '2026-07-23T09:00:00Z',
+          }],
+        },
+      }, {
+        id: 'vertical-9x16-1080p',
+        enabled: false,
+        required: false,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        compositionMode: 'authored',
+        renderProfileId: 'vertical-final',
+        progress: {
+          totalFrames: 13029,
+          renderedFrames: 0,
+          validatedFrames: 0,
+          activeWorkerIds: [],
+          stages: [],
+        },
+      }],
+      etaForecast: {
+        state: 'stable',
+        confidence: 'high',
+        p50RemainingSeconds: 3800,
+        p90RemainingSeconds: 5800,
+        lastEstimateAt: '2026-07-23T09:00:00Z',
+        variantForecasts: [{
+          outputVariantId: 'horizontal-16x9-1080p',
+          state: 'stable',
+          confidence: 'high',
+          p50RemainingSeconds: 3600,
+          p90RemainingSeconds: 5400,
+          lastEstimateAt: '2026-07-23T09:00:00Z',
+        }],
+      },
+    })
+
+    expect(job.activeVariantId).toBe('horizontal-16x9-1080p')
+    expect(job.outputVariants).toHaveLength(2)
+    expect(job.outputVariants?.[0]).toMatchObject({
+      id: 'horizontal-16x9-1080p',
+      enabled: true,
+      required: true,
+      width: 1920,
+      height: 1080,
+      deliverableRole: 'primary-master',
+      compositionProfileId: 'andromeda-horizontal',
+      profileId: 'horizontal-final',
+      renderedFrames: 110,
+      validatedFrames: 100,
+      publishedFrames: 100,
+      inFlightFrames: 3,
+      previewFrame: 110,
+      previewUrl: '/api/mission-control/render/job-variants/preview?v=110',
+      fullFrameUrl: '/api/mission-control/render/job-variants/frame?v=110',
+      retryCount: 2,
+      failureCount: 1,
+    })
+    expect(job.outputVariants?.[0]?.workers).toEqual([expect.objectContaining({ id: 'worker-a', active: true })])
+    expect(job.outputVariants?.[0]?.stages[0]).toMatchObject({
+      id: 'image_sequence_render',
+      completedUnits: 110,
+      totalUnits: 13029,
+      throughput: 0.25,
+      elapsedSeconds: 440,
+    })
+    expect(job.outputVariants?.[0]?.stages[0]?.eta).toMatchObject({ p50Seconds: 3600, p90Seconds: 5400 })
+    expect(job.outputVariants?.[0]?.eta).toMatchObject({ p50Seconds: 3600, p90Seconds: 5400, confidence: 'high' })
+    expect(job.aggregateEta).toMatchObject({ p50Seconds: 3800, p90Seconds: 5800, confidence: 'high' })
+  })
+
   it('maps saved profile hours, storage, resolution, and authorization from the backend model', async () => {
     const fetchMock = vi.fn().mockResolvedValue(response([{
       id: testProfile.id,

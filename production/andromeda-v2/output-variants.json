@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "trip-to-andromeda-v2",
+  "variants": [
+    {
+      "id": "horizontal-16x9-1080p",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "required": true,
+      "enabledByDefault": true,
+      "compositionMode": "authored",
+      "deliverableRole": "primary-master",
+      "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+      "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+      "safeZone": {
+        "xMin": 0.08,
+        "xMax": 0.92,
+        "yMin": 0.10,
+        "yMax": 0.90
+      },
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "cropPolicy": "native-authored-never-crop"
+    },
+    {
+      "id": "vertical-9x16-1080p",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "required": false,
+      "enabledByDefault": false,
+      "compositionMode": "authored",
+      "deliverableRole": "optional-social",
+      "compositionProfileId": "andromeda-v2-vertical-master-v1",
+      "cameraName": "TP_ANDROMEDA_V2_CAMERA_VERTICAL",
+      "safeZone": {
+        "xMin": 0.12,
+        "xMax": 0.88,
+        "yMin": 0.08,
+        "yMax": 0.92
+      },
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "cropPolicy": "native-authored-never-crop"
+    }
+  ]
+}

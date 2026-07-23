@@ -13,6 +13,7 @@ import type {
   DirectorReview,
   DirectorShot,
   DirectorWorkspace,
+  EtaEstimate,
   EncodeCandidate,
   EncodeJob,
   FolderSelection,
@@ -34,10 +35,13 @@ import type {
   RenderSelection,
   RenderState,
   SceneSummary,
+  StageProgress,
   StartRenderRequest,
   StructuredError,
   SystemPaths,
   SystemStatus,
+  OutputVariantProgress,
+  WorkerProgress,
 } from './types'
 
 export const MISSION_CONTROL_API_BASE =
@@ -379,6 +383,335 @@ function confidence(value: unknown): 'low' | 'medium' | 'high' | 'unknown' {
   return normalized === 'low' || normalized === 'medium' || normalized === 'high' ? normalized : 'unknown'
 }
 
+function optionalRenderState(value: unknown): RenderState | null {
+  if (value === undefined || value === null || value === '') return null
+  const normalized = normalizeToken(value)
+  return renderStates.has(normalized as RenderState) ? normalized as RenderState : null
+}
+
+function optionalRenderPhase(value: unknown): RenderPhase | null {
+  if (value === undefined || value === null || value === '') return null
+  const normalized = normalizeToken(value)
+  return renderPhases.has(normalized as RenderPhase) ? normalized as RenderPhase : null
+}
+
+function publicArtifactUrl(value: unknown): string | null {
+  const url = nullableString(value)
+  return url && (/^https?:\/\//i.test(url) || url.startsWith('/api/')) ? url : null
+}
+
+export function parseEtaEstimate(value: unknown): EtaEstimate | null {
+  if (!isRecord(value)) return null
+  const item = value
+  const bounds = asRecord(first(item, 'bounds', 'confidence_bounds', 'confidenceBounds'))
+  const pick = (...keys: string[]): unknown => first(item, ...keys) ?? first(bounds, ...keys)
+  const rawState = normalizeToken(first(item, 'state', 'estimate_state', 'estimateState'))
+  const rawFreshness = normalizeToken(first(item, 'freshness', 'estimate_freshness', 'estimateFreshness'))
+  const state = rawState === 'calibrating' || rawState === 'stable' || rawState === 'degraded' || rawState === 'unavailable'
+    ? rawState
+    : 'unavailable'
+  const freshness = rawFreshness === 'fresh' || rawFreshness === 'stale'
+    ? rawFreshness
+    : typeof item.stale === 'boolean'
+      ? item.stale ? 'stale' : 'fresh'
+      : 'unknown'
+  const estimate: EtaEstimate = {
+    state,
+    p50Seconds: nullableNumber(pick(
+      'p50_seconds',
+      'p50Seconds',
+      'p50_seconds_remaining',
+      'p50SecondsRemaining',
+      'p50_remaining_seconds',
+      'p50RemainingSeconds',
+      'median_seconds',
+      'medianSeconds',
+    )),
+    p90Seconds: nullableNumber(pick(
+      'p90_seconds',
+      'p90Seconds',
+      'p90_seconds_remaining',
+      'p90SecondsRemaining',
+      'p90_remaining_seconds',
+      'p90RemainingSeconds',
+      'conservative_seconds',
+      'conservativeSeconds',
+    )),
+    p50CompletionAt: nullableString(pick(
+      'p50_completion_at',
+      'p50CompletionAt',
+      'p50_finish_at',
+      'p50FinishAt',
+      'estimated_completion_at',
+      'estimatedCompletionAt',
+    )),
+    p90CompletionAt: nullableString(pick(
+      'p90_completion_at',
+      'p90CompletionAt',
+      'p90_finish_at',
+      'p90FinishAt',
+      'conservative_completion_at',
+      'conservativeCompletionAt',
+    )),
+    confidence: confidence(first(item, 'confidence', 'eta_confidence', 'etaConfidence')),
+    freshness,
+    lastEstimateAt: nullableString(first(
+      item,
+      'last_estimate_at',
+      'lastEstimateAt',
+      'calculated_at',
+      'calculatedAt',
+      'updated_at',
+      'updatedAt',
+    )),
+    sampleCount: nullableNumber(first(item, 'sample_count', 'sampleCount', 'observations')),
+  }
+  return estimate.state !== 'unavailable'
+    || estimate.p50Seconds !== null
+    || estimate.p90Seconds !== null
+    || estimate.p50CompletionAt !== null
+    || estimate.p90CompletionAt !== null
+    ? estimate
+    : null
+}
+
+function parseWorker(value: unknown, index: number): WorkerProgress | null {
+  if (typeof value === 'string' && value.length > 0) {
+    return {
+      id: value,
+      status: 'active',
+      active: true,
+      currentTaskId: null,
+      currentFrame: null,
+      retryCount: 0,
+      failureCount: 0,
+      lastHeartbeatAt: null,
+    }
+  }
+  if (!isRecord(value)) return null
+  const status = normalizeToken(first(value, 'status', 'state'))
+  const id = stringValue(first(value, 'id', 'worker_id', 'workerId'), `worker-${index + 1}`)
+  return {
+    id,
+    status,
+    active: typeof value.active === 'boolean'
+      ? value.active
+      : status !== 'failed' && status !== 'lost' && status !== 'offline' && status !== 'stopped',
+    currentTaskId: nullableString(first(value, 'current_task_id', 'currentTaskId', 'task_id', 'taskId')),
+    currentFrame: nullableNumber(first(value, 'current_frame', 'currentFrame', 'frame')),
+    retryCount: numberValue(first(value, 'retry_count', 'retryCount', 'retries')),
+    failureCount: numberValue(first(value, 'failure_count', 'failureCount', 'failures')),
+    lastHeartbeatAt: nullableString(first(value, 'last_heartbeat_at', 'lastHeartbeatAt', 'heartbeat_at', 'heartbeatAt')),
+  }
+}
+
+function parseWorkers(value: unknown): WorkerProgress[] {
+  const candidate = Array.isArray(value)
+    ? value
+    : first(asRecord(value), 'workers', 'items', 'active_workers', 'activeWorkers')
+  return Array.isArray(candidate)
+    ? candidate.map(parseWorker).filter((worker): worker is WorkerProgress => worker !== null)
+    : []
+}
+
+function stageState(value: unknown): StageProgress['state'] {
+  const normalized = normalizeToken(value)
+  return normalized === 'pending'
+    || normalized === 'calibrating'
+    || normalized === 'running'
+    || normalized === 'paused'
+    || normalized === 'complete'
+    || normalized === 'failed'
+    || normalized === 'cancelled'
+    || normalized === 'skipped'
+    || normalized === 'indeterminate'
+    ? normalized
+    : 'unknown'
+}
+
+function parseStageProgress(value: unknown, index: number): StageProgress | null {
+  if (!isRecord(value)) return null
+  const units = asRecord(first(value, 'units', 'work'))
+  const rawProgress = nullableNumber(first(value, 'progress', 'progress_ratio', 'progressRatio', 'percent_complete', 'percentComplete'))
+  const progress = rawProgress === null ? null : Math.max(0, Math.min(1, rawProgress > 1 ? rawProgress / 100 : rawProgress))
+  const id = stringValue(first(value, 'id', 'stage_id', 'stageId', 'stage'), `stage-${index + 1}`)
+  const directEta = {
+    state: first(value, 'estimate_state', 'estimateState'),
+    confidence: first(value, 'eta_confidence', 'etaConfidence', 'confidence'),
+    p50RemainingSeconds: first(value, 'eta_p50_seconds', 'etaP50Seconds', 'p50_remaining_seconds', 'p50RemainingSeconds'),
+    p90RemainingSeconds: first(value, 'eta_p90_seconds', 'etaP90Seconds', 'p90_remaining_seconds', 'p90RemainingSeconds'),
+    lastEstimateAt: first(value, 'last_estimate_at', 'lastEstimateAt', 'updated_at', 'updatedAt'),
+  }
+  return {
+    id,
+    label: stringValue(first(value, 'label', 'display_name', 'displayName', 'name'), id),
+    state: stageState(first(value, 'state', 'status')),
+    completedUnits: nullableNumber(first(value, 'completed_units', 'completedUnits', 'completed'))
+      ?? nullableNumber(first(units, 'completed', 'done')),
+    totalUnits: nullableNumber(first(value, 'total_units', 'totalUnits', 'total'))
+      ?? nullableNumber(first(units, 'total')),
+    progress,
+    throughput: nullableNumber(first(value, 'throughput', 'throughput_per_second', 'throughputPerSecond', 'units_per_second', 'unitsPerSecond')),
+    throughputUnit: nullableString(first(value, 'throughput_unit', 'throughputUnit', 'unit')),
+    elapsedSeconds: nullableNumber(first(value, 'elapsed_seconds', 'elapsedSeconds')),
+    startedAt: nullableString(first(value, 'started_at', 'startedAt')),
+    updatedAt: nullableString(first(value, 'updated_at', 'updatedAt')),
+    eta: parseEtaEstimate(first(value, 'eta', 'eta_estimate', 'etaEstimate')) ?? parseEtaEstimate(directEta),
+  }
+}
+
+function parseStages(value: unknown): StageProgress[] {
+  const candidate = Array.isArray(value)
+    ? value
+    : first(asRecord(value), 'stages', 'items', 'stage_progress', 'stageProgress')
+  return Array.isArray(candidate)
+    ? candidate.map(parseStageProgress).filter((stage): stage is StageProgress => stage !== null)
+    : []
+}
+
+export function parseOutputVariantProgress(value: unknown, index = 0): OutputVariantProgress | null {
+  if (!isRecord(value)) return null
+  const item = value
+  const identity = asRecord(first(item, 'identity', 'variant_identity', 'variantIdentity', 'output_variant', 'outputVariant'))
+  const dimensions = asRecord(first(item, 'dimensions', 'resolution'))
+  const composition = asRecord(first(item, 'composition_profile', 'compositionProfile', 'composition'))
+  const profile = asRecord(first(item, 'render_profile', 'renderProfile', 'profile'))
+  const progress = asRecord(first(item, 'progress', 'frame_progress', 'frameProgress'))
+  const artifacts = asRecord(first(item, 'artifacts', 'latest_artifacts', 'latestArtifacts'))
+  const preview = asRecord(
+    first(artifacts, 'preview', 'latest_preview', 'latestPreview')
+      ?? first(progress, 'preview', 'latest_preview', 'latestPreview'),
+  )
+  const fullFrame = asRecord(first(artifacts, 'frame', 'full_frame', 'fullFrame', 'latest_frame', 'latestFrame'))
+  const pick = (...keys: string[]): unknown => first(item, ...keys) ?? first(progress, ...keys)
+  const pickIdentity = (...keys: string[]): unknown => first(item, ...keys) ?? first(identity, ...keys)
+  const previewReference = first(
+    item,
+    'preview_url',
+    'previewUrl',
+    'latest_frame_preview_url',
+    'latestFramePreviewUrl',
+  ) ?? first(progress, 'preview_url', 'previewUrl')
+    ?? first(preview, 'url', 'href', 'preview_url', 'previewUrl')
+  const fullFrameReference = first(
+    item,
+    'full_frame_url',
+    'fullFrameUrl',
+    'latest_full_frame_url',
+    'latestFullFrameUrl',
+  ) ?? first(progress, 'full_frame_url', 'fullFrameUrl')
+    ?? first(fullFrame, 'url', 'href', 'full_frame_url', 'fullFrameUrl')
+  const previewMatch = nullableString(previewReference)?.match(/frame[_-]?(\d{1,9})\.png/i)
+  const id = stringValue(
+    pickIdentity('id', 'variant_id', 'variantId', 'output_variant_id', 'outputVariantId'),
+    `variant-${index + 1}`,
+  )
+  const width = numberValue(first(item, 'width') ?? first(dimensions, 'width'))
+  const height = numberValue(first(item, 'height') ?? first(dimensions, 'height'))
+  const variantStages = parseStages(first(item, 'stages', 'stage_progress', 'stageProgress') ?? first(progress, 'stages', 'stage_progress', 'stageProgress'))
+  const explicitState = optionalRenderState(first(item, 'state', 'status') ?? first(progress, 'state', 'status'))
+  const inferredState: RenderState | null = variantStages.some((stage) => stage.state === 'failed')
+    ? 'failed'
+    : variantStages.length > 0 && variantStages.every((stage) => stage.state === 'complete' || stage.state === 'skipped')
+      ? 'complete'
+      : variantStages.some((stage) => stage.state === 'running')
+        ? 'running'
+        : variantStages.some((stage) => stage.state === 'paused')
+          ? 'paused_safely'
+          : null
+  return {
+    id,
+    displayName: stringValue(first(item, 'display_name', 'displayName', 'label', 'name'), id),
+    enabled: booleanValue(first(item, 'enabled'), true),
+    required: booleanValue(first(item, 'required')),
+    width,
+    height,
+    fps: nullableNumber(first(item, 'fps') ?? first(dimensions, 'fps')),
+    aspectRatio: nullableString(first(item, 'aspect_ratio', 'aspectRatio') ?? first(dimensions, 'aspect_ratio', 'aspectRatio')),
+    deliverableRole: nullableString(first(item, 'deliverable_role', 'deliverableRole', 'role')),
+    compositionMode: nullableString(first(item, 'composition_mode', 'compositionMode') ?? first(composition, 'mode')),
+    compositionProfileId: nullableString(first(
+      item,
+      'composition_profile_id',
+      'compositionProfileId',
+    )) ?? nullableString(first(composition, 'id')),
+    compositionProfileSha256: nullableString(first(
+      item,
+      'composition_profile_sha256',
+      'compositionProfileSha256',
+      'composition_sha256',
+      'compositionSha256',
+    )) ?? nullableString(first(composition, 'sha256', 'composition_sha256', 'compositionSha256')),
+    profileId: nullableString(first(item, 'profile_id', 'profileId', 'render_profile_id', 'renderProfileId'))
+      ?? nullableString(first(profile, 'id'))
+      ?? nullableString(first(identity, 'profile_id', 'profileId')),
+    profileSha256: nullableString(first(item, 'profile_sha256', 'profileSha256', 'render_profile_sha256', 'renderProfileSha256'))
+      ?? nullableString(first(profile, 'sha256'))
+      ?? nullableString(first(identity, 'profile_sha256', 'profileSha256')),
+    outputVariantSha256: nullableString(first(item, 'output_variant_sha256', 'outputVariantSha256')),
+    state: explicitState ?? inferredState,
+    phase: optionalRenderPhase(first(item, 'phase', 'stage') ?? first(progress, 'phase', 'stage')),
+    frameStart: nullableNumber(pick('frame_start', 'frameStart')),
+    frameEnd: nullableNumber(pick('frame_end', 'frameEnd')),
+    currentFrame: nullableNumber(pick('current_frame', 'currentFrame')),
+    currentFrameStartedAt: nullableString(pick('current_frame_started_at', 'currentFrameStartedAt')),
+    lastOutputAt: nullableString(pick('last_output_at', 'lastOutputAt')),
+    latestRenderedFrame: nullableNumber(pick(
+      'latest_rendered_frame',
+      'latestRenderedFrame',
+      'latest_rendered_frame_index',
+      'latestRenderedFrameIndex',
+    )),
+    latestSafeFrame: nullableNumber(pick(
+      'latest_safe_frame',
+      'latestSafeFrame',
+      'latest_safe_frame_index',
+      'latestSafeFrameIndex',
+      'latest_published_frame',
+      'latestPublishedFrame',
+    )),
+    renderedFrames: numberValue(pick('rendered_frames', 'renderedFrames', 'rendered_frame_count', 'renderedFrameCount')),
+    inFlightFrames: (() => {
+      const raw = pick('in_flight_frames', 'inFlightFrames', 'inflight_frames', 'inflightFrames', 'inflight_frame_count', 'inflightFrameCount')
+      return Array.isArray(raw) ? raw.length : numberValue(raw)
+    })(),
+    validatedFrames: numberValue(pick('validated_frames', 'validatedFrames', 'validated_frame_count', 'validatedFrameCount')),
+    publishedFrames: numberValue(
+      pick('published_frames', 'publishedFrames', 'published_frame_count', 'publishedFrameCount', 'safe_frames', 'safeFrames'),
+      numberValue(pick('validated_frames', 'validatedFrames', 'validated_frame_count', 'validatedFrameCount')),
+    ),
+    totalFrames: numberValue(pick('total_frames', 'totalFrames', 'total_frame_count', 'totalFrameCount')),
+    activeChunkId: nullableString(pick('active_chunk_id', 'activeChunkId', 'chunk_id', 'chunkId')),
+    chunkStart: nullableNumber(pick('chunk_start', 'chunkStart')),
+    chunkEnd: nullableNumber(pick('chunk_end', 'chunkEnd')),
+    currentChunkProgress: nullableNumber(pick('current_chunk_progress', 'currentChunkProgress')),
+    chunksCompleted: numberValue(pick('chunks_completed', 'chunksCompleted')),
+    chunksTotal: numberValue(pick('chunks_total', 'chunksTotal')),
+    previewUrl: publicArtifactUrl(previewReference),
+    fullFrameUrl: publicArtifactUrl(fullFrameReference),
+    previewFrame: nullableNumber(first(item, 'preview_frame', 'previewFrame') ?? first(preview, 'frame'))
+      ?? (previewMatch?.[1] ? Number.parseInt(previewMatch[1], 10) : null),
+    latestPreviewAt: nullableString(first(item, 'latest_preview_at', 'latestPreviewAt') ?? first(preview, 'created_at', 'createdAt', 'timestamp')),
+    workers: parseWorkers(
+      first(item, 'workers', 'active_workers', 'activeWorkers')
+        ?? first(progress, 'workers', 'active_worker_ids', 'activeWorkerIds'),
+    ),
+    retryCount: numberValue(pick('retry_count', 'retryCount', 'retries')),
+    failureCount: numberValue(pick('failure_count', 'failureCount', 'failures')),
+    stages: variantStages,
+    eta: parseEtaEstimate(first(item, 'eta', 'eta_estimate', 'etaEstimate', 'render_eta', 'renderEta')),
+  }
+}
+
+function parseOutputVariants(value: unknown): OutputVariantProgress[] {
+  const candidate = Array.isArray(value)
+    ? value
+    : first(asRecord(value), 'variants', 'items', 'output_variants', 'outputVariants')
+  return Array.isArray(candidate)
+    ? candidate.map(parseOutputVariantProgress).filter((variant): variant is OutputVariantProgress => variant !== null)
+    : []
+}
+
 export function parseRenderEvent(value: unknown): RenderEvent {
   const item = asRecord(value)
   const identity = asRecord(item.identity)
@@ -386,9 +719,30 @@ export function parseRenderEvent(value: unknown): RenderEvent {
   const safeStop = normalizeToken(first(item, 'safe_stop_status', 'safeStopStatus'))
   const previewReference = nullableString(first(item, 'preview_url', 'previewUrl', 'latest_frame_preview_reference', 'latest_frame_preview', 'latestFramePreview'))
   const previewMatch = previewReference?.match(/frame[_-]?(\d{1,9})\.png/i)
-  const previewUrl = previewReference && (/^https?:\/\//i.test(previewReference) || previewReference.startsWith('/api/'))
-    ? previewReference
-    : null
+  const previewUrl = publicArtifactUrl(previewReference)
+  const etaForecast = asRecord(first(
+    item,
+    'eta_forecast',
+    'etaForecast',
+    'matrix_forecast',
+    'matrixForecast',
+    'forecast',
+  ))
+  const variantForecasts = records(first(etaForecast, 'variant_forecasts', 'variantForecasts'))
+  const variantEta = new Map<string, EtaEstimate>()
+  variantForecasts.forEach((forecast) => {
+    const id = nullableString(first(forecast, 'output_variant_id', 'outputVariantId', 'variant_id', 'variantId', 'id'))
+    const estimate = parseEtaEstimate(forecast)
+    if (id && estimate) variantEta.set(id, estimate)
+  })
+  const outputVariants = parseOutputVariants(first(
+    item,
+    'output_variants',
+    'outputVariants',
+    'output_variant_progress',
+    'outputVariantProgress',
+    'variants',
+  )).map((variant) => ({ ...variant, eta: variant.eta ?? variantEta.get(variant.id) ?? null }))
   return {
     schemaVersion: stringValue(first(item, 'schema_version', 'schemaVersion'), '1'),
     sequence: numberValue(first(item, 'sequence', 'event_sequence', 'eventSequence')),
@@ -429,6 +783,7 @@ export function parseRenderEvent(value: unknown): RenderEvent {
     etaConfidence: confidence(first(item, 'eta_confidence', 'etaConfidence')),
     metrics: metrics(item.metrics, item),
     previewUrl,
+    fullFrameUrl: publicArtifactUrl(first(item, 'full_frame_url', 'fullFrameUrl', 'latest_full_frame_url', 'latestFullFrameUrl')),
     previewFrame: nullableNumber(first(item, 'preview_frame', 'previewFrame', 'latest_preview_frame', 'latestPreviewFrame'))
       ?? (previewMatch?.[1] ? Number.parseInt(previewMatch[1], 10) : null),
     latestPreviewAt: nullableString(first(item, 'latest_preview_at', 'latestPreviewAt')),
@@ -446,6 +801,15 @@ export function parseRenderEvent(value: unknown): RenderEvent {
       : null,
     currentFrameStartedAt: nullableString(first(item, 'current_frame_started_at', 'currentFrameStartedAt')),
     lastOutputAt: nullableString(first(item, 'last_output_at', 'lastOutputAt')),
+    activeVariantId: nullableString(first(item, 'active_variant_id', 'activeVariantId', 'output_variant_id', 'outputVariantId')),
+    outputVariants,
+    stages: parseStages(first(item, 'stages', 'stage_progress', 'stageProgress')),
+    eta: parseEtaEstimate(first(item, 'eta', 'eta_estimate', 'etaEstimate', 'render_eta', 'renderEta')),
+    aggregateEta: parseEtaEstimate(first(item, 'aggregate_eta', 'aggregateEta', 'total_eta', 'totalEta', 'job_eta', 'jobEta'))
+      ?? parseEtaEstimate(etaForecast),
+    workers: parseWorkers(first(item, 'workers', 'active_workers', 'activeWorkers')),
+    retryCount: numberValue(first(item, 'retry_count', 'retryCount', 'retries')),
+    failureCount: numberValue(first(item, 'failure_count', 'failureCount', 'failures')),
   }
 }
 

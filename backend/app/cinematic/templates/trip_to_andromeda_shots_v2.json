@@ -1,0 +1,3584 @@
+{
+  "schemaVersion": "2.0.0",
+  "storyPlanSchemaVersion": "2.0.0",
+  "projectId": "trip-to-andromeda-v2",
+  "seed": 84291,
+  "frameStart": 1,
+  "frameEnd": 13029,
+  "fps": 30,
+  "storyPlanSha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+  "lookProfileId": "andromeda-r13.1-final-look-v1",
+  "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+  "shots": [
+    {
+      "id": "andromeda-v2-shot-01-dead-moon-establish",
+      "sequence": 1,
+      "actId": "signal",
+      "name": "Dead Moon Establish",
+      "frameStart": 1,
+      "frameEnd": 260,
+      "durationFrames": 260,
+      "storyPurpose": "Establish the dormant engine as a small readable subject inside a functional dead-moon observatory.",
+      "protagonistState": "dormant",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "environmentSignature": [
+        "regolith-observatory-rim",
+        "collapsed-crystal-routing",
+        "distant-needle-beacon"
+      ],
+      "transitionIn": "Begin from black with the lunar rim revealing physical depth.",
+      "transitionOut": "The distant beacon begins a measured sweep toward the observatory.",
+      "cameraIntent": "Wide low-drift reveal with the engine below the horizontal center and clear lunar scale.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-signal-v1",
+        "vertical": "andromeda-v2-vertical-signal-v1"
+      },
+      "requiredLandmarks": [
+        "dead-moon-rim",
+        "needle-beacon"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        1,
+        130,
+        260
+      ],
+      "cameraRigId": "andromeda-v2-rig-signal-01",
+      "lensMm": 32,
+      "spatialLayers": {
+        "foreground": "regolith-observatory-rim",
+        "midground": "collapsed-crystal-routing",
+        "background": "distant-needle-beacon"
+      },
+      "dominantShape": "regolith-observatory-rim",
+      "secondaryNarrativeAction": "The distant beacon begins a measured sweep toward the observatory.",
+      "lightingIdentity": "cold-lunar-teal-with-localized-amber-signal-shot-01",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-01-dead-moon-establish-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-beacon-and-crystal-emission",
+          "smoothingFrames": 30,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-01-horizontal",
+          "lensMm": 32,
+          "framingIntent": "16:9 authored staging: Wide low-drift reveal with the engine below the horizontal center and clear lunar scale.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "regolith-observatory-rim on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-01-vertical",
+          "lensMm": 42,
+          "framingIntent": "9:16 independent depth-stack for Dead Moon Establish; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "regolith-observatory-rim on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-02-beacon-sweep",
+      "sequence": 2,
+      "actId": "signal",
+      "name": "Beacon Sweep",
+      "frameStart": 261,
+      "frameEnd": 521,
+      "durationFrames": 261,
+      "storyPurpose": "Turn the distant transmission into a directional event that visibly searches the dormant structure.",
+      "protagonistState": "dormant",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "environmentSignature": [
+        "needle-beacon-arc",
+        "weathered-observatory-spine",
+        "cold-dust-parallax"
+      ],
+      "transitionIn": "Match the beacon position from the establishing frame.",
+      "transitionOut": "The sweep catches one buried crystal route beneath the engine.",
+      "cameraIntent": "Long-lens lateral track that preserves beacon direction and foreground observatory ribs.",
+      "complexityClass": "light",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-signal-v1",
+        "vertical": "andromeda-v2-vertical-signal-v1"
+      },
+      "requiredLandmarks": [
+        "needle-beacon",
+        "buried-crystal-route"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        261,
+        391,
+        521
+      ],
+      "cameraRigId": "andromeda-v2-rig-signal-02",
+      "lensMm": 65,
+      "spatialLayers": {
+        "foreground": "needle-beacon-arc",
+        "midground": "weathered-observatory-spine",
+        "background": "cold-dust-parallax"
+      },
+      "dominantShape": "needle-beacon-arc",
+      "secondaryNarrativeAction": "The sweep catches one buried crystal route beneath the engine.",
+      "lightingIdentity": "cold-lunar-teal-with-localized-amber-signal-shot-02",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-02-beacon-sweep-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-beacon-and-crystal-emission",
+          "smoothingFrames": 30,
+          "maximumInfluenceFraction": 0.08,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-02-horizontal",
+          "lensMm": 65,
+          "framingIntent": "16:9 authored staging: Long-lens lateral track that preserves beacon direction and foreground observatory ribs.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "needle-beacon-arc on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-02-vertical",
+          "lensMm": 85,
+          "framingIntent": "9:16 independent depth-stack for Beacon Sweep; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "needle-beacon-arc on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-03-ruin-answer",
+      "sequence": 3,
+      "actId": "signal",
+      "name": "Ruin Answer",
+      "frameStart": 522,
+      "frameEnd": 782,
+      "durationFrames": 261,
+      "storyPurpose": "Show the observatory answering through connected material channels rather than decorative emission.",
+      "protagonistState": "signalled",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "environmentSignature": [
+        "functional-crystal-route",
+        "connected-stone-supports",
+        "amber-answer-pulse"
+      ],
+      "transitionIn": "The caught light continues as a single routed pulse.",
+      "transitionOut": "The pulse reaches the engine's integrated front aperture.",
+      "cameraIntent": "Macro-to-medium route follow with a clear final eyeline to the engine.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-signal-v1",
+        "vertical": "andromeda-v2-vertical-signal-v1"
+      },
+      "requiredLandmarks": [
+        "functional-crystal-route",
+        "front-aperture"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        522,
+        652,
+        782
+      ],
+      "cameraRigId": "andromeda-v2-rig-signal-03",
+      "lensMm": 80,
+      "spatialLayers": {
+        "foreground": "functional-crystal-route",
+        "midground": "connected-stone-supports",
+        "background": "amber-answer-pulse"
+      },
+      "dominantShape": "functional-crystal-route",
+      "secondaryNarrativeAction": "The pulse reaches the engine's integrated front aperture.",
+      "lightingIdentity": "cold-lunar-teal-with-localized-amber-signal-shot-03",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-03-ruin-answer-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-beacon-and-crystal-emission",
+          "smoothingFrames": 30,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-03-horizontal",
+          "lensMm": 80,
+          "framingIntent": "16:9 authored staging: Macro-to-medium route follow with a clear final eyeline to the engine.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "functional-crystal-route on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-03-vertical",
+          "lensMm": 95,
+          "framingIntent": "9:16 independent depth-stack for Ruin Answer; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "functional-crystal-route on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-04-ancient-engine-stir",
+      "sequence": 4,
+      "actId": "signal",
+      "name": "Ancient Engine Stir",
+      "frameStart": 783,
+      "frameEnd": 1042,
+      "durationFrames": 260,
+      "storyPurpose": "Reveal asymmetric orientation and restrained internal motion before the engine can travel.",
+      "protagonistState": "signalled",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "environmentSignature": [
+        "engine-cradle",
+        "single-armor-band",
+        "aperture-amber-slit"
+      ],
+      "transitionIn": "The routed pulse becomes a narrow aperture response.",
+      "transitionOut": "The engine turns toward a chamber seam beyond the cradle.",
+      "cameraIntent": "Close asymmetric orbit that keeps the front aperture and shell orientation unambiguous.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-signal-v1",
+        "vertical": "andromeda-v2-vertical-signal-v1"
+      },
+      "requiredLandmarks": [
+        "front-aperture",
+        "chamber-seam"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        783,
+        912,
+        1042
+      ],
+      "cameraRigId": "andromeda-v2-rig-signal-04",
+      "lensMm": 55,
+      "spatialLayers": {
+        "foreground": "engine-cradle",
+        "midground": "single-armor-band",
+        "background": "aperture-amber-slit"
+      },
+      "dominantShape": "engine-cradle",
+      "secondaryNarrativeAction": "The engine turns toward a chamber seam beyond the cradle.",
+      "lightingIdentity": "cold-lunar-teal-with-localized-amber-signal-shot-04",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-04-ancient-engine-stir-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-beacon-and-crystal-emission",
+          "smoothingFrames": 30,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-04-horizontal",
+          "lensMm": 55,
+          "framingIntent": "16:9 authored staging: Close asymmetric orbit that keeps the front aperture and shell orientation unambiguous.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "engine-cradle on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-04-vertical",
+          "lensMm": 70,
+          "framingIntent": "9:16 independent depth-stack for Ancient Engine Stir; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "engine-cradle on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-05-chamber-call",
+      "sequence": 5,
+      "actId": "signal",
+      "name": "Chamber Call",
+      "frameStart": 1043,
+      "frameEnd": 1303,
+      "durationFrames": 261,
+      "storyPurpose": "Convert the signal into a visible path and end the act on the protagonist's decision to face it.",
+      "protagonistState": "signalled",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "environmentSignature": [
+        "opening-chamber-seam",
+        "aligned-routing-rails",
+        "engine-orientation-cue"
+      ],
+      "transitionIn": "The chamber seam answers the protagonist's turn.",
+      "transitionOut": "The seam opens into the reactivation iris chamber.",
+      "cameraIntent": "Subject-follow push that holds the protagonist against the opening geometry.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-signal-v1",
+        "vertical": "andromeda-v2-vertical-signal-v1"
+      },
+      "requiredLandmarks": [
+        "opening-chamber-seam",
+        "aligned-routing-rails"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        1043,
+        1173,
+        1303
+      ],
+      "cameraRigId": "andromeda-v2-rig-signal-05",
+      "lensMm": 42,
+      "spatialLayers": {
+        "foreground": "opening-chamber-seam",
+        "midground": "aligned-routing-rails",
+        "background": "engine-orientation-cue"
+      },
+      "dominantShape": "opening-chamber-seam",
+      "secondaryNarrativeAction": "The seam opens into the reactivation iris chamber.",
+      "lightingIdentity": "cold-lunar-teal-with-localized-amber-signal-shot-05",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-05-chamber-call-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-beacon-and-crystal-emission",
+          "smoothingFrames": 30,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-05-horizontal",
+          "lensMm": 42,
+          "framingIntent": "16:9 authored staging: Subject-follow push that holds the protagonist against the opening geometry.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "opening-chamber-seam on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-signal-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-05-vertical",
+          "lensMm": 55,
+          "framingIntent": "9:16 independent depth-stack for Chamber Call; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "opening-chamber-seam on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-signal-acquisition"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-06-aperture-ignition",
+      "sequence": 6,
+      "actId": "awakening",
+      "name": "Aperture Ignition",
+      "frameStart": 1304,
+      "frameEnd": 1616,
+      "durationFrames": 313,
+      "storyPurpose": "Awaken the front aperture with restrained amber light while preserving the ancient-engine silhouette.",
+      "protagonistState": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "environmentSignature": [
+        "iris-chamber-shell",
+        "amber-aperture-line",
+        "teal-return-light"
+      ],
+      "transitionIn": "Continue the seam opening as connected chamber petals.",
+      "transitionOut": "A single armor band answers the aperture line.",
+      "cameraIntent": "Extreme close orientation view with a slow reveal of surrounding chamber scale.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-awakening-v1",
+        "vertical": "andromeda-v2-vertical-awakening-v1"
+      },
+      "requiredLandmarks": [
+        "front-aperture",
+        "iris-chamber-shell"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        1304,
+        1460,
+        1616
+      ],
+      "cameraRigId": "andromeda-v2-rig-awakening-06",
+      "lensMm": 85,
+      "spatialLayers": {
+        "foreground": "iris-chamber-shell",
+        "midground": "amber-aperture-line",
+        "background": "teal-return-light"
+      },
+      "dominantShape": "iris-chamber-shell",
+      "secondaryNarrativeAction": "A single armor band answers the aperture line.",
+      "lightingIdentity": "restrained-teal-return-with-amber-aperture-key-shot-06",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-06-aperture-ignition-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "localized-aperture-and-routing-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-06-horizontal",
+          "lensMm": 85,
+          "framingIntent": "16:9 authored staging: Extreme close orientation view with a slow reveal of surrounding chamber scale.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "iris-chamber-shell on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-06-vertical",
+          "lensMm": 105,
+          "framingIntent": "9:16 independent depth-stack for Aperture Ignition; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "iris-chamber-shell on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-07-armor-band-rise",
+      "sequence": 7,
+      "actId": "awakening",
+      "name": "Armor Band Rise",
+      "frameStart": 1617,
+      "frameEnd": 1928,
+      "durationFrames": 312,
+      "storyPurpose": "Make one major armor band mechanically settle while the chamber releases its old restraints.",
+      "protagonistState": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "environmentSignature": [
+        "single-armor-band",
+        "releasing-cradle-clamps",
+        "connected-support-rhythm"
+      ],
+      "transitionIn": "The aperture line climbs into the single armor band.",
+      "transitionOut": "Released clamps expose the engine's independent rotation.",
+      "cameraIntent": "Three-quarter medium orbit with opposing near ribs for depth, never hiding the aperture.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-awakening-v1",
+        "vertical": "andromeda-v2-vertical-awakening-v1"
+      },
+      "requiredLandmarks": [
+        "single-armor-band",
+        "releasing-cradle-clamps"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        1617,
+        1772,
+        1928
+      ],
+      "cameraRigId": "andromeda-v2-rig-awakening-07",
+      "lensMm": 58,
+      "spatialLayers": {
+        "foreground": "single-armor-band",
+        "midground": "releasing-cradle-clamps",
+        "background": "connected-support-rhythm"
+      },
+      "dominantShape": "single-armor-band",
+      "secondaryNarrativeAction": "Released clamps expose the engine's independent rotation.",
+      "lightingIdentity": "restrained-teal-return-with-amber-aperture-key-shot-07",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-07-armor-band-rise-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "localized-aperture-and-routing-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-07-horizontal",
+          "lensMm": 58,
+          "framingIntent": "16:9 authored staging: Three-quarter medium orbit with opposing near ribs for depth, never hiding the aperture.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "single-armor-band on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-07-vertical",
+          "lensMm": 72,
+          "framingIntent": "9:16 independent depth-stack for Armor Band Rise; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "single-armor-band on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-08-orientation-choice",
+      "sequence": 8,
+      "actId": "awakening",
+      "name": "Orientation Choice",
+      "frameStart": 1929,
+      "frameEnd": 2241,
+      "durationFrames": 313,
+      "storyPurpose": "Show the protagonist choosing the signal axis independently from the chamber's motion.",
+      "protagonistState": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "environmentSignature": [
+        "signal-axis-crystals",
+        "asymmetric-engine-shell",
+        "stationary-chamber-ribs"
+      ],
+      "transitionIn": "The chamber holds while the protagonist turns.",
+      "transitionOut": "Signal-axis crystals ignite in the chosen direction.",
+      "cameraIntent": "Locked chamber perspective with controlled camera lag after the protagonist turn.",
+      "complexityClass": "light",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-awakening-v1",
+        "vertical": "andromeda-v2-vertical-awakening-v1"
+      },
+      "requiredLandmarks": [
+        "signal-axis-crystals",
+        "front-aperture"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        1929,
+        2085,
+        2241
+      ],
+      "cameraRigId": "andromeda-v2-rig-awakening-08",
+      "lensMm": 65,
+      "spatialLayers": {
+        "foreground": "signal-axis-crystals",
+        "midground": "asymmetric-engine-shell",
+        "background": "stationary-chamber-ribs"
+      },
+      "dominantShape": "signal-axis-crystals",
+      "secondaryNarrativeAction": "Signal-axis crystals ignite in the chosen direction.",
+      "lightingIdentity": "restrained-teal-return-with-amber-aperture-key-shot-08",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-08-orientation-choice-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "localized-aperture-and-routing-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.08,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-08-horizontal",
+          "lensMm": 65,
+          "framingIntent": "16:9 authored staging: Locked chamber perspective with controlled camera lag after the protagonist turn.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "signal-axis-crystals on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-08-vertical",
+          "lensMm": 80,
+          "framingIntent": "9:16 independent depth-stack for Orientation Choice; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "signal-axis-crystals on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-09-chamber-release",
+      "sequence": 9,
+      "actId": "awakening",
+      "name": "Chamber Release",
+      "frameStart": 2242,
+      "frameEnd": 2553,
+      "durationFrames": 312,
+      "storyPurpose": "Open the functional chamber shell and give the engine space to initiate its own forward movement.",
+      "protagonistState": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "environmentSignature": [
+        "hinged-chamber-petals",
+        "launch-axis-opening",
+        "functional-crystal-routing"
+      ],
+      "transitionIn": "Chosen-axis crystals unlock chamber hinges.",
+      "transitionOut": "The first launch-spine rib appears beyond the opening.",
+      "cameraIntent": "Wide chamber reveal with foreground petals creating parallax around an unobscured engine.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-awakening-v1",
+        "vertical": "andromeda-v2-vertical-awakening-v1"
+      },
+      "requiredLandmarks": [
+        "hinged-chamber-petals",
+        "launch-axis-opening"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        2242,
+        2397,
+        2553
+      ],
+      "cameraRigId": "andromeda-v2-rig-awakening-09",
+      "lensMm": 34,
+      "spatialLayers": {
+        "foreground": "hinged-chamber-petals",
+        "midground": "launch-axis-opening",
+        "background": "functional-crystal-routing"
+      },
+      "dominantShape": "hinged-chamber-petals",
+      "secondaryNarrativeAction": "The first launch-spine rib appears beyond the opening.",
+      "lightingIdentity": "restrained-teal-return-with-amber-aperture-key-shot-09",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-09-chamber-release-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "localized-aperture-and-routing-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-09-horizontal",
+          "lensMm": 34,
+          "framingIntent": "16:9 authored staging: Wide chamber reveal with foreground petals creating parallax around an unobscured engine.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "hinged-chamber-petals on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-09-vertical",
+          "lensMm": 45,
+          "framingIntent": "9:16 independent depth-stack for Chamber Release; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "hinged-chamber-petals on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-10-launch-axis-reveal",
+      "sequence": 10,
+      "actId": "awakening",
+      "name": "Launch Axis Reveal",
+      "frameStart": 2554,
+      "frameEnd": 2866,
+      "durationFrames": 313,
+      "storyPurpose": "Reveal the route as constructed depth and end with the protagonist leaving its cradle.",
+      "protagonistState": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "environmentSignature": [
+        "launch-spine-vanishing-point",
+        "opening-chamber-petals",
+        "guide-rail-ignition"
+      ],
+      "transitionIn": "The opening petals frame the first corridor ribs.",
+      "transitionOut": "Camera and protagonist cross the chamber threshold into the launch spine.",
+      "cameraIntent": "Scale pullback into rear-follow framing with independent engine acceleration.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-awakening-v1",
+        "vertical": "andromeda-v2-vertical-awakening-v1"
+      },
+      "requiredLandmarks": [
+        "launch-spine-vanishing-point",
+        "guide-rail-ignition"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        2554,
+        2710,
+        2866
+      ],
+      "cameraRigId": "andromeda-v2-rig-awakening-10",
+      "lensMm": 30,
+      "spatialLayers": {
+        "foreground": "launch-spine-vanishing-point",
+        "midground": "opening-chamber-petals",
+        "background": "guide-rail-ignition"
+      },
+      "dominantShape": "launch-spine-vanishing-point",
+      "secondaryNarrativeAction": "Camera and protagonist cross the chamber threshold into the launch spine.",
+      "lightingIdentity": "restrained-teal-return-with-amber-aperture-key-shot-10",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-10-launch-axis-reveal-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "localized-aperture-and-routing-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-10-horizontal",
+          "lensMm": 30,
+          "framingIntent": "16:9 authored staging: Scale pullback into rear-follow framing with independent engine acceleration.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "launch-spine-vanishing-point on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-awakening-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-10-vertical",
+          "lensMm": 42,
+          "framingIntent": "9:16 independent depth-stack for Launch Axis Reveal; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "launch-spine-vanishing-point on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-orientation-choice"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-11-commitment-lift",
+      "sequence": 11,
+      "actId": "departure",
+      "name": "Commitment Lift",
+      "frameStart": 2867,
+      "frameEnd": 3231,
+      "durationFrames": 365,
+      "storyPurpose": "Cross the point of return with the chamber visibly receding behind self-propelled movement.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "environmentSignature": [
+        "receding-chamber-aperture",
+        "launch-spine-ribs",
+        "restrained-rear-wake"
+      ],
+      "transitionIn": "Carry the chamber threshold across the cut as a receding landmark.",
+      "transitionOut": "Guide packets overtake the protagonist and establish corridor speed.",
+      "cameraIntent": "Rear follow with deliberate camera lag and a readable receding chamber.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-departure-v1",
+        "vertical": "andromeda-v2-vertical-departure-v1"
+      },
+      "requiredLandmarks": [
+        "receding-chamber-aperture",
+        "launch-spine-ribs"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        2867,
+        3049,
+        3231
+      ],
+      "cameraRigId": "andromeda-v2-rig-departure-11",
+      "lensMm": 38,
+      "spatialLayers": {
+        "foreground": "receding-chamber-aperture",
+        "midground": "launch-spine-ribs",
+        "background": "restrained-rear-wake"
+      },
+      "dominantShape": "receding-chamber-aperture",
+      "secondaryNarrativeAction": "Guide packets overtake the protagonist and establish corridor speed.",
+      "lightingIdentity": "cobalt-guide-light-with-protected-amber-subject-shot-11",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-11-commitment-lift-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-guide-packet-density",
+          "smoothingFrames": 12,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-11-horizontal",
+          "lensMm": 38,
+          "framingIntent": "16:9 authored staging: Rear follow with deliberate camera lag and a readable receding chamber.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "receding-chamber-aperture on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-11-vertical",
+          "lensMm": 50,
+          "framingIntent": "9:16 independent depth-stack for Commitment Lift; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "receding-chamber-aperture on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-12-rib-corridor-entry",
+      "sequence": 12,
+      "actId": "departure",
+      "name": "Rib Corridor Entry",
+      "frameStart": 3232,
+      "frameEnd": 3596,
+      "durationFrames": 365,
+      "storyPurpose": "Make the launch corridor architectural rhythm and functional routing legible at speed.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "environmentSignature": [
+        "connected-rib-rhythm",
+        "cobalt-guide-rails",
+        "deep-vanishing-axis"
+      ],
+      "transitionIn": "Passing guide packets light the first connected rib.",
+      "transitionOut": "The camera releases from rear follow into an authored side track.",
+      "cameraIntent": "Centered rear entry that shifts laterally only after the vanishing axis is established.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-departure-v1",
+        "vertical": "andromeda-v2-vertical-departure-v1"
+      },
+      "requiredLandmarks": [
+        "connected-rib-rhythm",
+        "deep-vanishing-axis"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        3232,
+        3414,
+        3596
+      ],
+      "cameraRigId": "andromeda-v2-rig-departure-12",
+      "lensMm": 32,
+      "spatialLayers": {
+        "foreground": "connected-rib-rhythm",
+        "midground": "cobalt-guide-rails",
+        "background": "deep-vanishing-axis"
+      },
+      "dominantShape": "connected-rib-rhythm",
+      "secondaryNarrativeAction": "The camera releases from rear follow into an authored side track.",
+      "lightingIdentity": "cobalt-guide-light-with-protected-amber-subject-shot-12",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-12-rib-corridor-entry-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-guide-packet-density",
+          "smoothingFrames": 12,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-12-horizontal",
+          "lensMm": 32,
+          "framingIntent": "16:9 authored staging: Centered rear entry that shifts laterally only after the vanishing axis is established.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "connected-rib-rhythm on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-12-vertical",
+          "lensMm": 44,
+          "framingIntent": "9:16 independent depth-stack for Rib Corridor Entry; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "connected-rib-rhythm on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-13-guide-packet-chase",
+      "sequence": 13,
+      "actId": "departure",
+      "name": "Guide Packet Chase",
+      "frameStart": 3597,
+      "frameEnd": 3961,
+      "durationFrames": 365,
+      "storyPurpose": "Use guide packets as measured speed references while maintaining protagonist agency.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "environmentSignature": [
+        "guide-packet-streams",
+        "functional-conduit-banks",
+        "engine-wake"
+      ],
+      "transitionIn": "A guide packet crosses foreground and pulls the camera into motion.",
+      "transitionOut": "The engine overtakes the packet stream and exposes a monumental side pylon.",
+      "cameraIntent": "Controlled chase with different packet, protagonist, and camera velocities.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-departure-v1",
+        "vertical": "andromeda-v2-vertical-departure-v1"
+      },
+      "requiredLandmarks": [
+        "guide-packet-streams",
+        "functional-conduit-banks"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        3597,
+        3779,
+        3961
+      ],
+      "cameraRigId": "andromeda-v2-rig-departure-13",
+      "lensMm": 40,
+      "spatialLayers": {
+        "foreground": "guide-packet-streams",
+        "midground": "functional-conduit-banks",
+        "background": "engine-wake"
+      },
+      "dominantShape": "guide-packet-streams",
+      "secondaryNarrativeAction": "The engine overtakes the packet stream and exposes a monumental side pylon.",
+      "lightingIdentity": "cobalt-guide-light-with-protected-amber-subject-shot-13",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-13-guide-packet-chase-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-guide-packet-density",
+          "smoothingFrames": 12,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-13-horizontal",
+          "lensMm": 40,
+          "framingIntent": "16:9 authored staging: Controlled chase with different packet, protagonist, and camera velocities.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "guide-packet-streams on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-13-vertical",
+          "lensMm": 52,
+          "framingIntent": "9:16 independent depth-stack for Guide Packet Chase; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "guide-packet-streams on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-14-parallax-pylon-pass",
+      "sequence": 14,
+      "actId": "departure",
+      "name": "Parallax Pylon Pass",
+      "frameStart": 3962,
+      "frameEnd": 4326,
+      "durationFrames": 365,
+      "storyPurpose": "Prove real spatial depth through a bounded foreground occlusion and opposing side-track movement.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "environmentSignature": [
+        "foreground-structural-pylon",
+        "midground-engine-track",
+        "background-routing-lattice"
+      ],
+      "transitionIn": "The revealed pylon enters foreground with a protected subject gap.",
+      "transitionOut": "Its trailing edge reveals the distant nested-ring gate.",
+      "cameraIntent": "Fast side track with bounded foreground occlusion and continuous aperture visibility.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-departure-v1",
+        "vertical": "andromeda-v2-vertical-departure-v1"
+      },
+      "requiredLandmarks": [
+        "foreground-structural-pylon",
+        "distant-nested-ring-gate"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        3962,
+        4144,
+        4326
+      ],
+      "cameraRigId": "andromeda-v2-rig-departure-14",
+      "lensMm": 36,
+      "spatialLayers": {
+        "foreground": "foreground-structural-pylon",
+        "midground": "midground-engine-track",
+        "background": "background-routing-lattice"
+      },
+      "dominantShape": "foreground-structural-pylon",
+      "secondaryNarrativeAction": "Its trailing edge reveals the distant nested-ring gate.",
+      "lightingIdentity": "cobalt-guide-light-with-protected-amber-subject-shot-14",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-14-parallax-pylon-pass-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-guide-packet-density",
+          "smoothingFrames": 12,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-14-horizontal",
+          "lensMm": 36,
+          "framingIntent": "16:9 authored staging: Fast side track with bounded foreground occlusion and continuous aperture visibility.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "foreground-structural-pylon on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-14-vertical",
+          "lensMm": 48,
+          "framingIntent": "9:16 independent depth-stack for Parallax Pylon Pass; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "foreground-structural-pylon on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-15-first-threshold-sight",
+      "sequence": 15,
+      "actId": "departure",
+      "name": "First Threshold Sight",
+      "frameStart": 4327,
+      "frameEnd": 4690,
+      "durationFrames": 364,
+      "storyPurpose": "Resolve the gate from a luminous target into a massive layered machine with destination depth.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "environmentSignature": [
+        "nested-ring-silhouette",
+        "destination-depth-slit",
+        "converging-launch-rails"
+      ],
+      "transitionIn": "The pylon clears to reveal the complete gate silhouette.",
+      "transitionOut": "Converging launch rails become the gate's connected outer supports.",
+      "cameraIntent": "Compression-to-wide reveal that keeps the gate larger than frame and the engine directional.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-departure-v1",
+        "vertical": "andromeda-v2-vertical-departure-v1"
+      },
+      "requiredLandmarks": [
+        "nested-ring-silhouette",
+        "destination-depth-slit"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        4327,
+        4508,
+        4690
+      ],
+      "cameraRigId": "andromeda-v2-rig-departure-15",
+      "lensMm": 28,
+      "spatialLayers": {
+        "foreground": "nested-ring-silhouette",
+        "midground": "destination-depth-slit",
+        "background": "converging-launch-rails"
+      },
+      "dominantShape": "nested-ring-silhouette",
+      "secondaryNarrativeAction": "Converging launch rails become the gate's connected outer supports.",
+      "lightingIdentity": "cobalt-guide-light-with-protected-amber-subject-shot-15",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-15-first-threshold-sight-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-guide-packet-density",
+          "smoothingFrames": 12,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-15-horizontal",
+          "lensMm": 28,
+          "framingIntent": "16:9 authored staging: Compression-to-wide reveal that keeps the gate larger than frame and the engine directional.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "nested-ring-silhouette on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-departure-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-15-vertical",
+          "lensMm": 36,
+          "framingIntent": "9:16 independent depth-stack for First Threshold Sight; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "nested-ring-silhouette on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-forward-travel"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-16-monolith-approach",
+      "sequence": 16,
+      "actId": "gates",
+      "name": "Monolith Approach",
+      "frameStart": 4691,
+      "frameEnd": 5107,
+      "durationFrames": 417,
+      "storyPurpose": "Establish the selected nested-ring monolith as a connected machine with a readable crossing axis.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "environmentSignature": [
+        "outer-stone-monolith",
+        "moving-lock-rings",
+        "localized-membrane"
+      ],
+      "transitionIn": "Launch rails lock into the monolith supports without a spatial reset.",
+      "transitionOut": "The lock rings begin independent alignment around the destination slit.",
+      "cameraIntent": "Low gate approach with the protagonist protected against the brightest aperture region.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-gates-v1",
+        "vertical": "andromeda-v2-vertical-gates-v1"
+      },
+      "requiredLandmarks": [
+        "outer-stone-monolith",
+        "destination-depth-slit"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        4691,
+        4899,
+        5107
+      ],
+      "cameraRigId": "andromeda-v2-rig-gates-16",
+      "lensMm": 30,
+      "spatialLayers": {
+        "foreground": "outer-stone-monolith",
+        "midground": "moving-lock-rings",
+        "background": "localized-membrane"
+      },
+      "dominantShape": "outer-stone-monolith",
+      "secondaryNarrativeAction": "The lock rings begin independent alignment around the destination slit.",
+      "lightingIdentity": "teal-monolith-depth-with-localized-cyan-membrane-shot-16",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-16-monolith-approach-micro-response",
+          "sourceFeature": "smoothed-bass-energy",
+          "target": "localized-lock-ring-and-membrane-emission",
+          "smoothingFrames": 18,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-16-horizontal",
+          "lensMm": 30,
+          "framingIntent": "16:9 authored staging: Low gate approach with the protagonist protected against the brightest aperture region.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "outer-stone-monolith on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-16-vertical",
+          "lensMm": 40,
+          "framingIntent": "9:16 independent depth-stack for Monolith Approach; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "outer-stone-monolith on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-17-lock-ring-alignment",
+      "sequence": 17,
+      "actId": "gates",
+      "name": "Lock Ring Alignment",
+      "frameStart": 5108,
+      "frameEnd": 5524,
+      "durationFrames": 417,
+      "storyPurpose": "Show ring mechanics aligning around, not replacing, the localized threshold membrane.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "environmentSignature": [
+        "counter-rotating-lock-rings",
+        "connected-ring-drives",
+        "destination-depth"
+      ],
+      "transitionIn": "Continue the first ring movement from the approach.",
+      "transitionOut": "Alignment tightens the membrane locally around the protagonist path.",
+      "cameraIntent": "Offset scale pullback that separates every major ring and preserves destination depth.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-gates-v1",
+        "vertical": "andromeda-v2-vertical-gates-v1"
+      },
+      "requiredLandmarks": [
+        "counter-rotating-lock-rings",
+        "destination-depth"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        5108,
+        5316,
+        5524
+      ],
+      "cameraRigId": "andromeda-v2-rig-gates-17",
+      "lensMm": 35,
+      "spatialLayers": {
+        "foreground": "counter-rotating-lock-rings",
+        "midground": "connected-ring-drives",
+        "background": "destination-depth"
+      },
+      "dominantShape": "counter-rotating-lock-rings",
+      "secondaryNarrativeAction": "Alignment tightens the membrane locally around the protagonist path.",
+      "lightingIdentity": "teal-monolith-depth-with-localized-cyan-membrane-shot-17",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-17-lock-ring-alignment-micro-response",
+          "sourceFeature": "smoothed-bass-energy",
+          "target": "localized-lock-ring-and-membrane-emission",
+          "smoothingFrames": 18,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-17-horizontal",
+          "lensMm": 35,
+          "framingIntent": "16:9 authored staging: Offset scale pullback that separates every major ring and preserves destination depth.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "counter-rotating-lock-rings on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-17-vertical",
+          "lensMm": 46,
+          "framingIntent": "9:16 independent depth-stack for Lock Ring Alignment; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "counter-rotating-lock-rings on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-18-membrane-anticipation",
+      "sequence": 18,
+      "actId": "gates",
+      "name": "Membrane Anticipation",
+      "frameStart": 5525,
+      "frameEnd": 5941,
+      "durationFrames": 417,
+      "storyPurpose": "Give the protagonist a visible anticipation beat before localized compression.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "environmentSignature": [
+        "localized-threshold-membrane",
+        "engine-anticipation-posture",
+        "ring-alignment-depth"
+      ],
+      "transitionIn": "Ring alignment narrows the path while the engine decelerates.",
+      "transitionOut": "The aperture and armor band compress only at the membrane contact zone.",
+      "cameraIntent": "Close threshold perspective with clear engine orientation and no full-frame cyan wash.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-gates-v1",
+        "vertical": "andromeda-v2-vertical-gates-v1"
+      },
+      "requiredLandmarks": [
+        "localized-threshold-membrane",
+        "engine-front-aperture"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        5525,
+        5733,
+        5941
+      ],
+      "cameraRigId": "andromeda-v2-rig-gates-18",
+      "lensMm": 50,
+      "spatialLayers": {
+        "foreground": "localized-threshold-membrane",
+        "midground": "engine-anticipation-posture",
+        "background": "ring-alignment-depth"
+      },
+      "dominantShape": "localized-threshold-membrane",
+      "secondaryNarrativeAction": "The aperture and armor band compress only at the membrane contact zone.",
+      "lightingIdentity": "teal-monolith-depth-with-localized-cyan-membrane-shot-18",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-18-membrane-anticipation-micro-response",
+          "sourceFeature": "smoothed-bass-energy",
+          "target": "localized-lock-ring-and-membrane-emission",
+          "smoothingFrames": 18,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-18-horizontal",
+          "lensMm": 50,
+          "framingIntent": "16:9 authored staging: Close threshold perspective with clear engine orientation and no full-frame cyan wash.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "localized-threshold-membrane on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-18-vertical",
+          "lensMm": 65,
+          "framingIntent": "9:16 independent depth-stack for Membrane Anticipation; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "localized-threshold-membrane on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-19-localized-crossing",
+      "sequence": 19,
+      "actId": "gates",
+      "name": "Localized Crossing",
+      "frameStart": 5942,
+      "frameEnd": 6358,
+      "durationFrames": 417,
+      "storyPurpose": "Cross the membrane with bounded deformation, a readable recovery, and independent camera reaction.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "environmentSignature": [
+        "localized-compression-zone",
+        "post-crossing-depth",
+        "restrained-shock-ring"
+      ],
+      "transitionIn": "Begin on the exact anticipation axis.",
+      "transitionOut": "The recovered engine exits while a restrained shock ring reaches the locks.",
+      "cameraIntent": "Threshold push followed by a delayed side reaction, never losing the protagonist silhouette.",
+      "complexityClass": "extreme",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-gates-v1",
+        "vertical": "andromeda-v2-vertical-gates-v1"
+      },
+      "requiredLandmarks": [
+        "localized-compression-zone",
+        "post-crossing-depth"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        5942,
+        6150,
+        6358
+      ],
+      "cameraRigId": "andromeda-v2-rig-gates-19",
+      "lensMm": 38,
+      "spatialLayers": {
+        "foreground": "localized-compression-zone",
+        "midground": "post-crossing-depth",
+        "background": "restrained-shock-ring"
+      },
+      "dominantShape": "localized-compression-zone",
+      "secondaryNarrativeAction": "The recovered engine exits while a restrained shock ring reaches the locks.",
+      "lightingIdentity": "teal-monolith-depth-with-localized-cyan-membrane-shot-19",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-19-localized-crossing-micro-response",
+          "sourceFeature": "smoothed-bass-energy",
+          "target": "localized-lock-ring-and-membrane-emission",
+          "smoothingFrames": 18,
+          "maximumInfluenceFraction": 0.2,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-19-horizontal",
+          "lensMm": 38,
+          "framingIntent": "16:9 authored staging: Threshold push followed by a delayed side reaction, never losing the protagonist silhouette.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "localized-compression-zone on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.2,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-19-vertical",
+          "lensMm": 50,
+          "framingIntent": "9:16 independent depth-stack for Localized Crossing; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "localized-compression-zone on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.14,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-20-route-seal",
+      "sequence": 20,
+      "actId": "gates",
+      "name": "Route Seal",
+      "frameStart": 6359,
+      "frameEnd": 6775,
+      "durationFrames": 417,
+      "storyPurpose": "Close the selected gate mechanism and show the old route becoming physically unavailable.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "environmentSignature": [
+        "closing-lock-rings",
+        "sealed-membrane-scar",
+        "misaligned-route-lattice"
+      ],
+      "transitionIn": "The crossing shock ring triggers the closing mechanism.",
+      "transitionOut": "A locking error propagates forward as directional fractures in the route lattice.",
+      "cameraIntent": "Post-crossing pullback that keeps protagonist reaction and gate closure in the same spatial field.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-gates-v1",
+        "vertical": "andromeda-v2-vertical-gates-v1"
+      },
+      "requiredLandmarks": [
+        "closing-lock-rings",
+        "misaligned-route-lattice"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        6359,
+        6567,
+        6775
+      ],
+      "cameraRigId": "andromeda-v2-rig-gates-20",
+      "lensMm": 48,
+      "spatialLayers": {
+        "foreground": "closing-lock-rings",
+        "midground": "sealed-membrane-scar",
+        "background": "misaligned-route-lattice"
+      },
+      "dominantShape": "closing-lock-rings",
+      "secondaryNarrativeAction": "A locking error propagates forward as directional fractures in the route lattice.",
+      "lightingIdentity": "teal-monolith-depth-with-localized-cyan-membrane-shot-20",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-20-route-seal-micro-response",
+          "sourceFeature": "smoothed-bass-energy",
+          "target": "localized-lock-ring-and-membrane-emission",
+          "smoothingFrames": 18,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-20-horizontal",
+          "lensMm": 48,
+          "framingIntent": "16:9 authored staging: Post-crossing pullback that keeps protagonist reaction and gate closure in the same spatial field.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "closing-lock-rings on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-gates-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-20-vertical",
+          "lensMm": 62,
+          "framingIntent": "9:16 independent depth-stack for Route Seal; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "closing-lock-rings on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "forward-depth-threshold-crossing"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-21-false-calm",
+      "sequence": 21,
+      "actId": "rupture",
+      "name": "False Calm",
+      "frameStart": 6776,
+      "frameEnd": 7140,
+      "durationFrames": 365,
+      "storyPurpose": "Establish a real route canyon whose structural stress quietly inherits the gate's locking error.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "environmentSignature": [
+        "layered-route-canyon",
+        "stress-lit-connected-ribs",
+        "dark-void-depth"
+      ],
+      "transitionIn": "Misaligned gate routing extends into hairline stress across connected canyon ribs.",
+      "transitionOut": "One stress line outruns the engine and opens a directional shear.",
+      "cameraIntent": "Quiet wide follow with readable connected structures and restrained red stress light.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-rupture-v1",
+        "vertical": "andromeda-v2-vertical-rupture-v1"
+      },
+      "requiredLandmarks": [
+        "layered-route-canyon",
+        "stress-lit-connected-ribs"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        6776,
+        6958,
+        7140
+      ],
+      "cameraRigId": "andromeda-v2-rig-rupture-21",
+      "lensMm": 35,
+      "spatialLayers": {
+        "foreground": "layered-route-canyon",
+        "midground": "stress-lit-connected-ribs",
+        "background": "dark-void-depth"
+      },
+      "dominantShape": "layered-route-canyon",
+      "secondaryNarrativeAction": "One stress line outruns the engine and opens a directional shear.",
+      "lightingIdentity": "dark-void-teal-with-directional-red-stress-shot-21",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-21-false-calm-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-stress-light-and-debris-micro-response",
+          "smoothingFrames": 16,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-21-horizontal",
+          "lensMm": 35,
+          "framingIntent": "16:9 authored staging: Quiet wide follow with readable connected structures and restrained red stress light.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "layered-route-canyon on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-21-vertical",
+          "lensMm": 48,
+          "framingIntent": "9:16 independent depth-stack for False Calm; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "layered-route-canyon on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-22-route-shear",
+      "sequence": 22,
+      "actId": "rupture",
+      "name": "Route Shear",
+      "frameStart": 7141,
+      "frameEnd": 7505,
+      "durationFrames": 365,
+      "storyPurpose": "Break the route through mechanically connected slabs, preserving direction and causal readability.",
+      "protagonistState": "travelling",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "environmentSignature": [
+        "directional-shear-plane",
+        "hinged-route-slabs",
+        "escaping-routing-energy"
+      ],
+      "transitionIn": "The leading stress line becomes a visible mechanical separation.",
+      "transitionOut": "A released route rib rotates into the protagonist's travel line.",
+      "cameraIntent": "Diagonal chase with the shear plane behind and the impending rib impact ahead.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-rupture-v1",
+        "vertical": "andromeda-v2-vertical-rupture-v1"
+      },
+      "requiredLandmarks": [
+        "directional-shear-plane",
+        "released-route-rib"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        7141,
+        7323,
+        7505
+      ],
+      "cameraRigId": "andromeda-v2-rig-rupture-22",
+      "lensMm": 40,
+      "spatialLayers": {
+        "foreground": "directional-shear-plane",
+        "midground": "hinged-route-slabs",
+        "background": "escaping-routing-energy"
+      },
+      "dominantShape": "directional-shear-plane",
+      "secondaryNarrativeAction": "A released route rib rotates into the protagonist's travel line.",
+      "lightingIdentity": "dark-void-teal-with-directional-red-stress-shot-22",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-22-route-shear-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-stress-light-and-debris-micro-response",
+          "smoothingFrames": 16,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-22-horizontal",
+          "lensMm": 40,
+          "framingIntent": "16:9 authored staging: Diagonal chase with the shear plane behind and the impending rib impact ahead.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "directional-shear-plane on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-22-vertical",
+          "lensMm": 52,
+          "framingIntent": "9:16 independent depth-stack for Route Shear; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "directional-shear-plane on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-23-fracture-impact",
+      "sequence": 23,
+      "actId": "rupture",
+      "name": "Fracture Impact",
+      "frameStart": 7506,
+      "frameEnd": 7870,
+      "durationFrames": 365,
+      "storyPurpose": "Deliver one asymmetric physical impact that visibly damages armor and functional crystal routing.",
+      "protagonistState": "damaged",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "environmentSignature": [
+        "released-route-rib",
+        "asymmetric-armor-damage",
+        "extinguished-crystal-channel"
+      ],
+      "transitionIn": "Hold the rib and engine trajectories long enough for the impact to be anticipated.",
+      "transitionOut": "The damaged engine exits the slab field in an uncontrolled but readable tumble.",
+      "cameraIntent": "Impact recoil with bounded shake, readable contact, and protected aperture orientation.",
+      "complexityClass": "extreme",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-rupture-v1",
+        "vertical": "andromeda-v2-vertical-rupture-v1"
+      },
+      "requiredLandmarks": [
+        "released-route-rib",
+        "asymmetric-armor-damage"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        7506,
+        7688,
+        7870
+      ],
+      "cameraRigId": "andromeda-v2-rig-rupture-23",
+      "lensMm": 55,
+      "spatialLayers": {
+        "foreground": "released-route-rib",
+        "midground": "asymmetric-armor-damage",
+        "background": "extinguished-crystal-channel"
+      },
+      "dominantShape": "released-route-rib",
+      "secondaryNarrativeAction": "The damaged engine exits the slab field in an uncontrolled but readable tumble.",
+      "lightingIdentity": "dark-void-teal-with-directional-red-stress-shot-23",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-23-fracture-impact-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-stress-light-and-debris-micro-response",
+          "smoothingFrames": 16,
+          "maximumInfluenceFraction": 0.2,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-23-horizontal",
+          "lensMm": 55,
+          "framingIntent": "16:9 authored staging: Impact recoil with bounded shake, readable contact, and protected aperture orientation.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "released-route-rib on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.2,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-23-vertical",
+          "lensMm": 70,
+          "framingIntent": "9:16 independent depth-stack for Fracture Impact; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "released-route-rib on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.14,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-24-damaged-freefall",
+      "sequence": 24,
+      "actId": "rupture",
+      "name": "Damaged Freefall",
+      "frameStart": 7871,
+      "frameEnd": 8235,
+      "durationFrames": 365,
+      "storyPurpose": "Let the damage alter movement, wake, and orientation while canyon depth remains measurable.",
+      "protagonistState": "damaged",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "environmentSignature": [
+        "falling-route-ribs",
+        "void-depth-markers",
+        "intermittent-engine-wake"
+      ],
+      "transitionIn": "Continue the impact angular momentum without a reset.",
+      "transitionOut": "A faint reconstruction signal appears through the falling structural ribs.",
+      "cameraIntent": "Weightless fall with independent camera recovery and layered depth markers.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-rupture-v1",
+        "vertical": "andromeda-v2-vertical-rupture-v1"
+      },
+      "requiredLandmarks": [
+        "falling-route-ribs",
+        "reconstruction-signal"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        7871,
+        8053,
+        8235
+      ],
+      "cameraRigId": "andromeda-v2-rig-rupture-24",
+      "lensMm": 42,
+      "spatialLayers": {
+        "foreground": "falling-route-ribs",
+        "midground": "void-depth-markers",
+        "background": "intermittent-engine-wake"
+      },
+      "dominantShape": "falling-route-ribs",
+      "secondaryNarrativeAction": "A faint reconstruction signal appears through the falling structural ribs.",
+      "lightingIdentity": "dark-void-teal-with-directional-red-stress-shot-24",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-24-damaged-freefall-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-stress-light-and-debris-micro-response",
+          "smoothingFrames": 16,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-24-horizontal",
+          "lensMm": 42,
+          "framingIntent": "16:9 authored staging: Weightless fall with independent camera recovery and layered depth markers.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "falling-route-ribs on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-24-vertical",
+          "lensMm": 54,
+          "framingIntent": "9:16 independent depth-stack for Damaged Freefall; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "falling-route-ribs on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-25-broken-path-choice",
+      "sequence": 25,
+      "actId": "rupture",
+      "name": "Broken Path Choice",
+      "frameStart": 8236,
+      "frameEnd": 8599,
+      "durationFrames": 364,
+      "storyPurpose": "End the rupture on a damaged but deliberate turn toward reconstruction rather than empty safety.",
+      "protagonistState": "damaged",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "environmentSignature": [
+        "forked-fracture-canyon",
+        "reconstruction-signal-axis",
+        "rotating-catch-ribs"
+      ],
+      "transitionIn": "The reconstruction signal becomes a stable axis beyond a forked canyon.",
+      "transitionOut": "Catch ribs rotate into connected cathedral arms around the chosen path.",
+      "cameraIntent": "Hold the path fork while the protagonist alone changes orientation toward the signal.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-rupture-v1",
+        "vertical": "andromeda-v2-vertical-rupture-v1"
+      },
+      "requiredLandmarks": [
+        "forked-fracture-canyon",
+        "reconstruction-signal-axis"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        8236,
+        8417,
+        8599
+      ],
+      "cameraRigId": "andromeda-v2-rig-rupture-25",
+      "lensMm": 50,
+      "spatialLayers": {
+        "foreground": "forked-fracture-canyon",
+        "midground": "reconstruction-signal-axis",
+        "background": "rotating-catch-ribs"
+      },
+      "dominantShape": "forked-fracture-canyon",
+      "secondaryNarrativeAction": "Catch ribs rotate into connected cathedral arms around the chosen path.",
+      "lightingIdentity": "dark-void-teal-with-directional-red-stress-shot-25",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-25-broken-path-choice-micro-response",
+          "sourceFeature": "smoothed-onset-density",
+          "target": "bounded-stress-light-and-debris-micro-response",
+          "smoothingFrames": 16,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-25-horizontal",
+          "lensMm": 50,
+          "framingIntent": "16:9 authored staging: Hold the path fork while the protagonist alone changes orientation toward the signal.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "forked-fracture-canyon on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-rupture-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-25-vertical",
+          "lensMm": 65,
+          "framingIntent": "9:16 independent depth-stack for Broken Path Choice; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "forked-fracture-canyon on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "diagonal-down-right-disruption"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-26-cradle-capture",
+      "sequence": 26,
+      "actId": "transformation",
+      "name": "Cradle Capture",
+      "frameStart": 8600,
+      "frameEnd": 9068,
+      "durationFrames": 469,
+      "storyPurpose": "Catch the damaged protagonist with connected functional arms whose force and purpose remain readable.",
+      "protagonistState": "damaged",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "environmentSignature": [
+        "radial-connected-arms",
+        "central-reconstruction-cradle",
+        "functional-energy-rails"
+      ],
+      "transitionIn": "Rupture catch ribs complete their rotation as cathedral arms.",
+      "transitionOut": "The arms arrest motion and expose the damaged armor side.",
+      "cameraIntent": "Radial scale reveal followed by a close subject-first capture view.",
+      "complexityClass": "extreme",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-transformation-v1",
+        "vertical": "andromeda-v2-vertical-transformation-v1"
+      },
+      "requiredLandmarks": [
+        "central-reconstruction-cradle",
+        "radial-connected-arms"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        8600,
+        8834,
+        9068
+      ],
+      "cameraRigId": "andromeda-v2-rig-transformation-26",
+      "lensMm": 32,
+      "spatialLayers": {
+        "foreground": "radial-connected-arms",
+        "midground": "central-reconstruction-cradle",
+        "background": "functional-energy-rails"
+      },
+      "dominantShape": "radial-connected-arms",
+      "secondaryNarrativeAction": "The arms arrest motion and expose the damaged armor side.",
+      "lightingIdentity": "cathedral-teal-with-restrained-amber-transfer-shot-26",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-26-cradle-capture-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-reconstruction-crystal-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.2,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-26-horizontal",
+          "lensMm": 32,
+          "framingIntent": "16:9 authored staging: Radial scale reveal followed by a close subject-first capture view.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "radial-connected-arms on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.2,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-26-vertical",
+          "lensMm": 42,
+          "framingIntent": "9:16 independent depth-stack for Cradle Capture; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "radial-connected-arms on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.14,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-27-armor-unmake",
+      "sequence": 27,
+      "actId": "transformation",
+      "name": "Armor Unmake",
+      "frameStart": 9069,
+      "frameEnd": 9537,
+      "durationFrames": 469,
+      "storyPurpose": "Remove only the damaged armor components through a legible mechanical operation.",
+      "protagonistState": "transforming",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "environmentSignature": [
+        "armor-indexing-clamps",
+        "single-band-separation",
+        "contained-damage-particles"
+      ],
+      "transitionIn": "Capture arms hand the damaged side to indexing clamps.",
+      "transitionOut": "Removed components reveal the interrupted crystal route beneath.",
+      "cameraIntent": "Close transformation orbit with protected aperture and damage-side visibility.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-transformation-v1",
+        "vertical": "andromeda-v2-vertical-transformation-v1"
+      },
+      "requiredLandmarks": [
+        "armor-indexing-clamps",
+        "interrupted-crystal-route"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        9069,
+        9303,
+        9537
+      ],
+      "cameraRigId": "andromeda-v2-rig-transformation-27",
+      "lensMm": 65,
+      "spatialLayers": {
+        "foreground": "armor-indexing-clamps",
+        "midground": "single-band-separation",
+        "background": "contained-damage-particles"
+      },
+      "dominantShape": "armor-indexing-clamps",
+      "secondaryNarrativeAction": "Removed components reveal the interrupted crystal route beneath.",
+      "lightingIdentity": "cathedral-teal-with-restrained-amber-transfer-shot-27",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-27-armor-unmake-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-reconstruction-crystal-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-27-horizontal",
+          "lensMm": 65,
+          "framingIntent": "16:9 authored staging: Close transformation orbit with protected aperture and damage-side visibility.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "armor-indexing-clamps on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-27-vertical",
+          "lensMm": 82,
+          "framingIntent": "9:16 independent depth-stack for Armor Unmake; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "armor-indexing-clamps on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-28-crystal-routing",
+      "sequence": 28,
+      "actId": "transformation",
+      "name": "Crystal Routing",
+      "frameStart": 9538,
+      "frameEnd": 10006,
+      "durationFrames": 469,
+      "storyPurpose": "Bridge the damaged side with visibly functional crystal routing tied to cathedral conduits.",
+      "protagonistState": "transforming",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "environmentSignature": [
+        "cathedral-conduit-tree",
+        "bridging-crystal-route",
+        "restrained-amber-transfer"
+      ],
+      "transitionIn": "The exposed route aligns with a connected cathedral conduit.",
+      "transitionOut": "The completed route sends one bounded pulse toward the front aperture.",
+      "cameraIntent": "Route-follow move that ends on the complete protagonist silhouette.",
+      "complexityClass": "extreme",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-transformation-v1",
+        "vertical": "andromeda-v2-vertical-transformation-v1"
+      },
+      "requiredLandmarks": [
+        "cathedral-conduit-tree",
+        "bridging-crystal-route"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        9538,
+        9772,
+        10006
+      ],
+      "cameraRigId": "andromeda-v2-rig-transformation-28",
+      "lensMm": 55,
+      "spatialLayers": {
+        "foreground": "cathedral-conduit-tree",
+        "midground": "bridging-crystal-route",
+        "background": "restrained-amber-transfer"
+      },
+      "dominantShape": "cathedral-conduit-tree",
+      "secondaryNarrativeAction": "The completed route sends one bounded pulse toward the front aperture.",
+      "lightingIdentity": "cathedral-teal-with-restrained-amber-transfer-shot-28",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-28-crystal-routing-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-reconstruction-crystal-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.2,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-28-horizontal",
+          "lensMm": 55,
+          "framingIntent": "16:9 authored staging: Route-follow move that ends on the complete protagonist silhouette.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "cathedral-conduit-tree on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.2,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-28-vertical",
+          "lensMm": 68,
+          "framingIntent": "9:16 independent depth-stack for Crystal Routing; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "cathedral-conduit-tree on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.14,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-29-aperture-rebirth",
+      "sequence": 29,
+      "actId": "transformation",
+      "name": "Aperture Rebirth",
+      "frameStart": 10007,
+      "frameEnd": 10475,
+      "durationFrames": 469,
+      "storyPurpose": "Reignite the integrated aperture through the repaired route without replacing the selected silhouette.",
+      "protagonistState": "transforming",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "environmentSignature": [
+        "repaired-front-aperture",
+        "single-reformed-armor-band",
+        "withdrawn-reconstruction-arms"
+      ],
+      "transitionIn": "The routed pulse arrives at the aperture as the arms hold still.",
+      "transitionOut": "The aperture stabilizes and the arms withdraw into a destination lattice.",
+      "cameraIntent": "Subject-first closeup opening into a composed full-body reveal.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-transformation-v1",
+        "vertical": "andromeda-v2-vertical-transformation-v1"
+      },
+      "requiredLandmarks": [
+        "repaired-front-aperture",
+        "single-reformed-armor-band"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        10007,
+        10241,
+        10475
+      ],
+      "cameraRigId": "andromeda-v2-rig-transformation-29",
+      "lensMm": 72,
+      "spatialLayers": {
+        "foreground": "repaired-front-aperture",
+        "midground": "single-reformed-armor-band",
+        "background": "withdrawn-reconstruction-arms"
+      },
+      "dominantShape": "repaired-front-aperture",
+      "secondaryNarrativeAction": "The aperture stabilizes and the arms withdraw into a destination lattice.",
+      "lightingIdentity": "cathedral-teal-with-restrained-amber-transfer-shot-29",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-29-aperture-rebirth-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-reconstruction-crystal-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-29-horizontal",
+          "lensMm": 72,
+          "framingIntent": "16:9 authored staging: Subject-first closeup opening into a composed full-body reveal.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "repaired-front-aperture on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-29-vertical",
+          "lensMm": 90,
+          "framingIntent": "9:16 independent depth-stack for Aperture Rebirth; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "repaired-front-aperture on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-30-transformed-release",
+      "sequence": 30,
+      "actId": "transformation",
+      "name": "Transformed Release",
+      "frameStart": 10476,
+      "frameEnd": 10944,
+      "durationFrames": 469,
+      "storyPurpose": "Release the rebuilt engine under its own power and transform cathedral structure into arrival depth.",
+      "protagonistState": "transformed",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "environmentSignature": [
+        "opening-cathedral-arms",
+        "destination-parallax-lattice",
+        "controlled-engine-wake"
+      ],
+      "transitionIn": "Withdrawn arms create a clear self-propelled departure corridor.",
+      "transitionOut": "Their repeated rhythm lengthens into the Andromeda destination lattice.",
+      "cameraIntent": "Independent launch with delayed camera pursuit and a final wide cathedral scale frame.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-transformation-v1",
+        "vertical": "andromeda-v2-vertical-transformation-v1"
+      },
+      "requiredLandmarks": [
+        "opening-cathedral-arms",
+        "destination-parallax-lattice"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        10476,
+        10710,
+        10944
+      ],
+      "cameraRigId": "andromeda-v2-rig-transformation-30",
+      "lensMm": 35,
+      "spatialLayers": {
+        "foreground": "opening-cathedral-arms",
+        "midground": "destination-parallax-lattice",
+        "background": "controlled-engine-wake"
+      },
+      "dominantShape": "opening-cathedral-arms",
+      "secondaryNarrativeAction": "Their repeated rhythm lengthens into the Andromeda destination lattice.",
+      "lightingIdentity": "cathedral-teal-with-restrained-amber-transfer-shot-30",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-30-transformed-release-micro-response",
+          "sourceFeature": "smoothed-spectral-centroid",
+          "target": "localized-reconstruction-crystal-emission",
+          "smoothingFrames": 24,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-30-horizontal",
+          "lensMm": 35,
+          "framingIntent": "16:9 authored staging: Independent launch with delayed camera pursuit and a final wide cathedral scale frame.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "opening-cathedral-arms on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-transformation-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-30-vertical",
+          "lensMm": 46,
+          "framingIntent": "9:16 independent depth-stack for Transformed Release; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "opening-cathedral-arms on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "radial-inward-then-forward-release"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-31-dust-veil-parting",
+      "sequence": 31,
+      "actId": "arrival",
+      "name": "Dust Veil Parting",
+      "frameStart": 10945,
+      "frameEnd": 11361,
+      "durationFrames": 417,
+      "storyPurpose": "Carry cathedral rhythm into a measured destination lattice before revealing the galactic horizon.",
+      "protagonistState": "transformed",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "environmentSignature": [
+        "destination-parallax-lattice",
+        "layered-dust-veil",
+        "hidden-galactic-horizon"
+      ],
+      "transitionIn": "Cathedral arm rhythm continues as quieter freestanding destination markers.",
+      "transitionOut": "The protagonist's wake parts the dust veil without becoming a full-frame effect.",
+      "cameraIntent": "Forward drift through layered markers with protected protagonist orientation.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-arrival-v1",
+        "vertical": "andromeda-v2-vertical-arrival-v1"
+      },
+      "requiredLandmarks": [
+        "destination-parallax-lattice",
+        "layered-dust-veil"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        10945,
+        11153,
+        11361
+      ],
+      "cameraRigId": "andromeda-v2-rig-arrival-31",
+      "lensMm": 38,
+      "spatialLayers": {
+        "foreground": "destination-parallax-lattice",
+        "midground": "layered-dust-veil",
+        "background": "hidden-galactic-horizon"
+      },
+      "dominantShape": "destination-parallax-lattice",
+      "secondaryNarrativeAction": "The protagonist's wake parts the dust veil without becoming a full-frame effect.",
+      "lightingIdentity": "broad-galactic-teal-with-quiet-amber-subject-return-shot-31",
+      "intentionalCut": true,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-31-dust-veil-parting-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "bounded-dust-and-wayfinding-emission",
+          "smoothingFrames": 36,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-31-horizontal",
+          "lensMm": 38,
+          "framingIntent": "16:9 authored staging: Forward drift through layered markers with protected protagonist orientation.",
+          "subjectOccupancyFraction": 0.14,
+          "foregroundPlacement": "destination-parallax-lattice on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-31-vertical",
+          "lensMm": 50,
+          "framingIntent": "9:16 independent depth-stack for Dust Veil Parting; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.12,
+          "foregroundPlacement": "destination-parallax-lattice on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-32-andromeda-horizon",
+      "sequence": 32,
+      "actId": "arrival",
+      "name": "Andromeda Horizon",
+      "frameStart": 11362,
+      "frameEnd": 11778,
+      "durationFrames": 417,
+      "storyPurpose": "Reveal Andromeda as a deep horizon with structural scale references, not an abstract background wash.",
+      "protagonistState": "transformed",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "environmentSignature": [
+        "andromeda-horizon-arc",
+        "foreground-destination-marker",
+        "multi-plane-galactic-depth"
+      ],
+      "transitionIn": "The parted veil reveals the first edge of the horizon arc.",
+      "transitionOut": "A near destination marker crosses frame to prove the horizon's distance.",
+      "cameraIntent": "Large scale pullback with a stable horizon and small but unmistakable protagonist.",
+      "complexityClass": "heavy",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-arrival-v1",
+        "vertical": "andromeda-v2-vertical-arrival-v1"
+      },
+      "requiredLandmarks": [
+        "andromeda-horizon-arc",
+        "foreground-destination-marker"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        11362,
+        11570,
+        11778
+      ],
+      "cameraRigId": "andromeda-v2-rig-arrival-32",
+      "lensMm": 30,
+      "spatialLayers": {
+        "foreground": "andromeda-horizon-arc",
+        "midground": "foreground-destination-marker",
+        "background": "multi-plane-galactic-depth"
+      },
+      "dominantShape": "andromeda-horizon-arc",
+      "secondaryNarrativeAction": "A near destination marker crosses frame to prove the horizon's distance.",
+      "lightingIdentity": "broad-galactic-teal-with-quiet-amber-subject-return-shot-32",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-32-andromeda-horizon-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "bounded-dust-and-wayfinding-emission",
+          "smoothingFrames": 36,
+          "maximumInfluenceFraction": 0.16,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-32-horizontal",
+          "lensMm": 30,
+          "framingIntent": "16:9 authored staging: Large scale pullback with a stable horizon and small but unmistakable protagonist.",
+          "subjectOccupancyFraction": 0.18,
+          "foregroundPlacement": "andromeda-horizon-arc on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-32-vertical",
+          "lensMm": 40,
+          "framingIntent": "9:16 independent depth-stack for Andromeda Horizon; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.16,
+          "foregroundPlacement": "andromeda-horizon-arc on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-33-scale-marker-pass",
+      "sequence": 33,
+      "actId": "arrival",
+      "name": "Scale Marker Pass",
+      "frameStart": 11779,
+      "frameEnd": 12195,
+      "durationFrames": 417,
+      "storyPurpose": "Use successive connected markers to expand perceived scale while preserving destination direction.",
+      "protagonistState": "transformed",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "environmentSignature": [
+        "successive-scale-markers",
+        "functional-crystal-wayfinding",
+        "andromeda-horizon-arc"
+      ],
+      "transitionIn": "The first near marker begins a sequence of increasingly distant structures.",
+      "transitionOut": "Marker routing converges on a stable destination orbit.",
+      "cameraIntent": "Side-follow parallax that keeps the engine clear of both marker and horizon silhouettes.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-arrival-v1",
+        "vertical": "andromeda-v2-vertical-arrival-v1"
+      },
+      "requiredLandmarks": [
+        "successive-scale-markers",
+        "andromeda-horizon-arc"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        11779,
+        11987,
+        12195
+      ],
+      "cameraRigId": "andromeda-v2-rig-arrival-33",
+      "lensMm": 45,
+      "spatialLayers": {
+        "foreground": "successive-scale-markers",
+        "midground": "functional-crystal-wayfinding",
+        "background": "andromeda-horizon-arc"
+      },
+      "dominantShape": "successive-scale-markers",
+      "secondaryNarrativeAction": "Marker routing converges on a stable destination orbit.",
+      "lightingIdentity": "broad-galactic-teal-with-quiet-amber-subject-return-shot-33",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-33-scale-marker-pass-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "bounded-dust-and-wayfinding-emission",
+          "smoothingFrames": 36,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-33-horizontal",
+          "lensMm": 45,
+          "framingIntent": "16:9 authored staging: Side-follow parallax that keeps the engine clear of both marker and horizon silhouettes.",
+          "subjectOccupancyFraction": 0.22,
+          "foregroundPlacement": "successive-scale-markers on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-33-vertical",
+          "lensMm": 58,
+          "framingIntent": "9:16 independent depth-stack for Scale Marker Pass; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.2,
+          "foregroundPlacement": "successive-scale-markers on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-34-destination-approach",
+      "sequence": 34,
+      "actId": "arrival",
+      "name": "Destination Approach",
+      "frameStart": 12196,
+      "frameEnd": 12612,
+      "durationFrames": 417,
+      "storyPurpose": "Transition from travel to chosen rest while the protagonist remains active and oriented.",
+      "protagonistState": "arrived",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "environmentSignature": [
+        "destination-orbit-rails",
+        "quiet-crystal-anchor",
+        "broad-galactic-return-light"
+      ],
+      "transitionIn": "Converging marker routes become the destination orbit rails.",
+      "transitionOut": "The engine decelerates before the camera and chooses its final orientation.",
+      "cameraIntent": "Measured approach with protagonist-led deceleration and delayed camera settle.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-arrival-v1",
+        "vertical": "andromeda-v2-vertical-arrival-v1"
+      },
+      "requiredLandmarks": [
+        "destination-orbit-rails",
+        "quiet-crystal-anchor"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        12196,
+        12404,
+        12612
+      ],
+      "cameraRigId": "andromeda-v2-rig-arrival-34",
+      "lensMm": 55,
+      "spatialLayers": {
+        "foreground": "destination-orbit-rails",
+        "midground": "quiet-crystal-anchor",
+        "background": "broad-galactic-return-light"
+      },
+      "dominantShape": "destination-orbit-rails",
+      "secondaryNarrativeAction": "The engine decelerates before the camera and chooses its final orientation.",
+      "lightingIdentity": "broad-galactic-teal-with-quiet-amber-subject-return-shot-34",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-34-destination-approach-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "bounded-dust-and-wayfinding-emission",
+          "smoothingFrames": 36,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-34-horizontal",
+          "lensMm": 55,
+          "framingIntent": "16:9 authored staging: Measured approach with protagonist-led deceleration and delayed camera settle.",
+          "subjectOccupancyFraction": 0.25,
+          "foregroundPlacement": "destination-orbit-rails on the right lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.08,
+            "xMax": 0.92,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-left-10-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-34-vertical",
+          "lensMm": 70,
+          "framingIntent": "9:16 independent depth-stack for Destination Approach; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.23,
+          "foregroundPlacement": "destination-orbit-rails on the lower depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.13,
+            "xMax": 0.87,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "lower-center-14-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        }
+      }
+    },
+    {
+      "id": "andromeda-v2-shot-35-quiet-arrival",
+      "sequence": 35,
+      "actId": "arrival",
+      "name": "Quiet Arrival",
+      "frameStart": 12613,
+      "frameEnd": 13029,
+      "durationFrames": 417,
+      "storyPurpose": "Resolve the journey with the transformed protagonist at rest against an Andromeda horizon that continues beyond frame.",
+      "protagonistState": "arrived",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "environmentSignature": [
+        "stable-destination-orbit",
+        "andromeda-horizon-arc",
+        "quiet-scale-markers"
+      ],
+      "transitionIn": "The protagonist settles first; camera motion decays afterward.",
+      "transitionOut": "End on a held orientation, protected aperture, and unresolved galactic depth.",
+      "cameraIntent": "Quiet final scale composition with no late arc, no foreground collision, and no exposure surge.",
+      "complexityClass": "standard",
+      "lookProfileId": "andromeda-r13.1-final-look-v1",
+      "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "compositionProfileIds": {
+        "horizontal": "andromeda-v2-horizontal-arrival-v1",
+        "vertical": "andromeda-v2-vertical-arrival-v1"
+      },
+      "requiredLandmarks": [
+        "stable-destination-orbit",
+        "andromeda-horizon-arc"
+      ],
+      "occlusionPolicyId": "andromeda-subject-landmark-protection-v1",
+      "reviewFrames": [
+        12613,
+        12821,
+        13029
+      ],
+      "cameraRigId": "andromeda-v2-rig-arrival-35",
+      "lensMm": 48,
+      "spatialLayers": {
+        "foreground": "stable-destination-orbit",
+        "midground": "andromeda-horizon-arc",
+        "background": "quiet-scale-markers"
+      },
+      "dominantShape": "stable-destination-orbit",
+      "secondaryNarrativeAction": "End on a held orientation, protected aperture, and unresolved galactic depth.",
+      "lightingIdentity": "broad-galactic-teal-with-quiet-amber-subject-return-shot-35",
+      "intentionalCut": false,
+      "audioReactiveLayers": [
+        {
+          "id": "andromeda-v2-shot-35-quiet-arrival-micro-response",
+          "sourceFeature": "smoothed-rms-energy",
+          "target": "bounded-dust-and-wayfinding-emission",
+          "smoothingFrames": 36,
+          "maximumInfluenceFraction": 0.12,
+          "controlsMajorCameraOrProtagonistTravel": false
+        }
+      ],
+      "compositionOverrides": {
+        "horizontal": {
+          "compositionProfileId": "andromeda-v2-horizontal-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-35-horizontal",
+          "lensMm": 48,
+          "framingIntent": "16:9 authored staging: Quiet final scale composition with no late arc, no foreground collision, and no exposure surge.",
+          "subjectOccupancyFraction": 0.19,
+          "foregroundPlacement": "stable-destination-orbit on the left lateral edge with a protected subject gap",
+          "safeZone": {
+            "xMin": 0.09,
+            "xMax": 0.91,
+            "yMin": 0.1,
+            "yMax": 0.9
+          },
+          "maximumForegroundOcclusionFraction": 0.18,
+          "minimumLandmarkVisibilityFraction": 0.72,
+          "titleSafeSpace": "upper-right-10-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        },
+        "vertical": {
+          "compositionProfileId": "andromeda-v2-vertical-arrival-v1",
+          "independentlyAuthored": true,
+          "derivedByCrop": false,
+          "sharedEventTiming": true,
+          "cameraRigId": "andromeda-v2-rig-35-vertical",
+          "lensMm": 62,
+          "framingIntent": "9:16 independent depth-stack for Quiet Arrival; protect subject, foreground, and primary landmark",
+          "subjectOccupancyFraction": 0.15,
+          "foregroundPlacement": "stable-destination-orbit on the upper depth edge, never as a horizontal crop remnant",
+          "safeZone": {
+            "xMin": 0.12,
+            "xMax": 0.88,
+            "yMin": 0.08,
+            "yMax": 0.92
+          },
+          "maximumForegroundOcclusionFraction": 0.12,
+          "minimumLandmarkVisibilityFraction": 0.78,
+          "titleSafeSpace": "upper-center-14-percent",
+          "screenDirection": "left-to-right-deceleration-and-settle"
+        }
+      }
+    }
+  ]
+}

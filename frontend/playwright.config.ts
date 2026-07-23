@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const npmDevCommand = process.platform === 'win32' ? 'npm.cmd run dev' : 'npm run dev'
+const frontendPort = Number(process.env.E2E_FRONTEND_PORT ?? '5173')
+const backendPort = Number(process.env.E2E_BACKEND_PORT ?? '8000')
 
 export default defineConfig({
   testDir: './e2e',
@@ -10,7 +12,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5173',
+    baseURL: process.env.E2E_BASE_URL ?? `http://127.0.0.1:${frontendPort}`,
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },
@@ -19,13 +21,13 @@ export default defineConfig({
     : [
         {
           command: 'node e2e/start-backend.mjs',
-          url: 'http://127.0.0.1:8000/api/health',
+          url: `http://127.0.0.1:${backendPort}/api/health`,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
         {
-          command: npmDevCommand,
-          url: 'http://127.0.0.1:5173',
+          command: `${npmDevCommand} -- --port ${frontendPort}`,
+          url: `http://127.0.0.1:${frontendPort}`,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },

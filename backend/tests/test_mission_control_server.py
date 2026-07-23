@@ -17,6 +17,7 @@ from app.mission_control.models import RuntimeIdentity
 from app.mission_control.processes import (
     _find_descendant_in_snapshot,
     process_is_alive,
+    process_started_at,
 )
 from app.mission_control.server import (
     InstanceDescriptorLease,
@@ -132,6 +133,9 @@ def test_windows_liveness_probe_never_terminates_the_process() -> None:
     try:
         assert process_is_alive(child.pid) is True
         assert process_is_alive(child.pid) is True
+        started_at = process_started_at(child.pid)
+        assert started_at is not None
+        assert abs((datetime.now(UTC) - started_at).total_seconds()) < 30
         assert child.poll() is None
     finally:
         child.terminate()
@@ -183,6 +187,11 @@ def test_instance_startup_lock_rejects_parallel_claim_and_reclaims_stale_lock(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    monkeypatch.setattr(
+        server_module,
+        "_pid_started_at",
+        lambda _pid: datetime(2026, 7, 21, 8, 0, tzinfo=UTC),
+    )
     descriptor = tmp_path / "instance.json"
     first = InstanceDescriptorLease(descriptor, _runtime("first"))
     first.claim()
@@ -199,6 +208,37 @@ def test_instance_startup_lock_rejects_parallel_claim_and_reclaims_stale_lock(
     second.claim()
     assert json.loads(second.lock_path.read_text(encoding="utf-8"))["instanceId"] == "second"
     second.release()
+
+
+def test_instance_startup_lock_reclaims_a_reused_live_pid(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    descriptor = tmp_path / "instance.json"
+    lease = InstanceDescriptorLease(descriptor, _runtime("replacement"))
+    lease.lock_path.write_text(
+        json.dumps(
+            {
+                "instanceId": "previous-boot",
+                "pid": os.getpid(),
+                "startedAt": "2026-07-20T08:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(server_module, "_pid_alive", lambda _pid: True)
+    monkeypatch.setattr(
+        server_module,
+        "_pid_started_at",
+        lambda _pid: datetime(2026, 7, 21, 8, 0, tzinfo=UTC),
+    )
+
+    lease.claim()
+
+    payload = json.loads(lease.lock_path.read_text(encoding="utf-8"))
+    assert payload["instanceId"] == "replacement"
+    assert payload["startedAt"] == "2026-07-21T08:00:00+00:00"
+    lease.release()
 
 
 @pytest.mark.parametrize(

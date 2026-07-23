@@ -5,13 +5,17 @@ import os
 from collections import defaultdict, deque
 from collections.abc import Iterable
 from ctypes import wintypes
+from datetime import UTC, datetime
 
 _PROCESS_SYNCHRONIZE = 0x00100000
+_PROCESS_QUERY_LIMITED_INFORMATION = 0x00001000
 _WAIT_OBJECT_0 = 0x00000000
 _WAIT_TIMEOUT = 0x00000102
 _ERROR_ACCESS_DENIED = 5
 _TH32CS_SNAPPROCESS = 0x00000002
 _MAX_PATH = 260
+_WINDOWS_EPOCH_TICKS = 116_444_736_000_000_000
+_WINDOWS_TICKS_PER_SECOND = 10_000_000
 
 
 class _ProcessEntry32W(ctypes.Structure):
@@ -68,6 +72,58 @@ def _windows_process_is_alive(process_id: int) -> bool:
         if status == _WAIT_OBJECT_0:
             return False
         return True
+    finally:
+        close_handle(handle)
+
+
+def process_started_at(process_id: int | None) -> datetime | None:
+    """Return a process creation time when the platform exposes it safely."""
+    if process_id is None or process_id <= 0 or os.name != "nt":
+        return None
+    return _windows_process_started_at(process_id)
+
+
+def _windows_process_started_at(process_id: int) -> datetime | None:
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    open_process = kernel32.OpenProcess
+    open_process.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    open_process.restype = wintypes.HANDLE
+    get_process_times = kernel32.GetProcessTimes
+    get_process_times.argtypes = (
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+    )
+    get_process_times.restype = wintypes.BOOL
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = (wintypes.HANDLE,)
+    close_handle.restype = wintypes.BOOL
+
+    handle = open_process(_PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
+    if not handle:
+        return None
+    try:
+        creation = wintypes.FILETIME()
+        exit_time = wintypes.FILETIME()
+        kernel_time = wintypes.FILETIME()
+        user_time = wintypes.FILETIME()
+        if not get_process_times(
+            handle,
+            ctypes.byref(creation),
+            ctypes.byref(exit_time),
+            ctypes.byref(kernel_time),
+            ctypes.byref(user_time),
+        ):
+            return None
+        ticks = (int(creation.dwHighDateTime) << 32) | int(creation.dwLowDateTime)
+        if ticks < _WINDOWS_EPOCH_TICKS:
+            return None
+        timestamp = (ticks - _WINDOWS_EPOCH_TICKS) / _WINDOWS_TICKS_PER_SECOND
+        return datetime.fromtimestamp(timestamp, tz=UTC)
+    except (OSError, OverflowError, ValueError):
+        return None
     finally:
         close_handle(handle)
 

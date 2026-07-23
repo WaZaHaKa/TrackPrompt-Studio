@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import math
 import os
+import re
 import shutil
 import struct
 import subprocess
 import time
-from datetime import UTC, datetime
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from ..cinematic.schemas import (
@@ -27,6 +32,7 @@ from .discovery import (
     validate_authorization_record,
 )
 from .errors import MissionControlError
+from .eta import EtaSample, EtaService, StageWorkload
 from .models import (
     AuthorizationResult,
     CalibrationPlanRequest,
@@ -41,6 +47,7 @@ from .models import (
     EncodeJobStatus,
     EncodeReadiness,
     EncodeStartRequest,
+    EtaConfidence,
     FakeRenderOptions,
     JobPhase,
     JobRecord,
@@ -77,6 +84,21 @@ from .models import (
 )
 from .outputs import OutputManager
 from .processes import find_descendant_process_id, process_is_alive
+from .render_contracts import (
+    CompositionProfile,
+    MediaRenderJob,
+    OutputVariant,
+    OutputVariantMatrixIdentity,
+    OutputVariantProgress,
+    PackageIdentity,
+    ProgressState,
+    ProjectRef,
+    RenderStage,
+    StageProgress,
+    TenantRef,
+    WorkerCapabilities,
+    WorkerKind,
+)
 from .renderers import (
     FakeRenderer,
     ProductionRenderer,
@@ -99,6 +121,81 @@ _PREVIEW_FALLBACK_WINDOW = 256
 _ENCODE_ACTIVE_STATUSES = {"queued", "encoding", "verifying"}
 _ENCODE_SETTING_PREFIX = "encode_job:"
 _DIRECTOR_FILE_LIMIT = 2_000_000
+_SHA256_LOWER_RE = re.compile(r"^[a-f0-9]{64}$")
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+
+
+@dataclass(frozen=True, slots=True)
+class _OutputVariantDefinition:
+    id: str
+    enabled: bool
+    required: bool
+    width: int
+    height: int
+    fps: float
+    deliverable_role: str
+    render_profile_id: str
+    render_profile_sha256: str
+    composition_profile: CompositionProfile
+    output_variant_sha256: str
+    frames_root: str
+    preview_root: str
+    encode_root: str
+    qa_root: str
+
+
+def _canonical_sha256(value: object) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _normalized_sha256(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    return normalized if _SHA256_LOWER_RE.fullmatch(normalized) else None
+
+
+def _physical_memory_bytes() -> int | None:
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class _MemoryStatusEx(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            status = _MemoryStatusEx()
+            status.dwLength = ctypes.sizeof(_MemoryStatusEx)
+            kernel32 = getattr(getattr(ctypes, "windll", None), "kernel32", None)
+            query = getattr(kernel32, "GlobalMemoryStatusEx", None)
+            if callable(query) and query(ctypes.byref(status)):
+                return int(status.ullTotalPhys)
+            return None
+        sysconf = getattr(os, "sysconf", None)
+        if not callable(sysconf):
+            return None
+        page_size = sysconf("SC_PAGE_SIZE")
+        page_count = sysconf("SC_PHYS_PAGES")
+        if isinstance(page_size, int) and isinstance(page_count, int):
+            return page_size * page_count
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
+    return None
 
 
 def _with_unbound_performance_detail(status: PerformanceStatus) -> PerformanceStatus:
@@ -579,6 +676,344 @@ class MissionControlService:
             base_name=base_name,
         )
 
+    @staticmethod
+    def _output_variant_contract_error(detail: str) -> MissionControlError:
+        return MissionControlError(
+            422,
+            "invalid_output_variant_contract",
+            "Output-variant contract is invalid",
+            detail,
+            "Repair the saved render profile and create a new authorization.",
+        )
+
+    def _output_variant_definitions(
+        self,
+        profile: ProfileSummary,
+        payload: Mapping[str, Any],
+    ) -> tuple[_OutputVariantDefinition, ...]:
+        raw_variants = payload.get("outputVariants")
+        if raw_variants is None:
+            singular_variant = payload.get("outputVariant")
+            if not isinstance(singular_variant, dict):
+                return ()
+            compatible_variant = dict(singular_variant)
+            compatible_variant.setdefault("enabled", True)
+            compatible_variant.setdefault("required", True)
+            compatible_variant.setdefault("width", profile.resolution.width)
+            compatible_variant.setdefault("height", profile.resolution.height)
+            compatible_variant.setdefault("fps", profile.fps)
+            compatible_variant.setdefault("deliverableRole", "primary-master")
+            compatible_variant.setdefault("renderProfileId", profile.id)
+            if profile.composition_profile_sha256 is not None:
+                compatible_variant.setdefault(
+                    "compositionProfileSha256",
+                    profile.composition_profile_sha256,
+                )
+            raw_variants = [compatible_variant]
+        if not isinstance(raw_variants, list) or not raw_variants:
+            raise self._output_variant_contract_error(
+                "outputVariants must contain at least one variant declaration."
+            )
+
+        output_matrix = payload.get("outputMatrix")
+        matrix = output_matrix if isinstance(output_matrix, dict) else {}
+        selected_value = payload.get(
+            "enabledOutputVariantIds",
+            matrix.get("enabledVariantIds"),
+        )
+        selected_ids: set[str] | None = None
+        if selected_value is not None:
+            if not isinstance(selected_value, list) or not all(
+                isinstance(item, str) and _IDENTIFIER_RE.fullmatch(item.strip())
+                for item in selected_value
+            ):
+                raise self._output_variant_contract_error(
+                    "enabledOutputVariantIds must contain only portable variant IDs."
+                )
+            selected_ids = {item.strip() for item in selected_value}
+            if len(selected_ids) != len(selected_value):
+                raise self._output_variant_contract_error(
+                    "enabledOutputVariantIds cannot contain duplicate IDs."
+                )
+
+        declarations: list[tuple[dict[str, Any], str, bool, bool]] = []
+        declared_ids: set[str] = set()
+        for raw_value in raw_variants:
+            if not isinstance(raw_value, dict):
+                raise self._output_variant_contract_error(
+                    "Every output variant must be a JSON object."
+                )
+            raw = dict(raw_value)
+            variant_id_value = raw.get("id")
+            if (
+                not isinstance(variant_id_value, str)
+                or _IDENTIFIER_RE.fullmatch(variant_id_value.strip()) is None
+            ):
+                raise self._output_variant_contract_error(
+                    "Every output variant requires a portable id."
+                )
+            variant_id = variant_id_value.strip()
+            if variant_id in declared_ids:
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} is declared more than once."
+                )
+            declared_ids.add(variant_id)
+            required = raw.get("required", False)
+            if not isinstance(required, bool):
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} has a non-boolean required flag."
+                )
+            if selected_ids is None:
+                enabled_value = raw.get(
+                    "enabled",
+                    raw.get("enabledByDefault", required),
+                )
+                if not isinstance(enabled_value, bool):
+                    raise self._output_variant_contract_error(
+                        f"Output variant {variant_id!r} has a non-boolean enabled flag."
+                    )
+                enabled = enabled_value
+            else:
+                enabled = variant_id in selected_ids
+            if required and not enabled:
+                raise self._output_variant_contract_error(
+                    f"Required output variant {variant_id!r} cannot be disabled."
+                )
+            declarations.append((raw, variant_id, enabled, required))
+
+        if selected_ids is not None and (unknown := selected_ids - declared_ids):
+            raise self._output_variant_contract_error(
+                f"Enabled output variants are not declared: {', '.join(sorted(unknown))}."
+            )
+        enabled_ids = [variant_id for _raw, variant_id, enabled, _required in declarations if enabled]
+        if not enabled_ids:
+            raise self._output_variant_contract_error(
+                "At least one declared output variant must be enabled."
+            )
+        primary_variant_id = enabled_ids[0]
+
+        definitions: list[_OutputVariantDefinition] = []
+        for raw, variant_id, enabled, required in declarations:
+            width = raw.get("width")
+            height = raw.get("height")
+            fps = raw.get("fps", profile.fps)
+            if (
+                isinstance(width, bool)
+                or not isinstance(width, int)
+                or width <= 0
+                or isinstance(height, bool)
+                or not isinstance(height, int)
+                or height <= 0
+                or isinstance(fps, bool)
+                or not isinstance(fps, (int, float))
+                or float(fps) <= 0
+                or float(fps) > 240
+            ):
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} has invalid width, height, or FPS."
+                )
+            if raw.get("compositionMode", "authored") != "authored":
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} must use an authored composition."
+                )
+            deliverable_value = raw.get(
+                "deliverableRole",
+                "primary-master" if required else "optional-deliverable",
+            )
+            if (
+                not isinstance(deliverable_value, str)
+                or _IDENTIFIER_RE.fullmatch(deliverable_value.strip()) is None
+            ):
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} has an invalid deliverable role."
+                )
+
+            composition_value = raw.get("compositionProfile")
+            composition = (
+                dict(composition_value)
+                if isinstance(composition_value, dict)
+                else {}
+            )
+            composition_id_value = raw.get(
+                "compositionProfileId",
+                composition.get("id", f"{variant_id}-composition"),
+            )
+            revision_value = composition.get(
+                "revision",
+                raw.get("compositionRevision", "1"),
+            )
+            if (
+                not isinstance(composition_id_value, str)
+                or _IDENTIFIER_RE.fullmatch(composition_id_value.strip()) is None
+                or not isinstance(revision_value, str)
+                or not revision_value.strip()
+            ):
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} has an invalid composition identity."
+                )
+            camera_name = raw.get(
+                "cameraName",
+                composition.get("cameraName", composition_id_value),
+            )
+            camera_sha256 = _normalized_sha256(
+                composition.get("cameraSha256", raw.get("cameraSha256"))
+            ) or _canonical_sha256(
+                {
+                    "cameraName": camera_name,
+                    "compositionProfileId": composition_id_value,
+                    "outputVariantId": variant_id,
+                }
+            )
+            composition_sha256 = _normalized_sha256(
+                composition.get(
+                    "compositionSha256",
+                    composition.get(
+                        "sha256",
+                        raw.get("compositionProfileSha256"),
+                    ),
+                )
+            ) or _canonical_sha256(
+                {
+                    "compositionProfile": composition,
+                    "compositionProfileId": composition_id_value,
+                    "outputVariantId": variant_id,
+                    "width": width,
+                    "height": height,
+                }
+            )
+            override_sha256 = _normalized_sha256(
+                composition.get("overrideSha256", raw.get("compositionOverrideSha256"))
+            )
+            render_profile_id_value = raw.get("renderProfileId", profile.id)
+            if (
+                not isinstance(render_profile_id_value, str)
+                or _IDENTIFIER_RE.fullmatch(render_profile_id_value.strip()) is None
+            ):
+                raise self._output_variant_contract_error(
+                    f"Output variant {variant_id!r} has an invalid render profile ID."
+                )
+            render_profile_sha256 = _normalized_sha256(
+                raw.get("renderProfileSha256")
+            ) or profile.saved_file_sha256.lower()
+            variant_sha256 = _normalized_sha256(
+                raw.get("outputVariantSha256")
+            ) or _canonical_sha256(
+                {
+                    "id": variant_id,
+                    "required": required,
+                    "width": width,
+                    "height": height,
+                    "fps": float(fps),
+                    "compositionMode": "authored",
+                    "deliverableRole": deliverable_value.strip(),
+                    "renderProfileId": render_profile_id_value.strip(),
+                    "renderProfileSha256": render_profile_sha256,
+                    "compositionProfileId": composition_id_value.strip(),
+                    "compositionSha256": composition_sha256,
+                }
+            )
+            default_root = (
+                ""
+                if variant_id == primary_variant_id
+                else f"variants/{variant_id}/"
+            )
+            artifact_roots: dict[str, str] = {}
+            for field, leaf in (
+                ("framesRoot", "frames"),
+                ("previewRoot", "previews"),
+                ("encodeRoot", "encodes"),
+                ("qaRoot", "qa"),
+            ):
+                value = raw.get(field, f"{default_root}{leaf}")
+                if not isinstance(value, str) or not value.strip():
+                    raise self._output_variant_contract_error(
+                        f"Output variant {variant_id!r} has an invalid {field}."
+                    )
+                artifact_roots[field] = value.strip()
+
+            definitions.append(
+                _OutputVariantDefinition(
+                    id=variant_id,
+                    enabled=enabled,
+                    required=required,
+                    width=width,
+                    height=height,
+                    fps=float(fps),
+                    deliverable_role=deliverable_value.strip(),
+                    render_profile_id=render_profile_id_value.strip(),
+                    render_profile_sha256=render_profile_sha256,
+                    composition_profile=CompositionProfile(
+                        id=composition_id_value.strip(),
+                        revision=revision_value.strip(),
+                        scene_sha256=profile.scene_sha256.lower(),
+                        camera_sha256=camera_sha256,
+                        composition_sha256=composition_sha256,
+                        override_sha256=override_sha256,
+                    ),
+                    output_variant_sha256=variant_sha256,
+                    frames_root=artifact_roots["framesRoot"],
+                    preview_root=artifact_roots["previewRoot"],
+                    encode_root=artifact_roots["encodeRoot"],
+                    qa_root=artifact_roots["qaRoot"],
+                )
+            )
+        return tuple(definitions)
+
+    @staticmethod
+    def _initial_stage_progress(
+        total_frames: int,
+        now: datetime,
+    ) -> tuple[StageProgress, ...]:
+        stages: list[StageProgress] = []
+        for stage in RenderStage:
+            if stage is RenderStage.INPUT_VERIFICATION:
+                stages.append(
+                    StageProgress(
+                        stage=stage,
+                        state=ProgressState.COMPLETE,
+                        completed_units=1,
+                        total_units=1,
+                        unit="checks",
+                        updated_at=now,
+                    )
+                )
+            elif stage in {RenderStage.RENDERING, RenderStage.FRAME_VALIDATION}:
+                stages.append(
+                    StageProgress(
+                        stage=stage,
+                        state=ProgressState.PENDING,
+                        completed_units=0,
+                        total_units=total_frames,
+                        unit="frames",
+                        updated_at=now,
+                    )
+                )
+            else:
+                stages.append(
+                    StageProgress(
+                        stage=stage,
+                        state=ProgressState.PENDING,
+                        updated_at=now,
+                    )
+                )
+        return tuple(stages)
+
+    @staticmethod
+    def _local_worker_capabilities() -> tuple[WorkerCapabilities, ...]:
+        memory_bytes = _physical_memory_bytes()
+        if memory_bytes is None or memory_bytes <= 0:
+            return ()
+        return (
+            WorkerCapabilities(
+                worker_id="local-render-worker",
+                kinds=(WorkerKind.LOCAL_CPU,),
+                logical_cpu_count=max(1, os.cpu_count() or 1),
+                memory_bytes=memory_bytes,
+                max_concurrent_tasks=1,
+                supported_artifact_formats=("png", "open-exr"),
+            ),
+        )
+
     def _identity(self, request: PreflightRequest) -> RenderIdentity:
         path = self.outputs.validated_path(request.output_directory)
         profile = self.discovery.get_profile(request.profile_id)
@@ -599,6 +1034,14 @@ class MissionControlService:
                 "The selected profile is bound to another exact approved scene.",
                 "Choose the profile's approved scene.",
             )
+        _profile_path, profile_payload, _profile_hash = self.discovery.profile_source(
+            profile.id
+        )
+        definitions = self._output_variant_definitions(profile, profile_payload)
+        active_variant = next(
+            (definition for definition in definitions if definition.enabled),
+            None,
+        )
         return RenderIdentity(
             project_id=request.project_id,
             scene_id=scene.id,
@@ -606,7 +1049,382 @@ class MissionControlService:
             profile_id=profile.id,
             profile_sha256=profile.saved_file_sha256,
             output_directory=str(path),
+            output_variant_id=(
+                active_variant.id
+                if active_variant is not None
+                else profile.output_variant_id
+            ),
+            output_width=(
+                active_variant.width
+                if active_variant is not None
+                else profile.resolution.width
+            ),
+            output_height=(
+                active_variant.height
+                if active_variant is not None
+                else profile.resolution.height
+            ),
+            composition_profile_id=(
+                active_variant.composition_profile.id
+                if active_variant is not None
+                else profile.composition_profile_id
+            ),
+            composition_profile_sha256=(
+                active_variant.composition_profile.composition_sha256
+                if active_variant is not None
+                else profile.composition_profile_sha256
+            ),
         )
+
+    def _shot_plan_payload(
+        self,
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+    ) -> Mapping[str, Any] | None:
+        inline = profile_payload.get("shotPlan")
+        if isinstance(inline, dict) and isinstance(inline.get("shots"), list):
+            return inline
+        shot_plan_path: object = profile_payload.get("shotPlanPath")
+        if shot_plan_path is None and isinstance(inline, dict):
+            shot_plan_path = inline.get("path")
+        production = profile_payload.get("production")
+        if shot_plan_path is None and isinstance(production, dict):
+            shot_plan_path = production.get("shotPlanPath")
+        if not isinstance(shot_plan_path, str) or not shot_plan_path.strip():
+            return None
+        raw_path = Path(shot_plan_path.strip())
+        candidates = (
+            (raw_path,)
+            if raw_path.is_absolute()
+            else (
+                profile_path.parent / raw_path,
+                self.config.repository_root / raw_path,
+            )
+        )
+        for candidate in candidates:
+            try:
+                resolved = candidate.resolve(strict=True)
+                if not resolved.is_file() or resolved.stat().st_size > 8_000_000:
+                    continue
+                payload = load_json_object(resolved, "Shot plan")
+                if isinstance(payload.get("shots"), list):
+                    return payload
+            except (MissionControlError, OSError):
+                continue
+        return None
+
+    def _remaining_complexity_units(
+        self,
+        job: JobRecord,
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+        *,
+        rendered_frames: int,
+        latest_rendered_frame: int | None,
+        fallback_complexity: str,
+    ) -> tuple[tuple[str, int], ...]:
+        next_frame = min(
+            job.frame_end + 1,
+            job.frame_start + max(0, rendered_frames),
+        )
+        if latest_rendered_frame is not None:
+            next_frame = max(next_frame, latest_rendered_frame + 1)
+        if next_frame > job.frame_end:
+            return ((fallback_complexity, 0),)
+        remaining = job.frame_end - next_frame + 1
+        shot_plan = self._shot_plan_payload(profile_payload, profile_path)
+        if shot_plan is None:
+            return ((fallback_complexity, remaining),)
+        raw_shots = shot_plan.get("shots")
+        if not isinstance(raw_shots, list):
+            return ((fallback_complexity, remaining),)
+
+        spans: list[tuple[int, int, str]] = []
+        for raw_value in raw_shots:
+            if not isinstance(raw_value, dict):
+                return ((fallback_complexity, remaining),)
+            frame_start = raw_value.get("frameStart")
+            frame_end = raw_value.get("frameEnd")
+            complexity = raw_value.get("complexityClass", "default")
+            if (
+                isinstance(frame_start, bool)
+                or not isinstance(frame_start, int)
+                or isinstance(frame_end, bool)
+                or not isinstance(frame_end, int)
+                or frame_end < frame_start
+                or not isinstance(complexity, str)
+                or _IDENTIFIER_RE.fullmatch(complexity.strip()) is None
+            ):
+                return ((fallback_complexity, remaining),)
+            clipped_start = max(next_frame, job.frame_start, frame_start)
+            clipped_end = min(job.frame_end, frame_end)
+            if clipped_start <= clipped_end:
+                spans.append((clipped_start, clipped_end, complexity.strip()))
+        if not spans:
+            return ((fallback_complexity, remaining),)
+
+        totals: dict[str, int] = {}
+        cursor = next_frame
+        for frame_start, frame_end, complexity in sorted(spans):
+            if frame_start < cursor:
+                return ((fallback_complexity, remaining),)
+            if frame_start > cursor:
+                totals["default"] = totals.get("default", 0) + frame_start - cursor
+            totals[complexity] = totals.get(complexity, 0) + frame_end - frame_start + 1
+            cursor = frame_end + 1
+        if cursor <= job.frame_end:
+            totals["default"] = totals.get("default", 0) + job.frame_end - cursor + 1
+        if sum(totals.values()) != remaining:
+            return ((fallback_complexity, remaining),)
+        return tuple(sorted(totals.items()))
+
+    def _render_workloads(
+        self,
+        job: JobRecord,
+        variants: tuple[OutputVariant, ...],
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+        *,
+        updated_variant_id: str | None = None,
+        rendered_frames: int | None = None,
+        latest_rendered_frame: int | None = None,
+        fallback_complexity: str,
+    ) -> tuple[StageWorkload, ...]:
+        workloads: list[StageWorkload] = []
+        for variant in variants:
+            if not variant.enabled:
+                continue
+            progress = variant.progress
+            variant_rendered = (
+                rendered_frames
+                if variant.id == updated_variant_id and rendered_frames is not None
+                else progress.rendered_frames
+            )
+            variant_latest = (
+                latest_rendered_frame
+                if variant.id == updated_variant_id
+                else progress.latest_rendered_frame
+            )
+            distribution = self._remaining_complexity_units(
+                job,
+                profile_payload,
+                profile_path,
+                rendered_frames=variant_rendered,
+                latest_rendered_frame=variant_latest,
+                fallback_complexity=fallback_complexity,
+            )
+            workloads.extend(
+                StageWorkload(
+                    output_variant_id=variant.id,
+                    stage=RenderStage.RENDERING,
+                    complexity_class=complexity,
+                    remaining_units=units,
+                    parallelizable=True,
+                )
+                for complexity, units in distribution
+            )
+        return tuple(workloads)
+
+    def _materialize_media_render_job(
+        self,
+        job: JobRecord,
+        profile: ProfileSummary,
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+        definitions: tuple[_OutputVariantDefinition, ...],
+        *,
+        authorization_token_value: str,
+    ) -> tuple[MediaRenderJob, tuple[WorkerCapabilities, ...]]:
+        now = job.updated_at
+        output_variants = tuple(
+            OutputVariant(
+                id=definition.id,
+                enabled=definition.enabled,
+                required=definition.required,
+                width=definition.width,
+                height=definition.height,
+                fps=definition.fps,
+                deliverable_role=definition.deliverable_role,
+                render_profile_id=definition.render_profile_id,
+                render_profile_sha256=definition.render_profile_sha256,
+                composition_profile=definition.composition_profile,
+                output_variant_sha256=definition.output_variant_sha256,
+                frames_root=definition.frames_root,
+                preview_root=definition.preview_root,
+                encode_root=definition.encode_root,
+                qa_root=definition.qa_root,
+                progress=OutputVariantProgress(
+                    output_variant_id=definition.id,
+                    stages=(
+                        self._initial_stage_progress(job.total_frame_count, now)
+                        if definition.enabled
+                        else ()
+                    ),
+                    total_frames=(
+                        job.total_frame_count if definition.enabled else 0
+                    ),
+                    updated_at=now,
+                ),
+            )
+            for definition in definitions
+        )
+        enabled = tuple(variant for variant in output_variants if variant.enabled)
+        package_value = profile_payload.get("package")
+        package = package_value if isinstance(package_value, dict) else {}
+        package_sha256 = _normalized_sha256(
+            package.get("sha256", profile_payload.get("packageSha256"))
+        ) or _canonical_sha256(
+            {
+                "sceneSha256": job.identity.scene_sha256.lower(),
+                "renderProfileSha256": job.identity.profile_sha256.lower(),
+                "outputVariants": [
+                    {
+                        "id": variant.id,
+                        "sha256": variant.output_variant_sha256,
+                    }
+                    for variant in output_variants
+                ],
+            }
+        )
+        package_id_value = package.get(
+            "id",
+            profile_payload.get("packageId", f"package-{package_sha256[:20]}"),
+        )
+        source_revision_value = package.get(
+            "sourceRevision",
+            profile_payload.get("sourceRevision", profile.id),
+        )
+        if (
+            not isinstance(package_id_value, str)
+            or _IDENTIFIER_RE.fullmatch(package_id_value.strip()) is None
+            or not isinstance(source_revision_value, str)
+            or not source_revision_value.strip()
+        ):
+            raise self._output_variant_contract_error(
+                "The package ID or source revision is invalid."
+            )
+        matrix_value = profile_payload.get("outputMatrix")
+        matrix = matrix_value if isinstance(matrix_value, dict) else {}
+        enabled_ids = tuple(variant.id for variant in enabled)
+        matrix_sha256 = _normalized_sha256(
+            matrix.get("sha256", profile_payload.get("outputMatrixSha256"))
+        ) or _canonical_sha256(
+            {
+                "packageSha256": package_sha256,
+                "enabledVariantIds": enabled_ids,
+                "variantSha256ById": {
+                    variant.id: variant.output_variant_sha256
+                    for variant in enabled
+                },
+            }
+        )
+        matrix_id_value = matrix.get(
+            "id",
+            profile_payload.get("outputMatrixId", f"matrix-{matrix_sha256[:20]}"),
+        )
+        if (
+            not isinstance(matrix_id_value, str)
+            or _IDENTIFIER_RE.fullmatch(matrix_id_value.strip()) is None
+        ):
+            raise self._output_variant_contract_error(
+                "The output-matrix ID is invalid."
+            )
+        tenant_value = profile_payload.get("tenant")
+        tenant = tenant_value if isinstance(tenant_value, dict) else {}
+        namespace_value = tenant.get(
+            "namespace",
+            profile_payload.get("tenantNamespace", "local"),
+        )
+        deployment_value = tenant.get(
+            "deploymentId",
+            profile_payload.get("deploymentId"),
+        )
+        if (
+            not isinstance(namespace_value, str)
+            or _IDENTIFIER_RE.fullmatch(namespace_value.strip()) is None
+            or (
+                deployment_value is not None
+                and (
+                    not isinstance(deployment_value, str)
+                    or _IDENTIFIER_RE.fullmatch(deployment_value.strip()) is None
+                )
+            )
+        ):
+            raise self._output_variant_contract_error(
+                "The tenant or deployment identity is invalid."
+            )
+        project_revision = profile_payload.get("projectRevision")
+        if project_revision is not None and not isinstance(project_revision, str):
+            project_revision = str(project_revision)
+        try:
+            media_job = MediaRenderJob(
+                id=job.id,
+                project=ProjectRef(
+                    tenant=TenantRef(
+                        namespace=namespace_value.strip(),
+                        deployment_id=(
+                            deployment_value.strip()
+                            if isinstance(deployment_value, str)
+                            else None
+                        ),
+                    ),
+                    project_id=job.identity.project_id,
+                    revision=(
+                        project_revision.strip()
+                        if isinstance(project_revision, str)
+                        and project_revision.strip()
+                        else None
+                    ),
+                ),
+                package=PackageIdentity(
+                    package_id=package_id_value.strip(),
+                    package_sha256=package_sha256,
+                    source_revision=source_revision_value.strip(),
+                    source_hashes={
+                        "scene": job.identity.scene_sha256.lower(),
+                        "render-profile": job.identity.profile_sha256.lower(),
+                    },
+                ),
+                output_matrix=OutputVariantMatrixIdentity(
+                    matrix_id=matrix_id_value.strip(),
+                    matrix_sha256=matrix_sha256,
+                    package_sha256=package_sha256,
+                    enabled_variant_ids=enabled_ids,
+                    variant_sha256_by_id={
+                        variant.id: variant.output_variant_sha256
+                        for variant in enabled
+                    },
+                ),
+                output_variants=output_variants,
+                created_at=job.created_at,
+                updated_at=job.updated_at,
+                authorization_sha256=hashlib.sha256(
+                    authorization_token_value.encode("utf-8")
+                ).hexdigest(),
+            )
+        except ValueError as exc:
+            raise self._output_variant_contract_error(
+                "The saved V2 output-variant identities or artifact roots are invalid."
+            ) from exc
+        workers = self._local_worker_capabilities()
+        eta_service = EtaService()
+        workloads = self._render_workloads(
+            job,
+            media_job.output_variants,
+            profile_payload,
+            profile_path,
+            rendered_frames=0,
+            latest_rendered_frame=None,
+            fallback_complexity="default",
+        )
+        aggregate_eta = eta_service.forecast_matrix(media_job, workloads)
+        active = next(variant for variant in media_job.output_variants if variant.enabled)
+        job.output_variants = media_job.output_variants
+        job.active_variant_id = active.id
+        job.stages = active.progress.stages
+        job.aggregate_eta = aggregate_eta
+        job.workers = workers
+        return media_job, workers
 
     async def preflight(
         self,
@@ -894,7 +1712,20 @@ class MissionControlService:
                 ),
                 free_storage_bytes=preflight.available_bytes,
             )
+            definitions = self._output_variant_definitions(profile, profile_payload)
+            media_job: MediaRenderJob | None = None
+            if definitions:
+                media_job, _workers = self._materialize_media_render_job(
+                    job,
+                    profile,
+                    profile_payload,
+                    profile_path,
+                    definitions,
+                    authorization_token_value=token,
+                )
             self.store.put_job(job)
+            if media_job is not None:
+                self.store.put_media_render_job(media_job)
             stored_event = self.store.append_event(self._event_from_job(job))
             await self._notify_event(stored_event.sequence)
             try:
@@ -1097,12 +1928,367 @@ class MissionControlService:
 
     async def update_job(self, job_id: str, **changes: object) -> JobRecord:
         job = self.get_job(job_id)
-        changes["updated_at"] = datetime.now(UTC)
+        routed_variant = changes.get("output_variant_id")
+        if routed_variant is not None:
+            enabled_ids = {
+                variant.id for variant in job.output_variants if variant.enabled
+            }
+            if (
+                not isinstance(routed_variant, str)
+                or (
+                    enabled_ids
+                    and routed_variant not in enabled_ids
+                )
+                or (
+                    not enabled_ids
+                    and routed_variant != job.identity.output_variant_id
+                )
+            ):
+                raise MissionControlError(
+                    409,
+                    "render_event_variant_mismatch",
+                    "Renderer event identity does not match",
+                    "The renderer event targets an unknown or disabled output variant.",
+                    "Reject the event and restart the exact authorized render worker.",
+                    job_id=job.id,
+                )
+        updated_at = datetime.now(UTC)
+        changes["updated_at"] = updated_at
+        changes.update(self._persistent_render_eta_changes(job, changes, updated_at))
+        changes.update(self._output_variant_progress_changes(job, changes, updated_at))
+        changes.pop("output_variant_id", None)
         updated = job.model_copy(update=changes)
         self.store.put_job(updated)
+        canonical_job = self.store.get_media_render_job(job_id)
+        if canonical_job is not None:
+            self.store.put_media_render_job(
+                canonical_job.model_copy(
+                    update={
+                        "output_variants": updated.output_variants,
+                        "updated_at": updated.updated_at,
+                    }
+                )
+            )
         event = self.store.append_event(self._event_from_job(updated))
         await self._notify_event(event.sequence)
         return updated
+
+    def _persistent_render_eta_changes(
+        self,
+        job: JobRecord,
+        changes: dict[str, object],
+        recorded_at: datetime,
+    ) -> dict[str, object]:
+        """Record one completed-frame sample and rebuild restart-safe render ETA."""
+        if changes.get("renderer_event_type") != "frame_written":
+            return {}
+        elapsed = changes.get("current_seconds_per_frame")
+        rendered = changes.get("rendered_frame_count")
+        frame = changes.get("latest_rendered_frame")
+        if (
+            isinstance(elapsed, bool)
+            or not isinstance(elapsed, (int, float))
+            or float(elapsed) <= 0
+            or isinstance(rendered, bool)
+            or not isinstance(rendered, int)
+            or isinstance(frame, bool)
+            or not isinstance(frame, int)
+        ):
+            return {}
+        routed_variant = changes.get("output_variant_id")
+        variant_id = (
+            routed_variant
+            if isinstance(routed_variant, str)
+            else job.active_variant_id or job.identity.output_variant_id
+        )
+        target_variant = next(
+            (
+                variant
+                for variant in job.output_variants
+                if variant.enabled and variant.id == variant_id
+            ),
+            None,
+        )
+        complexity = str(
+            changes.get("current_complexity_class")
+            or job.current_complexity_class
+            or "default"
+        )
+        worker_id = str(changes.get("worker_id") or job.worker_id or "local-worker")
+        state = self.store.get_eta_state(job.id)
+        service = EtaService.from_state(state) if state is not None else EtaService()
+        service.record_sample(
+            EtaSample(
+                output_variant_id=variant_id,
+                stage=RenderStage.RENDERING,
+                complexity_class=complexity,
+                task_id=f"frame-{frame}",
+                worker_id=worker_id,
+                duration_seconds=float(elapsed),
+                completed_units=1,
+                recorded_at=recorded_at,
+            )
+        )
+        service.set_worker_count(
+            variant_id,
+            RenderStage.RENDERING,
+            1,
+            observed_at=recorded_at,
+        )
+        total_frames = (
+            target_variant.progress.total_frames
+            if target_variant is not None
+            else job.total_frame_count
+        )
+        remaining = max(0, total_frames - rendered)
+        current_estimate = service.estimate(
+            StageWorkload(
+                output_variant_id=variant_id,
+                stage=RenderStage.RENDERING,
+                complexity_class=complexity,
+                remaining_units=(
+                    (1 if remaining > 0 else 0)
+                    if job.output_variants
+                    else remaining
+                ),
+                parallelizable=True,
+            )
+        )
+        p50_remaining = current_estimate.p50_remaining_seconds
+        p90_remaining = current_estimate.p90_remaining_seconds
+        aggregate_eta = job.aggregate_eta
+        estimate_confidences = [current_estimate.confidence]
+        if job.output_variants:
+            try:
+                profile_path, profile_payload, _profile_hash = (
+                    self.discovery.profile_source(job.identity.profile_id)
+                )
+            except MissionControlError:
+                profile_path = None
+                profile_payload = {}
+            canonical_job = self.store.get_media_render_job(job.id)
+            if canonical_job is not None and profile_path is not None:
+                workloads = self._render_workloads(
+                    job,
+                    canonical_job.output_variants,
+                    profile_payload,
+                    profile_path,
+                    updated_variant_id=variant_id,
+                    rendered_frames=rendered,
+                    latest_rendered_frame=frame,
+                    fallback_complexity=complexity,
+                )
+                active_estimates = [
+                    service.estimate(workload)
+                    for workload in workloads
+                    if workload.output_variant_id == variant_id
+                ]
+                p50_values = [
+                    estimate.p50_remaining_seconds
+                    for estimate in active_estimates
+                ]
+                p90_values = [
+                    estimate.p90_remaining_seconds
+                    for estimate in active_estimates
+                ]
+                p50_remaining = (
+                    None
+                    if any(value is None for value in p50_values)
+                    else sum(value for value in p50_values if value is not None)
+                )
+                p90_remaining = (
+                    None
+                    if any(value is None for value in p90_values)
+                    else sum(value for value in p90_values if value is not None)
+                )
+                estimate_confidences = [
+                    estimate.confidence for estimate in active_estimates
+                ] or estimate_confidences
+                aggregate_eta = service.forecast_matrix(
+                    canonical_job,
+                    workloads,
+                )
+        self.store.put_eta_state(job.id, service.snapshot())
+        confidence_rank = {
+            "unknown": 0,
+            "low": 1,
+            "medium": 2,
+            "high": 3,
+        }
+        confidence_value = min(
+            (item.value for item in estimate_confidences),
+            key=confidence_rank.__getitem__,
+        )
+        confidence = EtaConfidence(confidence_value)
+        stage = StageProgress(
+            stage=RenderStage.RENDERING,
+            state=(
+                ProgressState.COMPLETE if remaining == 0 else ProgressState.RUNNING
+            ),
+            completed_units=rendered,
+            total_units=total_frames,
+            unit="frames",
+            throughput_per_second=(
+                None
+                if current_estimate.p50_seconds_per_unit is None
+                else 1.0 / current_estimate.p50_seconds_per_unit
+            ),
+            elapsed_seconds=(
+                max(0.0, (recorded_at - job.started_at).total_seconds())
+                if job.started_at is not None
+                else 0.0
+            ),
+            eta_p50_seconds=p50_remaining,
+            eta_p90_seconds=p90_remaining,
+            started_at=job.started_at,
+            updated_at=recorded_at,
+        )
+        current_stages = (
+            target_variant.progress.stages
+            if target_variant is not None
+            else job.stages
+        )
+        stages = tuple(
+            item
+            for item in current_stages
+            if item.stage is not RenderStage.RENDERING
+        ) + (stage,)
+        return {
+            "rolling_median_seconds": current_estimate.p50_seconds_per_unit,
+            "rolling_mean_seconds": current_estimate.p50_seconds_per_unit,
+            "p90_seconds": current_estimate.p90_seconds_per_unit,
+            "estimated_completion_time": (
+                None
+                if p50_remaining is None
+                else recorded_at + timedelta(seconds=p50_remaining)
+            ),
+            "eta_confidence": confidence,
+            "stages": stages,
+            "aggregate_eta": aggregate_eta,
+        }
+
+    def _output_variant_progress_changes(
+        self,
+        job: JobRecord,
+        changes: dict[str, object],
+        updated_at: datetime,
+    ) -> dict[str, object]:
+        if not job.output_variants:
+            return {}
+        routed_variant = changes.get("output_variant_id")
+        variant_id = (
+            routed_variant
+            if isinstance(routed_variant, str)
+            else job.active_variant_id or job.identity.output_variant_id
+        )
+        variants = []
+        matched = False
+        for variant in job.output_variants:
+            if variant.id != variant_id:
+                variants.append(variant)
+                continue
+            matched = True
+            progress = variant.progress
+            rendered_value = changes.get(
+                "rendered_frame_count",
+                progress.rendered_frames,
+            )
+            validated_value = changes.get(
+                "validated_frame_count",
+                progress.validated_frames,
+            )
+            rendered = (
+                rendered_value
+                if isinstance(rendered_value, int) and not isinstance(rendered_value, bool)
+                else progress.rendered_frames
+            )
+            validated = (
+                validated_value
+                if isinstance(validated_value, int)
+                and not isinstance(validated_value, bool)
+                else progress.validated_frames
+            )
+            current = changes.get("current_frame", progress.current_frame)
+            latest_rendered = changes.get(
+                "latest_rendered_frame",
+                progress.latest_rendered_frame,
+            )
+            latest_safe = (
+                job.frame_start + validated - 1 if validated > 0 else None
+            )
+            in_flight = set(progress.in_flight_frames)
+            if (
+                changes.get("renderer_event_type") == "frame_written"
+                and isinstance(latest_rendered, int)
+            ):
+                in_flight.add(latest_rendered)
+            if latest_safe is not None:
+                in_flight = {frame for frame in in_flight if frame > latest_safe}
+            worker_id = changes.get("worker_id", job.worker_id)
+            workers = set(progress.active_worker_ids)
+            if isinstance(worker_id, str) and worker_id:
+                workers.add(worker_id)
+            preview_url = changes.get(
+                "latest_frame_preview",
+                progress.preview_url,
+            )
+            full_frame_url = changes.get(
+                "latest_full_frame_url",
+                progress.full_frame_url,
+            )
+            if isinstance(latest_rendered, int):
+                preview_url = (
+                    f"/api/mission-control/render/{job.id}/preview"
+                    f"?v={latest_rendered}&output_variant_id={variant_id}"
+                )
+                full_frame_url = (
+                    f"/api/mission-control/render/{job.id}/frame"
+                    f"?v={latest_rendered}&output_variant_id={variant_id}"
+                )
+            latest_frame_artifact = progress.latest_frame_artifact
+            latest_frame_artifact_frame = progress.latest_frame_artifact_frame
+            latest_frame_written_at = progress.latest_frame_written_at
+            artifact_value = changes.get("latest_frame_artifact")
+            if (
+                changes.get("renderer_event_type") == "frame_written"
+                and isinstance(artifact_value, str)
+                and isinstance(latest_rendered, int)
+            ):
+                latest_frame_artifact = artifact_value
+                latest_frame_artifact_frame = latest_rendered
+                latest_frame_written_at = updated_at
+            elif (
+                latest_frame_artifact_frame is not None
+                and latest_frame_artifact_frame != latest_rendered
+            ):
+                latest_frame_artifact = None
+                latest_frame_artifact_frame = None
+                latest_frame_written_at = None
+            variant_progress = progress.model_copy(
+                update={
+                    "stages": changes.get("stages", progress.stages),
+                    "rendered_frames": rendered,
+                    "validated_frames": validated,
+                    "current_frame": current,
+                    "latest_rendered_frame": latest_rendered,
+                    "latest_safe_frame": latest_safe,
+                    "in_flight_frames": tuple(sorted(in_flight)),
+                    "active_worker_ids": tuple(sorted(workers)),
+                    "preview_url": preview_url,
+                    "full_frame_url": full_frame_url,
+                    "latest_frame_artifact": latest_frame_artifact,
+                    "latest_frame_artifact_frame": latest_frame_artifact_frame,
+                    "latest_frame_written_at": latest_frame_written_at,
+                    "updated_at": updated_at,
+                }
+            )
+            variants.append(variant.model_copy(update={"progress": variant_progress}))
+        if not matched:
+            return {}
+        return {
+            "output_variants": tuple(variants),
+            "active_variant_id": variant_id,
+        }
 
     async def add_log(
         self,
@@ -1127,6 +2313,14 @@ class MissionControlService:
         )
 
     def _event_from_job(self, job: JobRecord) -> RenderEvent:
+        event_variant = next(
+            (
+                variant
+                for variant in job.output_variants
+                if variant.enabled and variant.id == job.active_variant_id
+            ),
+            None,
+        )
         return RenderEvent(
             sequence=0,
             timestamp=datetime.now(UTC),
@@ -1136,8 +2330,41 @@ class MissionControlService:
             phase=job.phase,
             scene_id=job.identity.scene_id,
             scene_sha256=job.identity.scene_sha256,
-            profile_id=job.identity.profile_id,
-            profile_sha256=job.identity.profile_sha256,
+            profile_id=(
+                event_variant.render_profile_id
+                if event_variant is not None
+                else job.identity.profile_id
+            ),
+            profile_sha256=(
+                event_variant.render_profile_sha256.upper()
+                if event_variant is not None
+                else job.identity.profile_sha256
+            ),
+            output_variant_id=(
+                event_variant.id
+                if event_variant is not None
+                else job.identity.output_variant_id
+            ),
+            output_width=(
+                event_variant.width
+                if event_variant is not None
+                else job.identity.output_width
+            ),
+            output_height=(
+                event_variant.height
+                if event_variant is not None
+                else job.identity.output_height
+            ),
+            composition_profile_id=(
+                event_variant.composition_profile.id
+                if event_variant is not None
+                else job.identity.composition_profile_id
+            ),
+            composition_profile_sha256=(
+                event_variant.composition_profile.composition_sha256
+                if event_variant is not None
+                else job.identity.composition_profile_sha256
+            ),
             renderer_active=job.renderer_active,
             watcher_active=job.watcher_active,
             current_frame_started_at=job.current_frame_started_at,
@@ -1155,6 +2382,7 @@ class MissionControlService:
             current_act_name=job.current_act_name,
             current_shot_id=job.current_shot_id,
             current_shot_name=job.current_shot_name,
+            current_complexity_class=job.current_complexity_class,
             rendered_frame_count=job.rendered_frame_count,
             inflight_frame_count=job.inflight_frame_count,
             validated_frame_count=job.validated_frame_count,
@@ -1182,10 +2410,17 @@ class MissionControlService:
             latest_frame_preview=job.latest_frame_preview,
             latest_preview_frame=job.latest_preview_frame,
             latest_preview_at=job.latest_preview_at,
+            latest_frame_artifact=job.latest_frame_artifact,
+            latest_full_frame_url=job.latest_full_frame_url,
             latest_log_line=job.latest_log_line,
             warning=job.warning,
             error=job.error,
             safe_stop_status=job.safe_stop_status,
+            output_variants=job.output_variants,
+            active_variant_id=job.active_variant_id,
+            stages=job.stages,
+            aggregate_eta=job.aggregate_eta,
+            workers=job.workers,
         )
 
     @property
@@ -1393,9 +2628,209 @@ class MissionControlService:
                 )
             return resumed
 
-    def preview_path(self, job_id: str, *, frame: int | None = None) -> Path | None:
+    def _telemetry_artifact_path(
+        self,
+        job: JobRecord,
+        *,
+        frame: int | None = None,
+        output_variant_id: str | None = None,
+    ) -> Path | None:
+        variant_id = output_variant_id
+        if variant_id is None and job.output_variants:
+            variant_id = job.active_variant_id
+        variant = next(
+            (
+                item
+                for item in job.output_variants
+                if item.enabled and item.id == variant_id
+            ),
+            None,
+        )
+        if job.output_variants and variant is None:
+            return None
+        expected_width: int | None
+        expected_height: int | None
+        if variant is not None:
+            relative = variant.progress.latest_frame_artifact
+            expected_frame = variant.progress.latest_frame_artifact_frame
+            expected_width = variant.width
+            expected_height = variant.height
+            written_at = variant.progress.latest_frame_written_at
+        else:
+            relative = job.latest_frame_artifact
+            expected_frame = job.latest_preview_frame
+            expected_width = job.identity.output_width
+            expected_height = job.identity.output_height
+            written_at = job.latest_preview_at
+        if relative is None or "\\" in relative or relative.startswith("/"):
+            return None
+        parts = relative.split("/")
+        if any(part in {"", ".", ".."} for part in parts):
+            return None
+        if frame is not None and expected_frame != frame:
+            return None
+        if expected_frame is None or Path(relative).name != f"frame_{expected_frame:06d}.png":
+            return None
+        root = Path(job.identity.output_directory)
+        try:
+            resolved_root = root.resolve(strict=True)
+            source = (root / Path(*parts)).resolve(strict=True)
+            source.relative_to(resolved_root)
+            if source.is_symlink() or not source.is_file():
+                return None
+            before = source.stat()
+            dimensions = self._png_dimensions(source)
+            if not self._valid_png(source):
+                return None
+            after = source.stat()
+            source_timestamp = datetime.fromtimestamp(before.st_mtime, tz=UTC)
+            if (
+                before.st_size != after.st_size
+                or before.st_mtime_ns != after.st_mtime_ns
+                or before.st_size < 20
+                or (expected_width is not None and dimensions[0] != expected_width)
+                or (expected_height is not None and dimensions[1] != expected_height)
+                or (
+                    written_at is not None
+                    and source_timestamp + timedelta(minutes=5) < written_at
+                )
+            ):
+                return None
+            return source
+        except (OSError, ValueError):
+            return None
+
+    def _variant_frame_path(
+        self,
+        job: JobRecord,
+        output_variant_id: str,
+        *,
+        frame: int | None,
+    ) -> Path | None:
+        variant = next(
+            (
+                item
+                for item in job.output_variants
+                if item.enabled and item.id == output_variant_id
+            ),
+            None,
+        )
+        requested = frame if frame is not None else (
+            variant.progress.latest_rendered_frame if variant is not None else None
+        )
+        if variant is None or requested is None:
+            return None
+        progress = variant.progress
+        known_rendered = requested == progress.latest_rendered_frame
+        known_safe = (
+            progress.latest_safe_frame is not None
+            and job.frame_start <= requested <= progress.latest_safe_frame
+        )
+        if not known_rendered and not known_safe:
+            return None
+        root = Path(job.identity.output_directory)
+        try:
+            frames_root = (
+                root / Path(*variant.frames_root.split("/"))
+            ).resolve(strict=True)
+            frames_root.relative_to(root.resolve(strict=True))
+            source = (frames_root / f"frame_{requested:06d}.png").resolve(strict=True)
+            source.relative_to(frames_root)
+            before = source.stat()
+            if (
+                not self._valid_png(source)
+                or self._png_dimensions(source) != (variant.width, variant.height)
+            ):
+                return None
+            after = source.stat()
+            return (
+                source
+                if before.st_size == after.st_size
+                and before.st_mtime_ns == after.st_mtime_ns
+                else None
+            )
+        except (OSError, ValueError):
+            return None
+
+    def full_frame_path(
+        self,
+        job_id: str,
+        *,
+        frame: int | None = None,
+        output_variant_id: str | None = None,
+    ) -> Path | None:
         job = self.get_job(job_id)
-        cache_key = f"{job_id}:{frame if frame is not None else 'latest'}"
+        selected_variant_id = (
+            output_variant_id
+            if output_variant_id is not None
+            else job.active_variant_id if job.output_variants else None
+        )
+        if selected_variant_id is not None:
+            variant_source = self._variant_frame_path(
+                job,
+                selected_variant_id,
+                frame=frame,
+            )
+            if variant_source is not None:
+                return variant_source
+            return self._telemetry_artifact_path(
+                job,
+                frame=frame,
+                output_variant_id=selected_variant_id,
+            )
+        requested_frame = frame if frame is not None else job.latest_preview_frame
+        if requested_frame is None or not job.frame_start <= requested_frame <= job.frame_end:
+            return None
+        inflight = self._telemetry_artifact_path(job, frame=requested_frame)
+        if inflight is not None:
+            return inflight
+        published = (
+            Path(job.identity.output_directory)
+            / "frames"
+            / f"frame_{requested_frame:06d}.png"
+        )
+        return published if self._valid_png(published) else None
+
+    def preview_path(
+        self,
+        job_id: str,
+        *,
+        frame: int | None = None,
+        output_variant_id: str | None = None,
+    ) -> Path | None:
+        job = self.get_job(job_id)
+        selected_variant_id = (
+            output_variant_id
+            if output_variant_id is not None
+            else job.active_variant_id if job.output_variants else None
+        )
+        cache_key = (
+            f"{job_id}:{selected_variant_id or 'legacy'}:"
+            f"{frame if frame is not None else 'latest'}"
+        )
+        if selected_variant_id is not None:
+            variant_source = self._variant_frame_path(
+                job,
+                selected_variant_id,
+                frame=frame,
+            )
+            if variant_source is None:
+                variant_source = self._telemetry_artifact_path(
+                    job,
+                    frame=frame,
+                    output_variant_id=selected_variant_id,
+                )
+            if variant_source is not None:
+                preview = self._preview_thumbnail(job, variant_source)
+                self._preview_cache[cache_key] = (time.monotonic(), preview)
+                return preview
+            self._preview_cache[cache_key] = (time.monotonic(), None)
+            return None
+        inflight = self._telemetry_artifact_path(job, frame=frame)
+        if inflight is not None:
+            preview = self._preview_thumbnail(job, inflight)
+            self._preview_cache[cache_key] = (time.monotonic(), preview)
+            return preview
         if frame is not None:
             if frame < job.frame_start or frame > job.frame_end:
                 return None
@@ -1448,9 +2883,9 @@ class MissionControlService:
     def _preview_thumbnail(self, job: JobRecord, source: Path) -> Path:
         """Publish a bounded preview outside Blender's render callbacks.
 
-        The source has already passed structural validation and, for production
-        jobs, manifest hash validation. A failed or unavailable thumbnailer never
-        replaces the last complete source preview.
+        The source has passed bounded structural and stable-size validation.
+        Published frames additionally have manifest hash validation. A failed or
+        unavailable thumbnailer never replaces the complete source frame.
         """
 
         if job.renderer != RendererKind.PRODUCTION:

@@ -292,6 +292,41 @@ Start-Process "$proof\media-lock-final\r13.1-motion-preview.mp4"
 Start-Process "$proof\r13.1-artistic-review.json"
 ```
 
+### Finish-line owner attestation and output matrix
+
+The historical R13.1 proof remains immutable. Its Codex-assisted `REVISE`
+recommendation, pending human-artist field, and `artistApproved: false` value
+continue to describe that bounded proof. They are not rewritten to manufacture
+approval.
+
+The later owner-attested record at
+`production/andromeda-v2/creative-acceptance.json` separately records the
+owner's decision to use R13.1 as the project-level visual and motion baseline.
+It attributes the acceptance to the operator, not Codex. Its scope is the look
+target for this project; it does not waive technical QA, authorize stale
+identities, permit cloud provisioning, or start a full render.
+
+The finish-line production contract is an exact output matrix:
+
+- authored horizontal 1920 × 1080 at 30 FPS is required and enabled;
+- authored vertical 1080 × 1920 at 30 FPS is optional and disabled by default;
+- story timing, audio clock, protagonist state, and deterministic seeds are
+  shared;
+- camera, lens, framing, occupancy, foreground, safe zones, and environment
+  layout may differ by authored composition;
+- a vertical crop, stretch, letterbox, or blind reframe is invalid.
+
+Changing the enabled matrix invalidates its calibration, aggregate forecast,
+technical authorization, and operator-start authorization. A bounded vertical
+composition proof demonstrates authoring capability but does not enable the
+vertical production workload.
+
+See [Render operation architecture](render-operation-architecture.md) for the
+generic lifecycle and SaaS/privacy boundary, and [Andromeda V2 production
+runbook](andromeda-v2-production-runbook.md) for safe operator actions. The full
+13,029-frame production render is outside the implementation sprint and must
+remain unstarted until the separate exact operator gate is authorized.
+
 ## Local verification
 
 ```powershell
@@ -318,7 +353,11 @@ git diff --check
 
 Local deployment means a current frontend build and loopback Mission Control service. If a render or encode is active, do not restart it merely to activate new code; report activation as deferred.
 
-## Known limitations and remaining gates
+## Historical proof limitations and current production gate
+
+The following R11–R13.1 bullets are preserved as stage-specific history. They
+explain why the finish-line package was needed; they are not a current readiness
+manifest for the later seven-act V2 source.
 
 - R13.1 passes its bounded structural, motion, encoding, exposure, and immutable-evidence gates, but its Codex-assisted recommendation is `REVISE`; the provisional look is not artist-approved.
 - Its destination is still abstract, mechanically connected architecture remains a procedural blockout, and the late look-back camera arc is the most aggressive motion in the proof.
@@ -326,6 +365,6 @@ Local deployment means a current frontend build and loopback Mission Control ser
 - R13 has no motion proof. A human must select the protagonist, architectural material language, gate construction, and exposure/lighting treatment before the bounded 3-5 second motion test can be authored.
 - The R12 real-analysis bounded proof passes its technical continuity, encoding, exposure, and evidence-integrity gates, but its Codex-assisted artistic decision is `REVISE` and it is not a human artist-approved film.
 - The procedural/low-poly machinery, simple green membrane/beyond layer, still-graphic orange chamber aperture, dark corridor, and inherited geometric-orb protagonist remain the principal artistic limitations. The proof uses review-quality Eevee output rather than final-quality shading, volumetrics, motion blur, or production sampling.
-- Only Signal through First Gate was revised and reviewed; the later Rupture, Transformation, and Arrival environments still need an equivalent artistic pass before any full-story approval.
-- V2 needs its own render calibration, frozen candidate/profile hashes, and explicit production authorization.
-- Cloud provisioning and a full-track V2 render are outside this implementation and were not run.
+- In the R11/R12 bounded proof, only Signal through First Gate was revised and reviewed; the later Rupture, Transformation, and Arrival environments were outside that historical proof.
+- Current readiness is governed only by the V2 package, calibration, evidence, and exact technical-authorization artifacts. This chronology must not be used to infer readiness.
+- Even when every objective V2 gate passes, the separate exact operator-start gate remains mandatory. Cloud provisioning and the full-track production render were not performed by this documentation update.

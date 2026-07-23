@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from .eta import EtaPersistentState
 from .models import JobRecord, LogEntry, RenderEvent
+from .render_contracts import MediaRenderJob
 
 
 class MissionControlStore:
@@ -66,6 +68,18 @@ class MissionControlStore:
                     value_json TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS mission_control_media_render_jobs (
+                    id TEXT PRIMARY KEY,
+                    updated_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS mission_control_eta_states (
+                    job_id TEXT PRIMARY KEY,
+                    updated_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
                 """
             )
 
@@ -122,6 +136,62 @@ class MissionControlStore:
                 (limit,),
             ).fetchall()
         return [JobRecord.model_validate_json(str(row["payload_json"])) for row in rows]
+
+    def put_media_render_job(self, job: MediaRenderJob) -> None:
+        """Persist the reusable V2 job contract in Mission Control's canonical DB."""
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO mission_control_media_render_jobs(id, updated_at, payload_json)
+                VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    updated_at = excluded.updated_at,
+                    payload_json = excluded.payload_json
+                """,
+                (
+                    job.id,
+                    job.updated_at.isoformat(),
+                    job.model_dump_json(by_alias=False),
+                ),
+            )
+
+    def get_media_render_job(self, job_id: str) -> MediaRenderJob | None:
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT payload_json FROM mission_control_media_render_jobs WHERE id = ?",
+                (job_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return MediaRenderJob.model_validate_json(str(row["payload_json"]))
+
+    def put_eta_state(self, job_id: str, state: EtaPersistentState) -> None:
+        """Persist robust ETA observations so restarts retain measured history."""
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO mission_control_eta_states(job_id, updated_at, payload_json)
+                VALUES (?, ?, ?)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    updated_at = excluded.updated_at,
+                    payload_json = excluded.payload_json
+                """,
+                (
+                    job_id,
+                    state.updated_at.isoformat(),
+                    state.model_dump_json(by_alias=False),
+                ),
+            )
+
+    def get_eta_state(self, job_id: str) -> EtaPersistentState | None:
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT payload_json FROM mission_control_eta_states WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return EtaPersistentState.model_validate_json(str(row["payload_json"]))
 
     def append_event(self, event: RenderEvent) -> RenderEvent:
         timestamp = event.timestamp.isoformat()

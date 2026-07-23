@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-final-worker-requirements",
+  "projectId": "trip-to-andromeda-v2",
+  "requirements": [
+    {
+      "id": "local-rtx3060-eevee-v1",
+      "deviceClass": "gpu",
+      "renderer": "BLENDER_EEVEE",
+      "blenderVersion": "5.2",
+      "minimumVramMiB": 8192,
+      "maximumWorkersPerDevice": 1,
+      "chunkSizeFrames": 300,
+      "deterministicSeed": 84291,
+      "requiredCapabilities": [
+        "png-16bit-rgb",
+        "atomic-chunk-publication",
+        "validated-missing-frame-resume",
+        "variant-aware-telemetry"
+      ]
+    }
+  ],
+  "localMatch": {
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "vramMiB": 12288,
+    "blenderVersion": "5.2.0 LTS",
+    "matches": true
+  },
+  "remoteWorkersProvisioned": false
+}

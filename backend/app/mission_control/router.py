@@ -341,8 +341,16 @@ async def render_preview(
     job_id: str,
     request: Request,
     version: Annotated[int | None, Query(alias="v", ge=1)] = None,
+    output_variant_id: Annotated[
+        str | None,
+        Query(alias="output_variant_id", min_length=1, max_length=160),
+    ] = None,
 ) -> Response:
-    path = _service(request).preview_path(job_id, frame=version)
+    path = _service(request).preview_path(
+        job_id,
+        frame=version,
+        output_variant_id=output_variant_id,
+    )
     if path is None:
         return Response(status_code=204, headers={"Cache-Control": "no-store"})
     preview_frame = int(path.stem.removeprefix("frame_"))
@@ -354,6 +362,66 @@ async def render_preview(
             "Pragma": "no-cache",
             "X-Content-Type-Options": "nosniff",
             "X-TrackPrompt-Preview-Frame": str(preview_frame),
+        },
+    )
+
+
+@router.get("/render/{job_id}/frame")
+async def render_full_frame(
+    job_id: str,
+    request: Request,
+    version: Annotated[int | None, Query(alias="v", ge=1)] = None,
+    output_variant_id: Annotated[
+        str | None,
+        Query(alias="output_variant_id", min_length=1, max_length=160),
+    ] = None,
+) -> Response:
+    service = _service(request)
+    path = service.full_frame_path(
+        job_id,
+        frame=version,
+        output_variant_id=output_variant_id,
+    )
+    if path is None:
+        return Response(status_code=204, headers={"Cache-Control": "no-store"})
+    job = service.get_job(job_id)
+    frame = version if version is not None else job.latest_preview_frame
+    variant = next(
+        (
+            item
+            for item in job.output_variants
+            if item.enabled and item.id == output_variant_id
+        ),
+        None,
+    )
+    safe = bool(
+        frame is not None
+        and (
+            (
+                variant is not None
+                and variant.progress.latest_safe_frame is not None
+                and frame <= variant.progress.latest_safe_frame
+            )
+            or (
+                variant is None
+                and frame
+                <= job.frame_start + max(0, job.published_frame_count) - 1
+                and path.parent.name == "frames"
+                and path.parent.parent == Path(job.identity.output_directory)
+            )
+        )
+    )
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+            "X-TrackPrompt-Frame-Safety": (
+                "validated-published" if safe else "rendered-inflight"
+            ),
+            "Content-Disposition": f'inline; filename="{path.name}"',
         },
     )
 

@@ -127,6 +127,11 @@ class OutputManager:
             profile_id=profile.id,
             profile_sha256=profile.saved_file_sha256,
             output_directory=str(path),
+            output_variant_id=profile.output_variant_id,
+            output_width=profile.resolution.width,
+            output_height=profile.resolution.height,
+            composition_profile_id=profile.composition_profile_id,
+            composition_profile_sha256=profile.composition_profile_sha256,
         )
 
     def inspect(
@@ -329,6 +334,17 @@ class OutputManager:
             profile_id=str(profile.get("profileId") or profile.get("id") or "unknown"),
             profile_sha256=str(profile.get("sha256", "")).upper(),
             output_directory=existing_output or str(output),
+            output_variant_id=(
+                expected.output_variant_id if expected is not None else "primary"
+            ),
+            output_width=expected.output_width if expected is not None else None,
+            output_height=expected.output_height if expected is not None else None,
+            composition_profile_id=(
+                expected.composition_profile_id if expected is not None else "primary"
+            ),
+            composition_profile_sha256=(
+                expected.composition_profile_sha256 if expected is not None else None
+            ),
         )
         if manifest.get("kind") != _RENDER_MANIFEST_KIND:
             issues.append("Render manifest kind is unsupported.")

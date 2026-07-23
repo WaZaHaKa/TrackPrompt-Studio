@@ -9,7 +9,9 @@ import os
 import re
 import shutil
 import stat
+import struct
 import subprocess
+import zlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -63,7 +65,49 @@ _FAKE_PREVIEW_PNG = base64.b64decode(
 )
 
 
-def _publish_fake_preview(output_directory: str, frame: int) -> Path:
+def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+    checksum = zlib.crc32(kind + payload) & 0xFFFFFFFF
+    return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", checksum)
+
+
+def _fake_preview_png(width: int, height: int, frame: int) -> bytes:
+    """Create a visible deterministic RGB fixture without an image dependency."""
+    if width < 1 or height < 1:
+        raise ValueError("fake preview dimensions must be positive")
+    phase = frame % 256
+    left_width = width // 3
+    middle_width = width // 3
+    right_width = width - left_width - middle_width
+    scanlines = bytearray()
+    denominator = max(1, height - 1)
+    for row in range(height):
+        vertical = row * 255 // denominator
+        scanlines.append(0)
+        scanlines.extend(bytes((12, (48 + vertical // 3) % 256, (96 + phase) % 256)) * left_width)
+        scanlines.extend(
+            bytes(((42 + phase // 4) % 256, (18 + vertical // 2) % 256, 132))
+            * middle_width
+        )
+        scanlines.extend(
+            bytes(((8 + vertical // 5) % 256, (112 + phase // 2) % 256, (176 + vertical // 4) % 256))
+            * right_width
+        )
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", header)
+        + _png_chunk(b"IDAT", zlib.compress(bytes(scanlines), level=9))
+        + _png_chunk(b"IEND", b"")
+    )
+
+
+def _publish_fake_preview(
+    output_directory: str,
+    frame: int,
+    *,
+    width: int = 1280,
+    height: int = 720,
+) -> Path:
     """Atomically publish one deterministic preview only at a fake chunk boundary."""
     frames_directory = Path(output_directory) / "frames"
     frames_directory.mkdir(parents=True, exist_ok=True)
@@ -74,7 +118,7 @@ def _publish_fake_preview(output_directory: str, frame: int) -> Path:
     )
     try:
         with temporary.open("xb") as stream:
-            stream.write(_FAKE_PREVIEW_PNG)
+            stream.write(_fake_preview_png(width, height, frame))
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, destination)
@@ -93,6 +137,7 @@ class CommandResult:
 
 @dataclass(frozen=True, slots=True)
 class RendererTelemetryEvent:
+    schema_version: str
     event_type: str
     sequence: int
     job_id: str
@@ -107,12 +152,39 @@ class RendererTelemetryEvent:
     act_name: str | None
     shot_id: str | None
     shot_name: str | None
+    complexity_class: str | None
+    project_id: str | None
+    scene_sha256: str | None
+    profile_sha256: str | None
+    output_variant_id: str | None
+    width: int | None
+    height: int | None
+    composition_profile_id: str | None
+    artifact_relative_path: str | None
+    emitted_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class RendererVariantExpectation:
+    output_variant_id: str
+    render_profile_sha256: str
+    width: int
+    height: int
+    composition_profile_id: str
 
 
 def parse_renderer_telemetry_line(
     line: str,
     *,
     expected_job_id: str,
+    expected_project_id: str | None = None,
+    expected_scene_sha256: str | None = None,
+    expected_profile_sha256: str | None = None,
+    expected_output_variant_id: str | None = None,
+    expected_width: int | None = None,
+    expected_height: int | None = None,
+    expected_composition_profile_id: str | None = None,
+    expected_output_variants: Mapping[str, RendererVariantExpectation] | None = None,
 ) -> RendererTelemetryEvent | None:
     """Parse only the exact, bounded renderer prefix; malformed payloads are inert."""
     if not line.startswith(RENDER_EVENT_PREFIX) or len(line) > 8_192:
@@ -121,8 +193,9 @@ def parse_renderer_telemetry_line(
         raw = json.loads(line[len(RENDER_EVENT_PREFIX) :])
     except json.JSONDecodeError:
         return None
-    if not isinstance(raw, dict) or raw.get("schemaVersion") != "1.0.0":
+    if not isinstance(raw, dict) or raw.get("schemaVersion") not in {"1.0.0", "2.0.0"}:
         return None
+    schema_version = str(raw["schemaVersion"])
 
     def identifier(key: str, *, required: bool) -> str | None:
         value = raw.get(key)
@@ -140,6 +213,48 @@ def parse_renderer_telemetry_line(
             raise ValueError(key)
         return value
 
+    def canonical_hash(key: str) -> str | None:
+        value = raw.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, str) or _HASH_PATTERN.fullmatch(value) is None:
+            raise ValueError(key)
+        return value.upper()
+
+    def positive_dimension(key: str) -> int | None:
+        value = raw.get(key)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int) or not 16 <= value <= 16_384:
+            raise ValueError(key)
+        return int(value)
+
+    def relative_artifact() -> str | None:
+        value = raw.get("artifactRelativePath")
+        if value is None:
+            return None
+        if (
+            not isinstance(value, str)
+            or len(value) > 512
+            or "\\" in value
+            or value.startswith("/")
+            or any(part in {"", ".", ".."} for part in value.split("/"))
+            or Path(value).suffix.casefold() not in {".png", ".exr"}
+        ):
+            raise ValueError("artifactRelativePath")
+        return value
+
+    def emitted_timestamp() -> datetime | None:
+        value = raw.get("emittedAt")
+        if value is None:
+            return None
+        if not isinstance(value, str) or len(value) > 40:
+            raise ValueError("emittedAt")
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            raise ValueError("emittedAt")
+        return parsed.astimezone(UTC)
+
     try:
         event_type = raw.get("eventType")
         renderer_status = raw.get("rendererStatus")
@@ -151,6 +266,15 @@ def parse_renderer_telemetry_line(
         job_id = identifier("jobId", required=True)
         worker_id = identifier("workerId", required=True)
         chunk_id = identifier("chunkId", required=True)
+        project_id = identifier("projectId", required=False)
+        output_variant_id = identifier("outputVariantId", required=False)
+        composition_profile_id = identifier("compositionProfileId", required=False)
+        scene_sha256 = canonical_hash("sceneSha256")
+        profile_sha256 = canonical_hash("profileSha256")
+        width = positive_dimension("width")
+        height = positive_dimension("height")
+        artifact_relative_path = relative_artifact()
+        emitted_at = emitted_timestamp()
         if (
             event_type not in _RENDER_EVENT_TYPES
             or renderer_status not in _RENDER_STATUSES
@@ -167,6 +291,54 @@ def parse_renderer_telemetry_line(
             or chunk_end - chunk_start > 10_000
         ):
             return None
+        if schema_version == "2.0.0" and (
+            project_id is None
+            or scene_sha256 is None
+            or profile_sha256 is None
+            or output_variant_id is None
+            or width is None
+            or height is None
+            or composition_profile_id is None
+            or emitted_at is None
+            or (event_type == "frame_written" and artifact_relative_path is None)
+        ):
+            return None
+        if any(
+            actual != expected
+            for actual, expected in (
+                (project_id, expected_project_id),
+                (scene_sha256, expected_scene_sha256),
+            )
+            if expected is not None
+        ):
+            return None
+        if expected_output_variants is not None:
+            expected_variant = (
+                expected_output_variants.get(output_variant_id)
+                if output_variant_id is not None
+                else None
+            )
+            if expected_variant is None or (
+                expected_variant.output_variant_id != output_variant_id
+                or profile_sha256 != expected_variant.render_profile_sha256.upper()
+                or width != expected_variant.width
+                or height != expected_variant.height
+                or composition_profile_id
+                != expected_variant.composition_profile_id
+            ):
+                return None
+        elif any(
+            actual != expected
+            for actual, expected in (
+                (profile_sha256, expected_profile_sha256),
+                (output_variant_id, expected_output_variant_id),
+                (width, expected_width),
+                (height, expected_height),
+                (composition_profile_id, expected_composition_profile_id),
+            )
+            if expected is not None
+        ):
+            return None
         if frame is not None and (
             isinstance(frame, bool)
             or not isinstance(frame, int)
@@ -181,6 +353,7 @@ def parse_renderer_telemetry_line(
         ):
             return None
         return RendererTelemetryEvent(
+            schema_version=schema_version,
             event_type=str(event_type),
             sequence=sequence,
             job_id=job_id,
@@ -195,6 +368,16 @@ def parse_renderer_telemetry_line(
             act_name=name("actName"),
             shot_id=identifier("shotId", required=False),
             shot_name=name("shotName"),
+            complexity_class=identifier("complexityClass", required=False),
+            project_id=project_id,
+            scene_sha256=scene_sha256,
+            profile_sha256=profile_sha256,
+            output_variant_id=output_variant_id,
+            width=width,
+            height=height,
+            composition_profile_id=composition_profile_id,
+            artifact_relative_path=artifact_relative_path,
+            emitted_at=emitted_at,
         )
     except (TypeError, ValueError):
         return None
@@ -533,6 +716,24 @@ def telemetry_progress_changes(
     output_at: datetime,
 ) -> dict[str, object]:
     frame = event.frame
+    target_variant = next(
+        (
+            variant
+            for variant in job.output_variants
+            if variant.enabled and variant.id == event.output_variant_id
+        ),
+        None,
+    )
+    if job.output_variants and (
+        target_variant is None
+        or event.width != target_variant.width
+        or event.height != target_variant.height
+        or event.composition_profile_id
+        != target_variant.composition_profile.id
+        or event.profile_sha256
+        != target_variant.render_profile_sha256.upper()
+    ):
+        return {}
     changes: dict[str, object] = {
         "renderer_event_type": event.event_type,
         "renderer_event_sequence": event.sequence,
@@ -545,11 +746,14 @@ def telemetry_progress_changes(
         "renderer_active": True,
         "watcher_active": True,
     }
+    if event.output_variant_id is not None:
+        changes["output_variant_id"] = event.output_variant_id
     for key, value in (
         ("current_act_id", event.act_id),
         ("current_act_name", event.act_name),
         ("current_shot_id", event.shot_id),
         ("current_shot_name", event.shot_name),
+        ("current_complexity_class", event.complexity_class),
     ):
         if value is not None:
             changes[key] = value
@@ -563,18 +767,57 @@ def telemetry_progress_changes(
             latest_log_line=f"Rendering frame {frame}",
         )
     elif event.event_type == "frame_written" and frame is not None:
-        rendered = max(job.rendered_frame_count, frame - job.frame_start + 1)
+        previous_rendered = (
+            target_variant.progress.rendered_frames
+            if target_variant is not None
+            else job.rendered_frame_count
+        )
+        previous_safe = (
+            target_variant.progress.validated_frames
+            if target_variant is not None
+            else job.published_frame_count
+        )
+        previous_latest = (
+            target_variant.progress.latest_rendered_frame
+            if target_variant is not None
+            else job.latest_rendered_frame
+        )
+        if previous_latest is not None and frame < previous_latest:
+            return {}
+        rendered = max(previous_rendered, frame - job.frame_start + 1)
         changes.update(
             current_frame=frame,
-            latest_rendered_frame=max(job.latest_rendered_frame or 0, frame),
+            latest_rendered_frame=max(previous_latest or 0, frame),
             rendered_frame_count=rendered,
-            inflight_frame_count=max(0, rendered - job.published_frame_count),
+            inflight_frame_count=max(0, rendered - previous_safe),
             current_chunk_progress=(frame - event.chunk_start + 1)
             / (event.chunk_end - event.chunk_start + 1),
             phase=JobPhase.RENDER_FRAME,
             current_frame_started_at=None,
             latest_log_line=f"Rendered frame {frame}; awaiting chunk validation",
         )
+        if event.artifact_relative_path is not None:
+            changes.update(
+                latest_frame_artifact=event.artifact_relative_path,
+                latest_preview_frame=frame,
+                latest_preview_at=output_at,
+                latest_frame_preview=(
+                    f"/api/mission-control/render/{job.id}/preview?v={frame}"
+                    + (
+                        f"&output_variant_id={event.output_variant_id}"
+                        if event.output_variant_id is not None
+                        else ""
+                    )
+                ),
+                latest_full_frame_url=(
+                    f"/api/mission-control/render/{job.id}/frame?v={frame}"
+                    + (
+                        f"&output_variant_id={event.output_variant_id}"
+                        if event.output_variant_id is not None
+                        else ""
+                    )
+                ),
+            )
     elif event.event_type == "render_stats":
         changes.update(
             phase=JobPhase.RENDER_FRAME,
@@ -584,7 +827,12 @@ def telemetry_progress_changes(
         )
     elif event.event_type == "chunk_complete":
         if frame is not None:
-            changes["latest_rendered_frame"] = max(job.latest_rendered_frame or 0, frame)
+            previous_latest = (
+                target_variant.progress.latest_rendered_frame
+                if target_variant is not None
+                else job.latest_rendered_frame
+            )
+            changes["latest_rendered_frame"] = max(previous_latest or 0, frame)
         changes.update(
             phase=JobPhase.PUBLISH_CHUNK,
             current_chunk_progress=1.0,
@@ -602,7 +850,11 @@ def telemetry_progress_changes(
 
 
 def telemetry_event_is_new(job: JobRecord, event: RendererTelemetryEvent) -> bool:
-    if job.worker_id != event.worker_id or job.active_chunk_id != event.chunk_id:
+    if (
+        job.active_variant_id != event.output_variant_id
+        or job.worker_id != event.worker_id
+        or job.active_chunk_id != event.chunk_id
+    ):
         return True
     return event.sequence > (job.renderer_event_sequence or 0)
 
@@ -935,7 +1187,7 @@ class ProductionRenderer:
             )
             return
         frame_started_at = datetime.now(UTC)
-        telemetry_sequences: dict[tuple[str, str], int] = {}
+        telemetry_sequences: dict[tuple[str | None, str, str], int] = {}
         while True:
             try:
                 raw = await asyncio.wait_for(process.stdout.readline(), timeout=1.5)
@@ -956,15 +1208,65 @@ class ProductionRenderer:
             if not line:
                 continue
             if line.startswith(RENDER_EVENT_PREFIX):
-                event = parse_renderer_telemetry_line(line, expected_job_id=job_id)
+                job = controller.get_job(job_id)
+                variant_expectations = (
+                    {
+                        variant.id: RendererVariantExpectation(
+                            output_variant_id=variant.id,
+                            render_profile_sha256=variant.render_profile_sha256,
+                            width=variant.width,
+                            height=variant.height,
+                            composition_profile_id=variant.composition_profile.id,
+                        )
+                        for variant in job.output_variants
+                        if variant.enabled
+                    }
+                    if job.output_variants
+                    else None
+                )
+                event = parse_renderer_telemetry_line(
+                    line,
+                    expected_job_id=job_id,
+                    expected_project_id=job.identity.project_id,
+                    expected_scene_sha256=job.identity.scene_sha256,
+                    expected_profile_sha256=(
+                        None
+                        if variant_expectations is not None
+                        else job.identity.profile_sha256
+                    ),
+                    expected_output_variant_id=(
+                        None
+                        if variant_expectations is not None
+                        else job.identity.output_variant_id
+                    ),
+                    expected_width=(
+                        None
+                        if variant_expectations is not None
+                        else job.identity.output_width
+                    ),
+                    expected_height=(
+                        None
+                        if variant_expectations is not None
+                        else job.identity.output_height
+                    ),
+                    expected_composition_profile_id=(
+                        None
+                        if variant_expectations is not None
+                        else job.identity.composition_profile_id
+                    ),
+                    expected_output_variants=variant_expectations,
+                )
                 if event is None:
                     continue
-                sequence_key = (event.worker_id, event.chunk_id)
+                sequence_key = (
+                    event.output_variant_id,
+                    event.worker_id,
+                    event.chunk_id,
+                )
                 if event.sequence <= telemetry_sequences.get(sequence_key, 0):
                     continue
                 telemetry_sequences[sequence_key] = event.sequence
                 output_at = datetime.now(UTC)
-                job = controller.get_job(job_id)
                 if not telemetry_event_is_new(job, event):
                     continue
                 telemetry_changes = telemetry_progress_changes(job, event, output_at=output_at)
@@ -1375,7 +1677,15 @@ class FakeRenderer:
             if not is_chunk_end:
                 continue
             published = index + 1
-            _publish_fake_preview(job.identity.output_directory, frame)
+            preview_path = _publish_fake_preview(
+                job.identity.output_directory,
+                frame,
+                width=job.identity.output_width or 1280,
+                height=job.identity.output_height or 720,
+            )
+            preview_relative_path = preview_path.relative_to(
+                Path(job.identity.output_directory)
+            ).as_posix()
             await controller.update_job(
                 job_id,
                 phase=JobPhase.PUBLISH_CHUNK,
@@ -1387,6 +1697,11 @@ class FakeRenderer:
                     f"/api/mission-control/render/{job_id}/preview?v={frame}"
                 ),
                 latest_preview_frame=frame,
+                latest_preview_at=datetime.now(UTC),
+                latest_frame_artifact=preview_relative_path,
+                latest_full_frame_url=(
+                    f"/api/mission-control/render/{job_id}/frame?v={frame}"
+                ),
                 latest_log_line=f"Published safe chunk {chunk_start}-{chunk_end}",
                 current_frame_started_at=None,
             )

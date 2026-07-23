@@ -1219,12 +1219,17 @@ async def test_fake_preview_is_atomic_valid_versioned_and_never_cached(
     assert complete.latest_frame_preview == (
         f"/api/mission-control/render/{job.id}/preview?v=4"
     )
+    assert complete.latest_full_frame_url == (
+        f"/api/mission-control/render/{job.id}/frame?v=4"
+    )
+    assert complete.latest_frame_artifact == "frames/frame_000004.png"
     frames = sorted((output / "frames").iterdir())
     assert [path.name for path in frames] == ["frame_000002.png", "frame_000004.png"]
     assert not list((output / "frames").glob("*.tmp"))
     for path in frames:
         payload = path.read_bytes()
         _assert_valid_png(payload)
+        assert struct.unpack(">II", payload[16:24]) == (1280, 720)
 
     application = FastAPI()
     application.state.mission_control_service = service
@@ -1238,6 +1243,15 @@ async def test_fake_preview_is_atomic_valid_versioned_and_never_cached(
         assert latest.headers["x-content-type-options"] == "nosniff"
         assert latest.headers["x-trackprompt-preview-frame"] == "4"
         assert latest.content == frames[-1].read_bytes()
+
+        full_frame = client.get(complete.latest_full_frame_url)
+        assert full_frame.status_code == 200
+        assert full_frame.headers["content-type"] == "image/png"
+        assert full_frame.headers["x-trackprompt-frame-safety"] == "validated-published"
+        assert full_frame.headers["content-disposition"] == (
+            'inline; filename="frame_000004.png"'
+        )
+        assert full_frame.content == frames[-1].read_bytes()
 
         earlier = client.get(f"/api/mission-control/render/{job.id}/preview?v=2")
         assert earlier.status_code == 200

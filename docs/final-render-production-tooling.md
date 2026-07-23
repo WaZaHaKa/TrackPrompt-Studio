@@ -20,6 +20,43 @@ The match is exact, including spaces, punctuation, case, and both 12-character S
 
 No wrapper or helper accepts `-Force`, `-Yes`, a wildcard token, or a generic authorization file. The Blender chunk entrypoint also requires a managed render manifest whose scene/profile hashes agree and whose authorization state records acceptance by the outer script.
 
+## V2 output-matrix identity
+
+The scene/profile token above is the low-level renderer gate. A V2 production
+package adds a higher-level technical authorization that binds the exact
+enabled output matrix, source revision, story/content identities,
+composition/camera and render profile per variant, calibration, disk/VRAM,
+dependency health, dashboard proof, media evidence, and aggregate P50/P90
+forecast. A third, separate operator-start gate binds that technical release.
+All three identities must agree.
+
+For Andromeda V2, horizontal 1920 × 1080 at 30 FPS is required and enabled.
+Vertical 1080 × 1920 at 30 FPS is a separately authored optional variant and is
+disabled by default. The live dashboard selector only selects an enabled
+preview/telemetry stream. It cannot add vertical to a running or authorized
+job.
+
+The project wrapper is:
+
+```powershell
+.\production\andromeda-v2\invoke-production.ps1 -Action Inspect
+.\production\andromeda-v2\invoke-production.ps1 -Action Preflight
+```
+
+Both commands are planning-only. `StartOrResume` is a production action and
+must fail until technical readiness and the exact operator-start gate authorize
+the same release. `-EnableVertical` is deliberately guarded until independent
+vertical calibration, separate QA, aggregate selected-matrix SLA, and a new
+authorization exist. It must not reuse horizontal-only evidence or silently
+crop horizontal frames.
+
+Changing any enabled variant, scene, composition, camera, profile, frame clock,
+or bound hash invalidates authorization. Variant frame directories, in-flight
+namespaces, previews, encodes, QA results, and resume state remain separate.
+See [Render operation architecture](render-operation-architecture.md) and the
+[Andromeda V2 production runbook](andromeda-v2-production-runbook.md) for the
+complete authorization, safe-stop, resume, and rollback boundaries.
+
 ## Render-profile contract
 
 The low-level renderer continues to accept the frozen schema `1.0.0` contract for backward compatibility. WZHK Mission Control's saved-profile builder emits schema `1.1.0`; it adds a stable profile ID, display metadata, nested source/timeline identity, pixel aspect, a configurable one-segment published-frame directory, dashboard preferences, per-output encoding enablement, and exact saved-file authorization binding. Required legacy production fields are illustrated below. Values are examples, not a profile recommendation.

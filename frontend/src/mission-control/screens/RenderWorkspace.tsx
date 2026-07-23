@@ -152,6 +152,8 @@ export function RenderWorkspace({
     && preflight.checks.every((check) => check.status !== 'fail')
 
   if (activeJob) {
+    const activeProfile = data.profiles.find((item) => item.id === activeJob.profileId)
+    const activeScene = data.scenes.find((item) => item.id === activeJob.sceneId)
     return (
       <LiveProgress
         job={activeJob}
@@ -159,6 +161,7 @@ export function RenderWorkspace({
         logs={logs}
         busyAction={jobBusyAction}
         advanced={advanced}
+        fallbackFps={activeProfile?.fps ?? activeScene?.fps ?? null}
         onRefresh={() => onRefreshJob(activeJob)}
         onStopAfterChunk={() => onStopAfterChunk(activeJob)}
         onCancelStop={() => onCancelStop(activeJob)}

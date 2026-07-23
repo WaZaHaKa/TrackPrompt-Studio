@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clipboard,
   Download,
+  ExternalLink,
   FolderOpen,
   Gauge,
   Image as ImageIcon,
@@ -20,13 +21,78 @@ import { useEffect, useMemo, useState } from 'react'
 import { MISSION_CONTROL_API_BASE } from '../api'
 import { AdvancedDetails, Button, ErrorCard, Metric, Notice, ProgressBar, SectionHeading, StatusBadge } from '../components'
 import { elapsedSince, formatBytes, formatClock, formatDateTime, formatDuration, percent, sentenceCase } from '../format'
-import type { ConnectionState, LogEntry, RenderJob } from '../types'
+import type { ConnectionState, EtaEstimate, LogEntry, RenderJob, StageProgress } from '../types'
 
 const runningStates = new Set(['starting', 'running', 'stop_requested', 'finishing_current_chunk', 'encoding', 'verifying'])
 
-function appendVersion(url: string, job: RenderJob): string {
+function appendVersion(url: string, job: RenderJob, frame: number | null, variantId: string | null): string {
   const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}frame=${job.previewFrame ?? job.lastCompletedFrame ?? 0}&sequence=${job.sequence}`
+  const variant = variantId ? `&output_variant_id=${encodeURIComponent(variantId)}` : ''
+  return `${url}${separator}frame=${frame ?? 0}&sequence=${job.sequence}${variant}`
+}
+
+function etaSeconds(seconds: number | null | undefined, completionAt: string | null | undefined, now: number): number | null {
+  if (seconds !== null && seconds !== undefined) return Math.max(0, seconds)
+  if (!completionAt) return null
+  const timestamp = new Date(completionAt).valueOf()
+  return Number.isFinite(timestamp) ? Math.max(0, (timestamp - now) / 1000) : null
+}
+
+function etaDetail(estimate: EtaEstimate | null, fallbackConfidence: RenderJob['etaConfidence']): string {
+  const confidence = estimate?.confidence ?? fallbackConfidence
+  const freshness = estimate?.freshness ?? 'unknown'
+  return `${sentenceCase(confidence)} confidence · ${sentenceCase(freshness)} estimate`
+}
+
+function stagePercent(stage: StageProgress): number | null {
+  if (stage.progress !== null) return stage.progress * 100
+  if (stage.completedUnits !== null && stage.totalUnits !== null && stage.totalUnits > 0) {
+    return percent(stage.completedUnits, stage.totalUnits)
+  }
+  return null
+}
+
+function timelineSeconds(frame: number | null, frameStart: number | null, fps: number | null): number | null {
+  if (
+    frame === null
+    || frameStart === null
+    || fps === null
+    || !Number.isFinite(frame)
+    || !Number.isFinite(frameStart)
+    || !Number.isFinite(fps)
+    || fps <= 0
+  ) {
+    return null
+  }
+  return Math.max(0, (frame - frameStart) / fps)
+}
+
+function timelineDuration(frameStart: number | null, frameEnd: number | null, fps: number | null): number | null {
+  if (
+    frameStart === null
+    || frameEnd === null
+    || fps === null
+    || !Number.isFinite(frameStart)
+    || !Number.isFinite(frameEnd)
+    || !Number.isFinite(fps)
+    || fps <= 0
+    || frameEnd < frameStart
+  ) {
+    return null
+  }
+  return (frameEnd - frameStart + 1) / fps
+}
+
+function formatTimeline(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return 'Not reported'
+  const totalTenths = Math.round(seconds * 10)
+  const hours = Math.floor(totalTenths / 36_000)
+  const minutes = Math.floor((totalTenths % 36_000) / 600)
+  const secondsWithTenths = (totalTenths % 600) / 10
+  const secondsLabel = secondsWithTenths.toFixed(1).padStart(4, '0')
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${secondsLabel}`
+    : `${String(minutes).padStart(2, '0')}:${secondsLabel}`
 }
 
 export function LiveProgress({
@@ -35,6 +101,7 @@ export function LiveProgress({
   logs,
   busyAction,
   advanced,
+  fallbackFps,
   onRefresh,
   onStopAfterChunk,
   onCancelStop,
@@ -48,6 +115,7 @@ export function LiveProgress({
   logs: LogEntry[]
   busyAction: string | null
   advanced: boolean
+  fallbackFps: number | null
   onRefresh: () => void
   onStopAfterChunk: () => void
   onCancelStop: () => void
@@ -60,6 +128,17 @@ export function LiveProgress({
   const [logsOpen, setLogsOpen] = useState(false)
   const [logQuery, setLogQuery] = useState('')
   const [previewFailed, setPreviewFailed] = useState(false)
+  const enabledVariants = useMemo(
+    () => (job.outputVariants ?? []).filter((variant) => variant.enabled),
+    [job.outputVariants],
+  )
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    job.activeVariantId ?? enabledVariants[0]?.id ?? null,
+  )
+  const selectedVariant = enabledVariants.find((variant) => variant.id === selectedVariantId)
+    ?? enabledVariants.find((variant) => variant.id === job.activeVariantId)
+    ?? enabledVariants[0]
+    ?? null
   const running = runningStates.has(job.state)
 
   useEffect(() => {
@@ -68,7 +147,19 @@ export function LiveProgress({
     return () => window.clearInterval(timer)
   }, [running])
 
-  useEffect(() => setPreviewFailed(false), [job.previewFrame, job.previewUrl, job.sequence])
+  useEffect(() => {
+    setSelectedVariantId((current) => {
+      if (current && enabledVariants.some((variant) => variant.id === current)) return current
+      return enabledVariants.find((variant) => variant.id === job.activeVariantId)?.id
+        ?? enabledVariants[0]?.id
+        ?? null
+    })
+  }, [enabledVariants, job.activeVariantId])
+
+  useEffect(
+    () => setPreviewFailed(false),
+    [job.previewFrame, job.previewUrl, job.sequence, selectedVariant?.id, selectedVariant?.previewFrame, selectedVariant?.previewUrl],
+  )
 
   const filteredLogs = useMemo(() => {
     const query = logQuery.trim().toLowerCase()
@@ -76,23 +167,102 @@ export function LiveProgress({
     return query ? source.filter((entry) => entry.message.toLowerCase().includes(query) || entry.level.includes(query)) : source
   }, [logQuery, logs])
 
-  const safeProgress = percent(job.publishedFrames, job.totalFrames)
-  const exactCurrentFrame = job.currentFrame !== null && job.currentFrameStartedAt !== null
-  const frameProgress = !exactCurrentFrame || job.frameStart === null
+  const totalFrames = selectedVariant?.totalFrames || job.totalFrames
+  const publishedFrames = selectedVariant?.publishedFrames ?? job.publishedFrames
+  const validatedFrames = selectedVariant?.validatedFrames ?? job.validatedFrames
+  const renderedFrames = selectedVariant?.renderedFrames ?? job.renderedFrames
+  const inFlightFrames = selectedVariant?.inFlightFrames ?? job.inFlightFrames
+  const selectedIsActive = !selectedVariant
+    || enabledVariants.length === 1
+    || job.activeVariantId === selectedVariant.id
+  const currentFrame = selectedVariant?.currentFrame ?? (selectedIsActive ? job.currentFrame : null)
+  const frameStart = selectedVariant?.frameStart ?? job.frameStart
+  const latestRenderedFrame = selectedVariant?.latestRenderedFrame ?? (selectedIsActive ? job.latestRenderedFrame : null)
+  const latestSafeFrame = selectedVariant?.latestSafeFrame
+    ?? (selectedVariant ? null : job.lastCompletedFrame)
+  const frameStartedAt = selectedVariant?.currentFrameStartedAt ?? (
+    selectedIsActive
+      ? job.currentFrameStartedAt
+      : null
+  )
+  const lastOutputAt = selectedVariant?.lastOutputAt ?? (
+    selectedIsActive
+      ? job.lastOutputAt
+      : null
+  )
+  const phase = selectedVariant?.phase ?? job.phase
+  const variantState = selectedVariant?.state ?? job.state
+  const activeChunkId = selectedVariant?.activeChunkId ?? job.activeChunkId
+  const chunkStart = selectedVariant?.chunkStart ?? job.chunkStart
+  const chunkEnd = selectedVariant?.chunkEnd ?? job.chunkEnd
+  const chunksCompleted = selectedVariant?.chunksCompleted ?? job.chunksCompleted
+  const chunksTotal = selectedVariant?.chunksTotal ?? job.chunksTotal
+  const selectedEta = selectedVariant ? selectedVariant.eta : job.eta ?? null
+  const stages = selectedVariant ? selectedVariant.stages : job.stages ?? []
+  const workers = selectedVariant ? selectedVariant.workers : job.workers ?? []
+  const activeWorkers = workers.filter((worker) => worker.active).length
+    || (!selectedVariant && job.workerId && job.rendererActive !== false ? 1 : 0)
+  const retryCount = selectedVariant?.retryCount ?? job.retryCount ?? 0
+  const failureCount = selectedVariant?.failureCount ?? job.failureCount ?? 0
+  const safeProgress = percent(publishedFrames, totalFrames)
+  const exactCurrentFrame = currentFrame !== null && frameStartedAt !== null
+  const frameProgress = !exactCurrentFrame || frameStart === null
     ? safeProgress
-    : percent((job.currentFrame ?? job.frameStart) - job.frameStart + 1, job.totalFrames)
-  const previewBase = job.previewUrl ?? `${MISSION_CONTROL_API_BASE}/render/${encodeURIComponent(job.jobId)}/preview`
-  const hasPreview = (job.previewFrame ?? job.lastCompletedFrame) !== null && !previewFailed
-  const currentFrameElapsed = elapsedSince(job.currentFrameStartedAt, now)
-  const lastOutputElapsed = elapsedSince(job.lastOutputAt, now)
+    : percent((currentFrame ?? frameStart) - frameStart + 1, totalFrames)
+  const previewFrame = selectedVariant
+    ? selectedVariant.previewFrame ?? selectedVariant.latestRenderedFrame
+    : job.previewFrame ?? job.lastCompletedFrame
+  const previewBase = selectedVariant?.previewUrl
+    ?? (!selectedVariant ? job.previewUrl : null)
+    ?? `${MISSION_CONTROL_API_BASE}/render/${encodeURIComponent(job.jobId)}/preview`
+  const fullFrameUrl = selectedVariant?.fullFrameUrl ?? (!selectedVariant ? job.fullFrameUrl ?? null : null)
+  const latestPreviewAt = selectedVariant ? selectedVariant.latestPreviewAt : job.latestPreviewAt
+  const hasPreview = previewFrame !== null && !previewFailed
+  const currentFrameElapsed = elapsedSince(frameStartedAt, now)
+  const lastOutputElapsed = elapsedSince(lastOutputAt, now)
   const activeStatus = running && job.rendererActive !== false
-    ? exactCurrentFrame && job.currentFrame !== null
-      ? `Rendering frame ${job.currentFrame.toLocaleString()}`
-      : job.phase === 'render_frame' && job.chunksTotal > 0
-        ? `Rendering chunk ${Math.min(job.chunksCompleted + 1, job.chunksTotal)} of ${job.chunksTotal}`
-        : sentenceCase(job.phase)
-    : sentenceCase(job.state)
+    ? exactCurrentFrame && currentFrame !== null
+      ? `Rendering frame ${currentFrame.toLocaleString()}`
+      : phase === 'render_frame' && chunksTotal > 0
+        ? `Rendering chunk ${Math.min(chunksCompleted + 1, chunksTotal)} of ${chunksTotal}`
+        : sentenceCase(phase)
+    : sentenceCase(variantState)
   const storyPosition = [job.currentActName, job.currentShotName].filter(Boolean).join(' · ')
+  const p50Seconds = etaSeconds(selectedEta?.p50Seconds, selectedEta?.p50CompletionAt ?? job.estimatedCompletionAt, now)
+  const p90Seconds = etaSeconds(selectedEta?.p90Seconds, selectedEta?.p90CompletionAt, now)
+  const aggregateP50 = etaSeconds(job.aggregateEta?.p50Seconds, job.aggregateEta?.p50CompletionAt, now)
+  const aggregateP90 = etaSeconds(job.aggregateEta?.p90Seconds, job.aggregateEta?.p90CompletionAt, now)
+  const aggregateTotalFrames = enabledVariants.reduce((total, variant) => total + variant.totalFrames, 0)
+  const aggregatePublishedFrames = enabledVariants.reduce((total, variant) => total + variant.publishedFrames, 0)
+  const timelineFps = selectedVariant?.fps ?? fallbackFps
+  const timelineFrame = currentFrame ?? latestRenderedFrame ?? latestSafeFrame
+  const songTimestampSeconds = timelineSeconds(timelineFrame, frameStart, timelineFps)
+  const songDurationSeconds = timelineDuration(
+    frameStart,
+    selectedVariant?.frameEnd ?? job.frameEnd,
+    timelineFps,
+  )
+  const activeFrameMetricsApply = selectedIsActive || !selectedVariant
+  const chunkFramesRemaining = (
+    activeFrameMetricsApply
+    && currentFrame !== null
+    && chunkEnd !== null
+    && currentFrame <= chunkEnd
+  )
+    ? chunkEnd - currentFrame + 1
+    : null
+  const chunkEtaP50 = (
+    chunkFramesRemaining !== null
+    && job.metrics.rollingMedianSeconds !== null
+  )
+    ? chunkFramesRemaining * job.metrics.rollingMedianSeconds
+    : null
+  const chunkEtaP90 = (
+    chunkFramesRemaining !== null
+    && job.metrics.p90Seconds !== null
+  )
+    ? chunkFramesRemaining * job.metrics.p90Seconds
+    : null
 
   const copyLogs = async (): Promise<void> => {
     const text = filteredLogs.map((entry) => `${entry.timestamp} [${entry.level.toUpperCase()}] ${entry.message}`).join('\n')
@@ -135,53 +305,138 @@ export function LiveProgress({
         </Notice>
       ) : null}
 
+      {enabledVariants.length > 0 ? (
+        <section className="mc-output-variants" aria-labelledby="mc-output-variants-title">
+          <div className="mc-output-variants__heading">
+            <div>
+              <span className="mc-eyebrow">Enabled output matrix</span>
+              <h2 id="mc-output-variants-title">Output variants</h2>
+            </div>
+            {enabledVariants.length > 1 ? (
+              <label className="mc-variant-select">
+                <span>Preview and progress stream</span>
+                <select
+                  aria-label="Output variant"
+                  value={selectedVariant?.id ?? ''}
+                  onChange={(event) => setSelectedVariantId(event.target.value)}
+                >
+                  {enabledVariants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>{variant.displayName}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+          <div className="mc-variant-status-grid">
+            {enabledVariants.map((variant) => (
+              <article key={variant.id} className="mc-variant-status" data-selected={variant.id === selectedVariant?.id}>
+                <div>
+                  <strong>{variant.displayName}</strong>
+                  <span>{variant.width > 0 && variant.height > 0 ? `${variant.width} × ${variant.height}` : 'Dimensions pending'}{variant.fps ? ` · ${variant.fps} FPS` : ''}</span>
+                </div>
+                <StatusBadge tone={variant.state === 'failed' ? 'error' : variant.state === 'complete' ? 'success' : 'info'}>
+                  {variant.required ? 'Required' : 'Optional'} · {sentenceCase(variant.state ?? job.state)}
+                </StatusBadge>
+                <p>{variant.publishedFrames.toLocaleString()} of {variant.totalFrames.toLocaleString()} safe · {variant.renderedFrames.toLocaleString()} rendered</p>
+              </article>
+            ))}
+          </div>
+          {enabledVariants.length > 1 && aggregateTotalFrames > 0 ? (
+            <div className="mc-aggregate-progress">
+              <div>
+                <strong>Enabled-matrix progress</strong>
+                <span>{aggregatePublishedFrames.toLocaleString()} of {aggregateTotalFrames.toLocaleString()} frames safe across {enabledVariants.length} variants</span>
+              </div>
+              <ProgressBar value={percent(aggregatePublishedFrames, aggregateTotalFrames)} label="Aggregate enabled output progress" />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="mc-live-hero">
         <div className="mc-live-hero__status">
           <div className="mc-live-hero__topline">
-            <StatusBadge tone={job.state === 'complete' ? 'success' : job.state === 'failed' ? 'error' : job.state === 'paused_safely' || job.state === 'resumable' ? 'warning' : 'info'}>{sentenceCase(job.state)}</StatusBadge>
-            <span>{sentenceCase(job.phase)}</span>
+            <StatusBadge tone={variantState === 'complete' ? 'success' : variantState === 'failed' ? 'error' : variantState === 'paused_safely' || variantState === 'resumable' ? 'warning' : 'info'}>{sentenceCase(variantState)}</StatusBadge>
+            <span>{selectedVariant ? `${selectedVariant.displayName} · ` : ''}{sentenceCase(phase)}</span>
           </div>
           <div className="mc-big-progress">
             <strong>{Math.round(frameProgress)}<small>%</small></strong>
             <div>
-              <span>{exactCurrentFrame && job.currentFrame !== null
-                ? `Frame ${job.currentFrame.toLocaleString()} of ${job.totalFrames.toLocaleString()}`
-                : `${job.publishedFrames.toLocaleString()} of ${job.totalFrames.toLocaleString()} safely published`}</span>
+              <span>{exactCurrentFrame && currentFrame !== null
+                ? `Frame ${currentFrame.toLocaleString()} of ${totalFrames.toLocaleString()}`
+                : `${publishedFrames.toLocaleString()} of ${totalFrames.toLocaleString()} safely published`}</span>
               <ProgressBar value={frameProgress} label="Current render progress" />
             </div>
           </div>
           <div className="mc-live-primary-metrics">
-            <Metric label="Time remaining" value={job.estimatedCompletionAt ? formatDuration(Math.max(0, (new Date(job.estimatedCompletionAt).valueOf() - now) / 1000)) : 'Calculating…'} detail={`${sentenceCase(job.etaConfidence)} confidence`} />
-            <Metric label="Expected finish" value={formatClock(job.estimatedCompletionAt)} detail={job.estimatedCompletionAt ? formatDateTime(job.estimatedCompletionAt) : undefined} />
-            <Metric label="Current chunk" value={job.chunksTotal > 0 ? `${Math.min(job.chunksCompleted + 1, job.chunksTotal)} of ${job.chunksTotal}` : 'Preparing'} detail={job.activeChunkId ?? (job.chunkStart !== null && job.chunkEnd !== null ? `Frames ${job.chunkStart}–${job.chunkEnd}` : undefined)} />
+            <Metric label="Render ETA P50" value={p50Seconds === null ? 'Calibrating…' : formatDuration(p50Seconds)} detail={etaDetail(selectedEta, job.etaConfidence)} />
+            <Metric label="Render ETA P90" value={p90Seconds === null ? 'Calibrating…' : formatDuration(p90Seconds)} detail={selectedEta?.lastEstimateAt ? `Updated ${formatDateTime(selectedEta.lastEstimateAt)}` : 'Conservative bound pending'} />
+            <Metric
+              label="Expected finish"
+              value={formatClock(selectedEta?.p90CompletionAt ?? selectedEta?.p50CompletionAt ?? job.estimatedCompletionAt)}
+              detail={selectedEta?.p90CompletionAt ? `P90 · ${formatDateTime(selectedEta.p90CompletionAt)}` : selectedEta?.p50CompletionAt ? `P50 · ${formatDateTime(selectedEta.p50CompletionAt)}` : job.estimatedCompletionAt ? formatDateTime(job.estimatedCompletionAt) : undefined}
+            />
+            <Metric label="Current chunk" value={chunksTotal > 0 ? `${Math.min(chunksCompleted + 1, chunksTotal)} of ${chunksTotal}` : 'Preparing'} detail={activeChunkId ?? (chunkStart !== null && chunkEnd !== null ? `Frames ${chunkStart}–${chunkEnd}` : undefined)} />
             <Metric label="Story position" value={storyPosition || 'Not reported'} detail={job.currentShotId ?? undefined} />
+            <Metric
+              label="Song timestamp"
+              value={formatTimeline(songTimestampSeconds)}
+              detail={songDurationSeconds === null ? `${timelineFps ?? 'Unknown'} FPS` : `of ${formatTimeline(songDurationSeconds)} · ${timelineFps} FPS`}
+            />
+            <Metric
+              label="Current shot ETA"
+              value="Indeterminate"
+              detail={job.currentShotId
+                ? 'The backend reports the shot identity, but not its frame bounds or a shot-scoped forecast.'
+                : 'Waiting for the backend to report the current shot and its bounds.'}
+            />
+            <Metric
+              label="Current chunk ETA"
+              value={chunkEtaP50 === null ? 'Calibrating…' : `P50 ${formatDuration(chunkEtaP50)}`}
+              detail={chunkEtaP90 === null
+                ? 'Waiting for chunk bounds and rolling frame-time samples.'
+                : `P90 ${formatDuration(chunkEtaP90)} · ${chunkFramesRemaining?.toLocaleString()} frames remaining`}
+            />
+            <Metric label="Active workers" value={activeWorkers > 0 ? activeWorkers.toLocaleString() : 'Not reported'} detail={`${retryCount.toLocaleString()} retries · ${failureCount.toLocaleString()} failures`} />
           </div>
           {activeStatus && running ? (
             <div className="mc-heartbeat" aria-live="polite">
               <Activity aria-hidden="true" />
               <div>
                 <strong>Rendering is still active</strong>
-                <span>{exactCurrentFrame && job.currentFrame !== null
-                  ? `Frame ${job.currentFrame.toLocaleString()} · ${currentFrameElapsed} elapsed`
-                  : job.chunkStart !== null && job.chunkEnd !== null
-                    ? `Chunk frames ${job.chunkStart.toLocaleString()}–${job.chunkEnd.toLocaleString()} · exact frame activity is not reported`
-                    : 'Renderer is preparing the next operation'}{job.lastOutputAt ? ` · last output ${lastOutputElapsed} ago` : ''}</span>
+                <span>{exactCurrentFrame && currentFrame !== null
+                  ? `Frame ${currentFrame.toLocaleString()} · ${currentFrameElapsed} elapsed`
+                  : chunkStart !== null && chunkEnd !== null
+                    ? `Chunk frames ${chunkStart.toLocaleString()}–${chunkEnd.toLocaleString()} · exact frame activity is not reported`
+                    : 'Renderer is preparing the next operation'}{lastOutputAt ? ` · last output ${lastOutputElapsed} ago` : ''}</span>
               </div>
             </div>
           ) : null}
         </div>
 
         <figure className="mc-preview-card">
-          <div className="mc-preview-card__image">
+          <div
+            className="mc-preview-card__image"
+            style={selectedVariant?.width && selectedVariant.height ? { aspectRatio: `${selectedVariant.width} / ${selectedVariant.height}` } : undefined}
+          >
             {hasPreview ? (
-              <img src={appendVersion(previewBase, job)} alt={`Latest completed render frame ${job.previewFrame ?? job.lastCompletedFrame ?? ''}`} onError={() => setPreviewFailed(true)} />
+              <img
+                src={appendVersion(previewBase, job, previewFrame, selectedVariant?.id ?? null)}
+                alt={`Latest completed ${selectedVariant?.displayName ?? 'render'} frame ${previewFrame ?? ''}`}
+                onError={() => setPreviewFailed(true)}
+              />
             ) : (
               <div className="mc-preview-placeholder"><ImageIcon aria-hidden="true" /><span>{previewFailed ? 'Preview is temporarily unavailable' : 'Preview appears after the first complete frame'}</span></div>
             )}
           </div>
           <figcaption>
-            <span><strong>Latest complete preview</strong><small>{job.previewFrame ?? job.lastCompletedFrame ? `Frame ${(job.previewFrame ?? job.lastCompletedFrame)?.toLocaleString()}` : 'Waiting for a structurally valid frame'}</small></span>
-            <span>{job.latestPreviewAt ? formatDateTime(job.latestPreviewAt) : 'Not available'}</span>
+            <span><strong>Latest completed frame</strong><small>{previewFrame !== null ? `Frame ${previewFrame.toLocaleString()}` : 'Waiting for a structurally valid frame'}</small></span>
+            <span>{latestPreviewAt ? formatDateTime(latestPreviewAt) : 'Not available'}</span>
+            {fullFrameUrl ? (
+              <a className="mc-frame-link" href={fullFrameUrl} target="_blank" rel="noreferrer">
+                Open exact full-resolution frame <ExternalLink aria-hidden="true" />
+              </a>
+            ) : null}
           </figcaption>
         </figure>
       </section>
@@ -189,14 +444,59 @@ export function LiveProgress({
       <section className="mc-safety-progress">
         <div className="mc-safety-progress__item mc-safety-progress__item--flight">
           <Gauge aria-hidden="true" />
-          <div><span>Rendered, not yet safe</span><strong>{job.inFlightFrames.toLocaleString()} frames</strong><p>Written inside the active chunk, but not yet validated and published as recoverable.</p></div>
+          <div><span>Rendered, not yet safe</span><strong>{inFlightFrames.toLocaleString()} frames</strong><p>Written inside the active chunk, but not yet validated and published as recoverable.</p><small>{latestRenderedFrame === null ? `${renderedFrames.toLocaleString()} rendered in total` : `Latest rendered frame ${latestRenderedFrame.toLocaleString()}`}</small></div>
         </div>
         <div className="mc-safety-progress__item mc-safety-progress__item--safe">
           <ShieldCheck aria-hidden="true" />
-          <div><span>Safe, preserved on resume</span><strong>{job.publishedFrames.toLocaleString()} frames</strong><p>Validated and published. These frames will not need to be rendered again.</p></div>
+          <div><span>Safe, preserved on resume</span><strong>{publishedFrames.toLocaleString()} frames</strong><p>Validated and published. These frames will not need to be rendered again.</p><small>{latestSafeFrame === null ? `${validatedFrames.toLocaleString()} validated in total` : `Latest safe frame ${latestSafeFrame.toLocaleString()}`}</small></div>
         </div>
         <div className="mc-safety-progress__bar"><ProgressBar value={safeProgress} label="Validated and published frame progress" /><span>{Math.round(safeProgress)}% safely published</span></div>
       </section>
+
+      {job.aggregateEta ? (
+        <section className="mc-card mc-aggregate-eta" aria-labelledby="mc-aggregate-eta-title">
+          <div className="mc-card__heading">
+            <div><span className="mc-eyebrow">Exact enabled output matrix</span><h2 id="mc-aggregate-eta-title">Aggregate job ETA</h2></div>
+            <StatusBadge tone={job.aggregateEta.state === 'degraded' ? 'warning' : job.aggregateEta.state === 'stable' ? 'success' : 'info'}>
+              {sentenceCase(job.aggregateEta.state)}
+            </StatusBadge>
+          </div>
+          <div className="mc-eta-metrics">
+            <Metric label="Aggregate ETA P50" value={aggregateP50 === null ? 'Calibrating…' : formatDuration(aggregateP50)} />
+            <Metric label="Aggregate ETA P90" value={aggregateP90 === null ? 'Calibrating…' : formatDuration(aggregateP90)} />
+            <Metric label="Confidence" value={sentenceCase(job.aggregateEta.confidence)} detail={`${sentenceCase(job.aggregateEta.freshness)} estimate`} />
+            <Metric label="Last estimate" value={job.aggregateEta.lastEstimateAt ? formatClock(job.aggregateEta.lastEstimateAt) : 'Not available'} detail={job.aggregateEta.lastEstimateAt ? formatDateTime(job.aggregateEta.lastEstimateAt) : undefined} />
+          </div>
+        </section>
+      ) : null}
+
+      {stages.length > 0 ? (
+        <section className="mc-card mc-stage-progress" aria-labelledby="mc-stage-progress-title">
+          <div className="mc-card__heading"><div><span className="mc-eyebrow">{selectedVariant?.displayName ?? 'Render job'}</span><h2 id="mc-stage-progress-title">Stage progress and ETA</h2></div></div>
+          <ol>
+            {stages.map((stage) => {
+              const progressValue = stagePercent(stage)
+              const stageP50 = etaSeconds(stage.eta?.p50Seconds, stage.eta?.p50CompletionAt, now)
+              const stageP90 = etaSeconds(stage.eta?.p90Seconds, stage.eta?.p90CompletionAt, now)
+              return (
+                <li key={stage.id}>
+                  <div className="mc-stage-progress__heading">
+                    <div><strong>{stage.label}</strong><span>{sentenceCase(stage.state)}</span></div>
+                    <span>{progressValue === null ? 'Indeterminate' : `${Math.round(progressValue)}%`}</span>
+                  </div>
+                  {progressValue === null ? <div className="mc-stage-progress__indeterminate">Calibrating or waiting for measurable work</div> : <ProgressBar value={progressValue} label={`${stage.label} progress`} />}
+                  <div className="mc-stage-progress__facts">
+                    <span>{stage.completedUnits !== null && stage.totalUnits !== null ? `${stage.completedUnits.toLocaleString()} / ${stage.totalUnits.toLocaleString()} ${stage.throughputUnit ?? 'units'}` : 'Units not yet known'}</span>
+                    <span>P50 {stageP50 === null ? 'calibrating' : formatDuration(stageP50)}</span>
+                    <span>P90 {stageP90 === null ? 'calibrating' : formatDuration(stageP90)}</span>
+                    <span>{stage.throughput === null ? 'Throughput pending' : `${stage.throughput.toLocaleString()} ${stage.throughputUnit ?? 'units'}/s`}</span>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+      ) : null}
 
       <div className="mc-live-controls">
         {job.state === 'running' && job.safeStopStatus !== 'requested' && job.safeStopStatus !== 'finishing_chunk' ? (
@@ -207,6 +507,29 @@ export function LiveProgress({
         ) : null}
         {(job.state === 'paused_safely' || job.state === 'resumable') && job.canResume ? (
           <Button tone="primary" icon={<Play aria-hidden="true" />} busy={busyAction === 'resume'} onClick={onResume}>Resume exact render</Button>
+        ) : null}
+        {job.state !== 'complete' && job.state !== 'cancelled' ? (
+          <>
+            <Button
+              tone="danger"
+              icon={<Ban aria-hidden="true" />}
+              disabled
+              aria-describedby="mc-cancel-render-unavailable"
+            >
+              Cancel render
+            </Button>
+            <Button
+              icon={<RotateCw aria-hidden="true" />}
+              disabled
+              aria-describedby="mc-retry-chunk-unavailable"
+            >
+              Retry failed chunk
+            </Button>
+            <div className="mc-live-control-limitations" role="note" aria-label="Unavailable render actions">
+              <p id="mc-cancel-render-unavailable"><strong>Cancel render is unavailable.</strong> The current backend exposes only a safe stop after the active chunk and cancellation of that stop request.</p>
+              <p id="mc-retry-chunk-unavailable"><strong>Targeted chunk retry is unavailable.</strong> The current backend exposes exact resume for a resumable job, but no failed-chunk retry endpoint.</p>
+            </div>
+          </>
         ) : null}
         {job.outputPath ? <Button tone="quiet" icon={<FolderOpen aria-hidden="true" />} onClick={onOpenOutput}>Open output folder</Button> : null}
         <Button tone="quiet" icon={<TerminalSquare aria-hidden="true" />} onClick={() => setLogsOpen((value) => !value)}>{logsOpen ? 'Hide logs' : 'Open logs'}</Button>
@@ -235,13 +558,17 @@ export function LiveProgress({
             <dl className="mc-technical-list">
               <div><dt>Job ID</dt><dd><code>{job.jobId}</code></dd></div>
               <div><dt>Scene</dt><dd><code>{job.sceneId ?? 'Unavailable'} · {job.sceneSha256 ?? 'hash unavailable'}</code></dd></div>
-              <div><dt>Profile</dt><dd><code>{job.profileId ?? 'Unavailable'} · {job.profileSha256 ?? 'hash unavailable'}</code></dd></div>
+              <div><dt>Output variant</dt><dd><code>{selectedVariant?.id ?? 'Legacy single output'}{selectedVariant?.outputVariantSha256 ? ` · ${selectedVariant.outputVariantSha256}` : ''}</code></dd></div>
+              <div><dt>Dimensions</dt><dd>{selectedVariant?.width && selectedVariant.height ? `${selectedVariant.width} × ${selectedVariant.height}${selectedVariant.fps ? ` · ${selectedVariant.fps} FPS` : ''}` : 'Not reported'}</dd></div>
+              <div><dt>Composition</dt><dd><code>{selectedVariant?.compositionProfileId ?? 'Not reported'}{selectedVariant?.compositionProfileSha256 ? ` · ${selectedVariant.compositionProfileSha256}` : ''}</code></dd></div>
+              <div><dt>Profile</dt><dd><code>{selectedVariant?.profileId ?? job.profileId ?? 'Unavailable'} · {selectedVariant?.profileSha256 ?? job.profileSha256 ?? 'hash unavailable'}</code></dd></div>
               <div><dt>Renderer</dt><dd>{job.rendererActive === null ? 'Not reported' : job.rendererActive ? 'Active' : 'Not active'}</dd></div>
               <div><dt>Watcher</dt><dd>{job.watcherActive === null ? 'Not reported' : job.watcherActive ? 'Active' : 'Not active'}</dd></div>
               <div><dt>Telemetry worker</dt><dd><code>{job.workerId ?? 'Not reported'}</code></dd></div>
               <div><dt>Latest renderer event</dt><dd>{job.rendererEventType ? `${sentenceCase(job.rendererEventType)} · ${job.rendererEventSequence ?? 'sequence unavailable'}` : 'Not reported'}</dd></div>
               <div><dt>Renderer status</dt><dd>{job.rendererStatus ? sentenceCase(job.rendererStatus) : 'Not reported'}</dd></div>
-              <div><dt>Latest rendered frame</dt><dd>{job.latestRenderedFrame?.toLocaleString() ?? 'Not reported'}</dd></div>
+              <div><dt>Latest rendered frame</dt><dd>{latestRenderedFrame?.toLocaleString() ?? 'Not reported'}</dd></div>
+              <div><dt>Workers / retries / failures</dt><dd>{activeWorkers.toLocaleString()} / {retryCount.toLocaleString()} / {failureCount.toLocaleString()}</dd></div>
               <div><dt>Event sequence</dt><dd>{job.sequence.toLocaleString()}</dd></div>
             </dl>
           </AdvancedDetails>

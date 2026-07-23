@@ -7,6 +7,8 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const backend = path.resolve(here, '../../backend')
 const ownsDataDirectory = !process.env.TRACKPROMPT_DATA_DIR
 const dataDirectory = process.env.TRACKPROMPT_DATA_DIR ?? path.resolve(here, '../.e2e-data')
+const backendPort = process.env.E2E_BACKEND_PORT ?? '8000'
+const frontendPort = process.env.E2E_FRONTEND_PORT ?? '5173'
 const venvPython = process.platform === 'win32'
   ? path.join(backend, '.venv', 'Scripts', 'python.exe')
   : path.join(backend, '.venv', 'bin', 'python')
@@ -31,13 +33,14 @@ function launch() {
   }
   child = spawn(
     candidate.command,
-    [...candidate.prefix, '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000'],
+    [...candidate.prefix, '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', backendPort],
     {
       cwd: backend,
       env: {
         ...process.env,
         TRACKPROMPT_DATA_DIR: dataDirectory,
         MODEL_CACHE_DIR: process.env.MODEL_CACHE_DIR ?? path.join(dataDirectory, 'models'),
+        CORS_ORIGINS: process.env.CORS_ORIGINS ?? `http://127.0.0.1:${frontendPort}`,
       },
       stdio: 'inherit',
     },

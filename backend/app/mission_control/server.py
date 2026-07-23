@@ -21,7 +21,7 @@ from starlette.exceptions import HTTPException
 from ..config import Settings
 from ..main import create_app
 from .models import RuntimeIdentity
-from .processes import process_is_alive
+from .processes import process_is_alive, process_started_at
 from .router import install_mission_control
 
 
@@ -101,6 +101,38 @@ def _pid_alive(pid: int) -> bool:
     return process_is_alive(pid)
 
 
+def _pid_started_at(pid: int) -> datetime | None:
+    return process_started_at(pid)
+
+
+def _lease_started_at(payload: dict[str, Any], lock_path: Path) -> datetime | None:
+    raw = payload.get("startedAt")
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+        except ValueError:
+            pass
+    try:
+        return datetime.fromtimestamp(lock_path.stat().st_mtime, tz=UTC)
+    except OSError:
+        return None
+
+
+def _lease_owner_is_alive(
+    pid: int,
+    payload: dict[str, Any],
+    lock_path: Path,
+) -> bool:
+    if not _pid_alive(pid):
+        return False
+    expected_start = _lease_started_at(payload, lock_path)
+    actual_start = _pid_started_at(pid)
+    if expected_start is None or actual_start is None:
+        return True
+    return abs((expected_start - actual_start).total_seconds()) <= 300
+
+
 class InstanceDescriptorLease:
     def __init__(self, path: Path, runtime: RuntimeIdentity) -> None:
         self.path = path.resolve()
@@ -127,7 +159,7 @@ class InstanceDescriptorLease:
                 )
                 if (
                     isinstance(existing_pid, int)
-                    and _pid_alive(existing_pid)
+                    and _lease_owner_is_alive(existing_pid, existing, self.lock_path)
                     and existing_instance != self.runtime.instance_id
                 ):
                     raise RuntimeError(
@@ -150,6 +182,7 @@ class InstanceDescriptorLease:
                     "kind": "trackprompt-mission-control-instance-lock",
                     "instanceId": self.runtime.instance_id,
                     "pid": self.runtime.pid,
+                    "startedAt": self.runtime.started_at.isoformat(),
                 }
                 with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
                     json.dump(payload, stream, sort_keys=True)

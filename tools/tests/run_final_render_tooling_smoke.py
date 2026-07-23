@@ -236,6 +236,7 @@ def main() -> int:
         ffmpeg = _absolute_command_path(args.ffmpeg)
         ffprobe = _absolute_command_path(args.ffprobe)
         delivery = output / "delivery" / "synthetic-final.mp4"
+        progress = output / "logs" / "synthetic-delivery.progress.txt"
         encode_script = repository / "encode-trackprompt-final.ps1"
         encoded = _run(
             [
@@ -265,9 +266,14 @@ def main() -> int:
                 sys.executable,
                 "-FrameScanWorkers",
                 "1",
+                "-ProgressPath",
+                str(progress),
             ],
             "Tiny delivery encode",
         )
+        progress_payload = progress.read_text(encoding="utf-8")
+        if "progress=end" not in progress_payload or "frame=3" not in progress_payload:
+            raise RuntimeError(f"Encode progress was not finalized: {progress_payload}")
         encode_payload = _json_output(encoded.stdout)
         verification_script = repository / "verify-trackprompt-final.ps1"
         verified = _run(

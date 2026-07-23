@@ -2,6 +2,34 @@
 
 The optional cinematic layer compiles local visual cues into versioned `StoryPlan` and `ShotPlan` artifacts before Blender scene construction. `space-journey-story` consumes the shot plan through a distinct preset boundary, and Mission Control exposes persisted frame/act/shot telemetry plus an atomic local Director review workspace. The browser still talks only to loopback FastAPI services, and audio/media remain local. See [Cinematic Visualizer V2](cinematic-visualizer-v2.md).
 
+## Final-render operation boundary
+
+Final rendering extends the existing Mission Control lifecycle; it does not add
+a second dashboard, scheduler, state store, or worker protocol. A versioned
+output matrix declares the exact enabled variants before calibration and
+authorization. Each enabled variant has its own authored composition/camera,
+profile, frame namespace, live preview, progress/ETA, encode, and QA identity.
+Shared story timing, audio synchronization, protagonist state, and deterministic
+seeds do not make the compositions interchangeable.
+
+The required Trip to Andromeda V2 master is authored horizontal 1920 × 1080 at
+30 FPS. Authored vertical 1080 × 1920 is optional and disabled by default. A
+disabled variant contributes no hidden work. Enabling it changes the job
+identity, adds a complete render/encode/QA workload, and invalidates any
+horizontal-only forecast or authorization. A live-view selector switches among
+already-enabled streams; it does not alter the authorized matrix.
+
+Creative acceptance, technical readiness, and permission to start are three
+separate gates. Technical authorization binds the exact source, content,
+scene/composition/profile, output matrix, forecast, storage, dependencies, and
+evidence. A separate operator gate must authorize that same release identity
+before any full production render begins.
+
+The generic architecture, SaaS extraction boundary, privacy rules, and rollback
+model are documented in [Render operation architecture and SaaS extraction
+boundary](render-operation-architecture.md). Project-specific safe commands are
+in the [Andromeda V2 production runbook](andromeda-v2-production-runbook.md).
+
 ## Catalogue and long-form boundary
 
 The professional catalogue is an additive subsystem sharing the private data
@@ -74,6 +102,7 @@ There is deliberately no normal-analysis arrow to an external service.
 | `backend/app/media.py` | Display-name sanitization, bounded ffprobe validation, and cancellable FFmpeg decode. |
 | `backend/app/analysis/` | Pure or isolated signal analyzers and versioned result assembly. |
 | `backend/app/visualizer/` | Private continuous-feature schema/DSP, deterministic frame conversion, public cue compilation, simplification, and privacy validation. |
+| `backend/app/mission_control/` | Persistent final-render jobs, output-variant routing, robust ETA/stage progress, real-frame publication, resume, encoding, and safe operator actions. |
 | `backend/app/tagging/`, `backend/app/lyrics/` | Optional local model adapters imported from concrete leaf modules. |
 | `backend/app/diagnostics/` | Safe executable import, GPU, model, provisioning, and capability diagnostics. |
 | `backend/app/prompting/` | Reviewed evidence filtering, deterministic Reliable composition, private sampled candidate writing, validation/repair, and provenance. |
@@ -82,6 +111,7 @@ There is deliberately no normal-analysis arrow to an external service.
 | `backend/tests/`, `frontend/src/**/*.test.*`, `frontend/e2e/` | Unit, component, and browser coverage using generated synthetic media. |
 | `tools/generate_test_audio.py` | Deterministic, synthetic-only audio fixtures. |
 | `blender/` | Reusable cue loader, audio-control F-curves, typed preset registry, Abstract Geometry and Space Journey builders, diagnostics, previews, and MCP-safe entrypoints. |
+| `render-profiles/`, `production/` | Versioned render contracts and project-specific identity/evidence packages; generated frames, media, scenes, logs, and private sources remain ignored runtime artifacts. |
 | `.trackprompt-data/` or Docker `/data` | Runtime state; ignored by Git and removable independently of source. |
 
 The Pydantic models are the API boundary and FastAPI publishes their OpenAPI

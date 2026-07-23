@@ -221,6 +221,107 @@ export interface RenderMetrics {
   ramUsedBytes: number | null
 }
 
+export type EtaConfidence = 'low' | 'medium' | 'high' | 'unknown'
+export type EtaFreshness = 'fresh' | 'stale' | 'unknown'
+export type EtaState = 'calibrating' | 'stable' | 'degraded' | 'unavailable'
+
+export interface EtaEstimate {
+  state: EtaState
+  p50Seconds: number | null
+  p90Seconds: number | null
+  p50CompletionAt: string | null
+  p90CompletionAt: string | null
+  confidence: EtaConfidence
+  freshness: EtaFreshness
+  lastEstimateAt: string | null
+  sampleCount: number | null
+}
+
+export type StageProgressState =
+  | 'pending'
+  | 'calibrating'
+  | 'running'
+  | 'paused'
+  | 'complete'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped'
+  | 'indeterminate'
+  | 'unknown'
+
+export interface StageProgress {
+  id: string
+  label: string
+  state: StageProgressState
+  completedUnits: number | null
+  totalUnits: number | null
+  progress: number | null
+  throughput: number | null
+  throughputUnit: string | null
+  elapsedSeconds: number | null
+  startedAt: string | null
+  updatedAt: string | null
+  eta: EtaEstimate | null
+}
+
+export interface WorkerProgress {
+  id: string
+  status: string
+  active: boolean
+  currentTaskId: string | null
+  currentFrame: number | null
+  retryCount: number
+  failureCount: number
+  lastHeartbeatAt: string | null
+}
+
+export interface OutputVariantProgress {
+  id: string
+  displayName: string
+  enabled: boolean
+  required: boolean
+  width: number
+  height: number
+  fps: number | null
+  aspectRatio: string | null
+  deliverableRole: string | null
+  compositionMode: string | null
+  compositionProfileId: string | null
+  compositionProfileSha256: string | null
+  profileId: string | null
+  profileSha256: string | null
+  outputVariantSha256: string | null
+  state: RenderState | null
+  phase: RenderPhase | null
+  frameStart: number | null
+  frameEnd: number | null
+  currentFrame: number | null
+  currentFrameStartedAt: string | null
+  lastOutputAt: string | null
+  latestRenderedFrame: number | null
+  latestSafeFrame: number | null
+  renderedFrames: number
+  inFlightFrames: number
+  validatedFrames: number
+  publishedFrames: number
+  totalFrames: number
+  activeChunkId: string | null
+  chunkStart: number | null
+  chunkEnd: number | null
+  currentChunkProgress: number | null
+  chunksCompleted: number
+  chunksTotal: number
+  previewUrl: string | null
+  fullFrameUrl: string | null
+  previewFrame: number | null
+  latestPreviewAt: string | null
+  workers: WorkerProgress[]
+  retryCount: number
+  failureCount: number
+  stages: StageProgress[]
+  eta: EtaEstimate | null
+}
+
 export interface RenderEvent {
   schemaVersion: string
   sequence: number
@@ -258,9 +359,10 @@ export interface RenderEvent {
   chunksCompleted: number
   chunksTotal: number
   estimatedCompletionAt: string | null
-  etaConfidence: 'low' | 'medium' | 'high' | 'unknown'
+  etaConfidence: EtaConfidence
   metrics: RenderMetrics
   previewUrl: string | null
+  fullFrameUrl?: string | null
   previewFrame: number | null
   latestPreviewAt: string | null
   latestLogLine: string | null
@@ -271,6 +373,14 @@ export interface RenderEvent {
   watcherActive: boolean | null
   currentFrameStartedAt: string | null
   lastOutputAt: string | null
+  activeVariantId?: string | null
+  outputVariants?: OutputVariantProgress[]
+  stages?: StageProgress[]
+  eta?: EtaEstimate | null
+  aggregateEta?: EtaEstimate | null
+  workers?: WorkerProgress[]
+  retryCount?: number
+  failureCount?: number
 }
 
 export interface RenderJob extends RenderEvent {

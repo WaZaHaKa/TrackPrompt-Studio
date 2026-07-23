@@ -3,6 +3,17 @@
 import { expect, test, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  disconnectSyntheticRenderEvents,
+  installSyntheticEventSource,
+  installSyntheticMissionControlRoutes,
+  makeSyntheticOutputMatrixFixture,
+  pushSyntheticRenderEvent,
+  syntheticEventSourceUrls,
+  syntheticOutputVariantIds,
+  type SyntheticOutputMatrixFixture,
+  type SyntheticOutputMatrixMode,
+} from './synthetic-output-matrix'
 
 const PROFILE_HASH = 'DB27AA9DE2939ACA78819B58BB08C7DB408EED7092E83FA327363EE094779BF0'
 const SCENE_HASH = '225EE7124B62434FF66D68E2477E5523C99914C76D7304366B0EBB696E0EFED5'
@@ -57,6 +68,27 @@ async function expectBasicAccessibility(page: Page): Promise<void> {
     return found
   })
   expect(issues).toEqual([])
+}
+
+function metric(page: Page, label: string) {
+  return page.locator('.mc-metric').filter({ has: page.getByText(label, { exact: true }) })
+}
+
+function variantCard(page: Page, label: string) {
+  return page.locator('.mc-variant-status').filter({ has: page.getByText(label, { exact: true }) })
+}
+
+async function openSyntheticOutputMatrix(
+  page: Page,
+  mode: SyntheticOutputMatrixMode,
+): Promise<SyntheticOutputMatrixFixture> {
+  const fixture = makeSyntheticOutputMatrixFixture(mode)
+  await installSyntheticEventSource(page)
+  await installSyntheticMissionControlRoutes(page, fixture)
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /rendering frame/i })).toBeVisible()
+  await expect(page.locator('.mc-connection-chip').getByText('Connected', { exact: true })).toBeVisible()
+  return fixture
 }
 
 test('casual user can authorize, reconnect, safely stop, resume, and complete a fake render', async ({ page, request }) => {
@@ -160,6 +192,181 @@ test('casual user can authorize, reconnect, safely stop, resume, and complete a 
   await expect(page.getByRole('heading', { name: 'Verified frame sequence' })).toBeVisible()
   await expect(page.getByText('120 / 120 frames')).toBeVisible()
   await expect(page.getByText('No complete frame sequence yet')).toHaveCount(0)
+})
+
+test('dual output streams preserve ordered publication, reject foreign telemetry, and resume after SSE reconnect', async ({ page }) => {
+  await page.setViewportSize({ width: 1_440, height: 1_100 })
+  const fixture = await openSyntheticOutputMatrix(page, 'dual')
+  const horizontalCard = variantCard(page, 'Horizontal 16:9')
+  const verticalCard = variantCard(page, 'Vertical 9:16')
+
+  await expect(page.getByRole('heading', { name: 'Output variants' })).toBeVisible()
+  await expect(page.locator('.mc-variant-status')).toHaveCount(2)
+  await expect(horizontalCard).toContainText(/1920.*1080/)
+  await expect(horizontalCard).toContainText('12 of 100 safe')
+  await expect(horizontalCard).toContainText('14 rendered')
+  await expect(verticalCard).toContainText(/1080.*1920/)
+  await expect(verticalCard).toContainText('8 of 100 safe')
+  await expect(verticalCard).toContainText('9 rendered')
+  await expect(page.getByText(/20 of 200 frames safe across 2 variants/)).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Output variant' })).toHaveValue(syntheticOutputVariantIds.horizontal)
+  await expect(page.getByRole('img', { name: 'Latest completed Horizontal 16:9 frame 14' })).toBeVisible()
+  await expect(page.locator('.mc-preview-card__image')).toHaveCSS('aspect-ratio', '1920 / 1080')
+  await expect(page.getByRole('link', { name: /open exact full-resolution frame/i }))
+    .toHaveAttribute('href', new RegExp(`output_variant_id=${syntheticOutputVariantIds.horizontal}`))
+  await expect(metric(page, 'Render ETA P50')).toContainText('About 1 hours')
+  await expect(metric(page, 'Render ETA P90')).toContainText('About 1 hr 30 min')
+  await expect(metric(page, 'Aggregate ETA P50')).toContainText('About 3 hours')
+  await expect(metric(page, 'Aggregate ETA P90')).toContainText('About 4 hours')
+
+  await pushSyntheticRenderEvent(page, fixture.event({
+    sequence: 101,
+    horizontal: {
+      currentFrame: 16,
+      latestRenderedFrame: 15,
+      latestSafeFrame: 13,
+      renderedFrames: 15,
+      inFlightFrames: 2,
+      validatedFrames: 13,
+      publishedFrames: 13,
+      previewFrame: 15,
+    },
+  }))
+  await expect(horizontalCard).toContainText('13 of 100 safe')
+  await expect(horizontalCard).toContainText('15 rendered')
+  await expect(page.getByRole('img', { name: 'Latest completed Horizontal 16:9 frame 15' })).toBeVisible()
+
+  await pushSyntheticRenderEvent(page, fixture.event({
+    sequence: 100,
+    horizontal: {
+      currentFrame: 2,
+      latestRenderedFrame: 1,
+      latestSafeFrame: 1,
+      renderedFrames: 1,
+      inFlightFrames: 0,
+      validatedFrames: 1,
+      publishedFrames: 1,
+      previewFrame: 1,
+    },
+  }))
+  await expect.poll(async () => page.evaluate(() => {
+    const raw = window.localStorage.getItem('wzhk.mission-control.last-event')
+    return raw ? (JSON.parse(raw) as { sequence?: number }).sequence : null
+  })).toBe(101)
+  await expect(horizontalCard).toContainText('13 of 100 safe')
+  await expect(page.getByRole('img', { name: 'Latest completed Horizontal 16:9 frame 15' })).toBeVisible()
+
+  const rejection = 'Rejected cross-format telemetry for vertical-9x16-1080p: expected 1080 x 1920 but received 1920 x 1080.'
+  await pushSyntheticRenderEvent(page, fixture.event({
+    sequence: 102,
+    warning: rejection,
+    horizontal: {
+      currentFrame: 16,
+      latestRenderedFrame: 15,
+      latestSafeFrame: 13,
+      renderedFrames: 15,
+      inFlightFrames: 2,
+      validatedFrames: 13,
+      publishedFrames: 13,
+      previewFrame: 15,
+    },
+  }))
+  await expect(page.getByText('Render warning', { exact: true })).toBeVisible()
+  await expect(page.getByText(rejection, { exact: true })).toBeVisible()
+  await expect(horizontalCard).toContainText('13 of 100 safe')
+  await expect(verticalCard).toContainText('8 of 100 safe')
+
+  const selector = page.getByRole('combobox', { name: 'Output variant' })
+  await selector.selectOption(syntheticOutputVariantIds.vertical)
+  await expect(verticalCard).toHaveAttribute('data-selected', 'true')
+  await expect(page.getByRole('img', { name: 'Latest completed Vertical 9:16 frame 9' })).toBeVisible()
+  await expect(page.locator('.mc-preview-card__image')).toHaveCSS('aspect-ratio', '1080 / 1920')
+  await expect(page.getByRole('link', { name: /open exact full-resolution frame/i }))
+    .toHaveAttribute('href', new RegExp(`output_variant_id=${syntheticOutputVariantIds.vertical}`))
+  await expect(metric(page, 'Render ETA P50')).toContainText('About 2 hours')
+  await expect(metric(page, 'Render ETA P90')).toContainText('About 2 hr 30 min')
+  await expect(page.locator('.mc-safety-progress__item--flight')).toContainText('1 frames')
+  await expect(page.locator('.mc-safety-progress__item--safe')).toContainText('8 frames')
+  await expect(metric(page, 'Active workers')).toContainText('1')
+
+  await disconnectSyntheticRenderEvents(page)
+  await expect(page.locator('.mc-connection-chip').getByText('Reconnecting', { exact: true })).toBeVisible()
+  await expect(page.getByText('Reconnecting to live updates', { exact: true })).toBeVisible()
+  await expect(page.locator('.mc-connection-chip').getByText('Connected', { exact: true })).toBeVisible({ timeout: 3_000 })
+
+  const connectionUrls = await syntheticEventSourceUrls(page)
+  expect(connectionUrls).toHaveLength(2)
+  expect(connectionUrls[1]).toContain('afterSequence=102')
+
+  await pushSyntheticRenderEvent(page, fixture.event({
+    sequence: 103,
+    activeVariantId: syntheticOutputVariantIds.vertical,
+    horizontal: {
+      currentFrame: 16,
+      latestRenderedFrame: 15,
+      latestSafeFrame: 13,
+      renderedFrames: 15,
+      inFlightFrames: 2,
+      validatedFrames: 13,
+      publishedFrames: 13,
+      previewFrame: 15,
+    },
+    vertical: {
+      currentFrame: 11,
+      latestRenderedFrame: 10,
+      latestSafeFrame: 9,
+      renderedFrames: 10,
+      inFlightFrames: 1,
+      validatedFrames: 9,
+      publishedFrames: 9,
+      previewFrame: 10,
+    },
+  }))
+  await expect(verticalCard).toContainText('9 of 100 safe')
+  await expect(verticalCard).toContainText('10 rendered')
+  await expect(page.getByRole('img', { name: 'Latest completed Vertical 9:16 frame 10' })).toBeVisible()
+  await expect(page.getByText(rejection, { exact: true })).toHaveCount(0)
+})
+
+test('horizontal-only output matrix does not invent a vertical card, ETA, or worker', async ({ page }) => {
+  await page.setViewportSize({ width: 1_280, height: 960 })
+  const fixture = await openSyntheticOutputMatrix(page, 'horizontal-only')
+  const horizontalCard = variantCard(page, 'Horizontal 16:9')
+
+  await expect(page.locator('.mc-variant-status')).toHaveCount(1)
+  await expect(horizontalCard).toContainText(/1920.*1080/)
+  await expect(horizontalCard).toContainText('12 of 100 safe')
+  await expect(page.getByText('Vertical 9:16', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Output variant' })).toHaveCount(0)
+  await expect(page.getByText(/frames safe across 2 variants/)).toHaveCount(0)
+  await expect(page.getByRole('img', { name: 'Latest completed Horizontal 16:9 frame 14' })).toBeVisible()
+  await expect(metric(page, 'Render ETA P50')).toContainText('30 minutes')
+  await expect(metric(page, 'Render ETA P90')).toContainText('45 minutes')
+  await expect(metric(page, 'Aggregate ETA P50')).toContainText('30 minutes')
+  await expect(metric(page, 'Aggregate ETA P90')).toContainText('45 minutes')
+  await expect(metric(page, 'Active workers')).toContainText('1')
+  await expect(page.locator('.mc-safety-progress__item--flight')).toContainText('2 frames')
+  await expect(page.locator('.mc-safety-progress__item--safe')).toContainText('12 frames')
+
+  await pushSyntheticRenderEvent(page, fixture.event({
+    sequence: 201,
+    vertical: {
+      currentFrame: 100,
+      latestRenderedFrame: 100,
+      latestSafeFrame: 100,
+      renderedFrames: 100,
+      inFlightFrames: 0,
+      validatedFrames: 100,
+      publishedFrames: 100,
+      previewFrame: 100,
+      etaP50Seconds: 1,
+      etaP90Seconds: 1,
+    },
+  }))
+  await expect(page.getByText('Vertical 9:16', { exact: true })).toHaveCount(0)
+  await expect(horizontalCard).toContainText('12 of 100 safe')
+  await expect(metric(page, 'Aggregate ETA P50')).toContainText('30 minutes')
+  await expect(metric(page, 'Active workers')).toContainText('1')
 })
 
 test('narrow layout, keyboard navigation, modal focus, and reduced motion remain usable', async ({ page }) => {

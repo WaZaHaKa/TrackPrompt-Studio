@@ -4,6 +4,9 @@ The **Director** navigation item opens the local Cinematic Visualizer V2 review 
 
 Mission Control is designed so the normal local workflow does not require a
 PowerShell command, JSON edit, hash, Blender command, or authorization token.
+The finish-line V2 package has additional package-level and output-matrix gates;
+operators must also follow the [Andromeda V2 production
+runbook](andromeda-v2-production-runbook.md).
 
 ## Launch
 
@@ -16,12 +19,19 @@ launcher; an active render continues in the backend.
 
 ![Mission Control home](images/mission-control-home.png)
 
-## Start a render
+## Start a saved-profile render
+
+These steps apply to a scene/profile exposed by the current local service. Do
+not substitute a lower-resolution historical profile for the Andromeda V2
+horizontal master. The V2 runbook remains authoritative for that package, and a
+generic Mission Control **Authorized** badge is not a substitute for the exact
+V2 technical authorization and operator-start gate.
 
 1. Choose **Start a new render** on Home.
-2. Confirm **Trip to Andromeda** and its approved scene.
-3. Keep **720p Hyper Optimized** for the fastest calibrated local result, or
-   choose another measured saved profile.
+2. Confirm the intended project and exact approved scene.
+3. Choose the measured saved profile for the intended output. Resolution,
+   composition, output variant, and profile identity are authorization inputs;
+   changing any of them requires a new forecast and authorization.
 4. Choose **Browse**, select a destination, and review its classification.
    - An empty folder can be used directly.
    - A matching prior render can resume.
@@ -37,16 +47,40 @@ launcher; an active render continues in the backend.
    inspect the resume plan.
 
 Mission Control creates the exact authorization record; do not copy the token
-from Advanced details into another profile or scene.
+from Advanced details into another profile or scene. For a V2 matrix, also
+confirm every enabled output variant and its composition/profile identity. A
+scene/profile authorization from the wizard does not authorize a different
+package release or variant set.
+
+## Andromeda V2 output variants
+
+The required default is authored horizontal 1920 × 1080 at 30 FPS. Authored
+vertical 1080 × 1920 at 30 FPS is optional and disabled by default. Vertical is
+not a crop, stretch, or reframe of the horizontal master.
+
+Enabling vertical is a pre-production configuration decision. It adds another
+13,029-frame render/encode/QA stream, disk requirement, calibration, and ETA.
+It therefore requires a new aggregate 24-hour forecast, technical
+authorization, and operator-start gate. The current Andromeda wrapper's
+`-EnableVertical` option deliberately fails closed until those artifacts exist.
+Never toggle the matrix after authorization or after a job starts.
 
 ## Follow progress
 
 ![Mission Control live render](images/mission-control-render-progress.png)
 
-The live view shows percent, the exact frame when reported, ETA, active chunk,
-safe frame count, storage, and the newest valid preview. **In progress** frames
-belong to the active unpublished chunk. **Safe** frames were validated and
-published, so a resume will not render them again.
+The live view shows the exact enabled output matrix. When more than one variant
+is enabled, the selector switches the visible preview and telemetry stream; it
+does not enable or disable work. For the selected variant, the dashboard shows
+the actual latest completed rendered/in-flight frame, the latest validated safe
+frame, current frame, act, shot, song timestamp, worker/chunk state, retries and
+failures, resource telemetry, stage progress, and P50/P90 ETA. Aggregate
+progress and ETA include only enabled variants.
+
+**Rendered/in-flight** frames belong to an unpublished chunk. **Safe** frames
+were validated and published, so a resume will not render them again. The
+preview is generated from the exact completed frame and links to that variant's
+corresponding full-resolution image.
 
 During a long frame the heartbeat continues with current-frame elapsed time and
 renderer status. **Reconnecting** means the browser is restoring its stream;
@@ -55,7 +89,10 @@ the last known state stays visible and the render is not restarted.
 Choose **Request stop after current chunk** for a recoverable stop. The renderer
 finishes, validates, and publishes that chunk before pausing. You may cancel the
 request before it is honored. A safely paused job appears under Jobs with
-**Resume**.
+**Resume**. Destructive **Cancel render** and targeted **Retry failed chunk**
+remain disabled because the current backend exposes neither operation. Use safe
+stop and exact resume; do not kill Blender, delete locks/in-flight directories,
+or remove successful frames to simulate those actions.
 
 ## Encode and open the result
 

@@ -8,6 +8,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from ..cinematic.schemas import ArtDirectionReviewCollection, ShotPlan, StoryPlan
+from .eta import MatrixEtaForecast
+from .render_contracts import OutputVariant, StageProgress, WorkerCapabilities
 
 MISSION_CONTROL_SCHEMA_VERSION = "1.0.0"
 
@@ -289,6 +291,9 @@ class ProfileSummary(MissionModel):
     authorization_issues: list[str] = Field(default_factory=list)
     recommended: bool = False
     last_used_at: datetime | None = None
+    output_variant_id: str = "primary"
+    composition_profile_id: str = "primary"
+    composition_profile_sha256: str | None = None
 
 
 class ProfileValidation(MissionModel):
@@ -341,6 +346,11 @@ class RenderIdentity(MissionModel):
     profile_id: str
     profile_sha256: str
     output_directory: str
+    output_variant_id: str = "primary"
+    output_width: int | None = None
+    output_height: int | None = None
+    composition_profile_id: str = "primary"
+    composition_profile_sha256: str | None = None
 
 
 class OutputInspection(MissionModel):
@@ -459,6 +469,7 @@ class JobRecord(MissionModel):
     current_act_name: str | None = None
     current_shot_id: str | None = None
     current_shot_name: str | None = None
+    current_complexity_class: str | None = None
     rendered_frame_count: int = 0
     inflight_frame_count: int = 0
     validated_frame_count: int = 0
@@ -486,10 +497,17 @@ class JobRecord(MissionModel):
     latest_frame_preview: str | None = None
     latest_preview_frame: int | None = None
     latest_preview_at: datetime | None = None
+    latest_frame_artifact: str | None = None
+    latest_full_frame_url: str | None = None
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
     safe_stop_status: SafeStopStatus = SafeStopStatus.NONE
+    output_variants: tuple[OutputVariant, ...] = ()
+    active_variant_id: str | None = None
+    stages: tuple[StageProgress, ...] = ()
+    aggregate_eta: MatrixEtaForecast | None = None
+    workers: tuple[WorkerCapabilities, ...] = ()
 
 
 class RenderEvent(MissionModel):
@@ -504,6 +522,11 @@ class RenderEvent(MissionModel):
     scene_sha256: str
     profile_id: str
     profile_sha256: str
+    output_variant_id: str = "primary"
+    output_width: int | None = None
+    output_height: int | None = None
+    composition_profile_id: str = "primary"
+    composition_profile_sha256: str | None = None
     renderer_active: bool | None = None
     watcher_active: bool | None = None
     current_frame_started_at: datetime | None = None
@@ -521,6 +544,7 @@ class RenderEvent(MissionModel):
     current_act_name: str | None = None
     current_shot_id: str | None = None
     current_shot_name: str | None = None
+    current_complexity_class: str | None = None
     rendered_frame_count: int = 0
     inflight_frame_count: int = 0
     validated_frame_count: int = 0
@@ -548,10 +572,17 @@ class RenderEvent(MissionModel):
     latest_frame_preview: str | None = None
     latest_preview_frame: int | None = None
     latest_preview_at: datetime | None = None
+    latest_frame_artifact: str | None = None
+    latest_full_frame_url: str | None = None
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
     safe_stop_status: SafeStopStatus = SafeStopStatus.NONE
+    output_variants: tuple[OutputVariant, ...] = ()
+    active_variant_id: str | None = None
+    stages: tuple[StageProgress, ...] = ()
+    aggregate_eta: MatrixEtaForecast | None = None
+    workers: tuple[WorkerCapabilities, ...] = ()
 
 
 class LogEntry(MissionModel):

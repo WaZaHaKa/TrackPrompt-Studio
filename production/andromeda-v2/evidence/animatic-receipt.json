@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-full-audio-animatic-receipt",
+  "projectId": "trip-to-andromeda-v2",
+  "outputVariantId": "horizontal-16x9-1080p",
+  "purpose": "complete low-resolution story, timing, motion, audio-sync, and mobile-readability evidence",
+  "artifact": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/animatic-horizontal-release-v2/animatic-horizontal-full-release-v2.mp4",
+    "sha256": "bb88363b9dca91088c4d358964460d569d424bf408815cf84ed9164c74598d8b",
+    "bytes": 18079501,
+    "committed": false
+  },
+  "video": {
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "width": 480,
+    "height": 270,
+    "fps": 30,
+    "frameStart": 1,
+    "frameEnd": 13029,
+    "frameCount": 13029,
+    "durationSeconds": 434.3
+  },
+  "audio": {
+    "sourceSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "codec": "aac",
+    "sampleRate": 44100,
+    "channels": 2,
+    "durationSeconds": 434.285011,
+    "videoAudioDurationDeltaSeconds": 0.014989
+  },
+  "frameSequence": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/animatic-horizontal-release-v2/frames",
+    "filenamePattern": "frame_######.png",
+    "width": 480,
+    "height": 270,
+    "bitDepth": 8,
+    "colorMode": "RGB",
+    "observedFrames": 13029,
+    "missingFrames": 0,
+    "unexpectedFrames": 0,
+    "duplicateFrameNumbers": 0,
+    "zeroByteFrames": 0,
+    "corruptFrames": 0,
+    "totalBytes": 1621310499,
+    "sequenceSha256": "d1514f38749bf479635ff9e7d7bcd3120e7edbae181fb45964f34257dad48201"
+  },
+  "reviewFrames": [
+    652,
+    1950,
+    3779,
+    6150,
+    7688,
+    8834,
+    11987,
+    13029
+  ],
+  "technicalPass": true,
+  "humanArtisticApproval": false,
+  "productionRenderStarted": false
+}

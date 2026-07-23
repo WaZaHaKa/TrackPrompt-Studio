@@ -15,8 +15,8 @@
     "deterministicEffectsVerified": true
   },
   "storage": {
-    "measuredAt": "2026-07-23T06:38:49.7784524Z",
-    "freeBytes": 380966588416,
+    "measuredAt": "2026-07-23T07:45:00Z",
+    "freeBytes": 379058008064,
     "plannedFrameSequenceBytes": 50277960909,
     "projectedMasterBytes": 107374183,
     "projectedDeliveryBytes": 1610612736,
@@ -24,7 +24,7 @@
     "projectedPeakDiskBytes": 56290915124,
     "safetyMultiplier": 1.25,
     "requiredFreeBytes": 70363643905,
-    "headroomAfterRequiredBytes": 310602944511,
+    "headroomAfterRequiredBytes": 308694364159,
     "headroomSatisfied": true
   },
   "throughput": {

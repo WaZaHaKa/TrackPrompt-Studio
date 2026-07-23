@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-final-quality-transition-report",
+  "projectId": "trip-to-andromeda-v2",
+  "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+  "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "fps": 30,
+  "samples": [
+    {
+      "id": "gates-to-rupture",
+      "frameStart": 6761,
+      "frameEnd": 6790,
+      "cutFrame": 6776,
+      "warmMedianSeconds": 0.6286880999978166,
+      "warmP90Seconds": 0.7644365799962543,
+      "worstFrameSeconds": 0.8116251000028569,
+      "mediaPath": "test-output/render-calibration/andromeda-v2-release-transition-gates-to-rupture/gates-to-rupture-final-quality.mp4",
+      "mediaSha256": "6e5947526ae89a03f38ca865d4321ddd1c7a2fb47c5c0320be1b938dd86561b3",
+      "mediaQaSha256": "87eb807f77b9b83c6612520953e627db68dfb81b34b18a380a01c80bee5ff5ed",
+      "technicalPass": true
+    },
+    {
+      "id": "rupture-to-transformation",
+      "frameStart": 8585,
+      "frameEnd": 8614,
+      "cutFrame": 8600,
+      "warmMedianSeconds": 0.5166456000006292,
+      "warmP90Seconds": 0.5590788800036535,
+      "worstFrameSeconds": 0.6044984000036493,
+      "mediaPath": "test-output/render-calibration/andromeda-v2-release-transition-rupture-to-transformation/rupture-to-transformation-final-quality.mp4",
+      "mediaSha256": "d119c5cabf3f737d5abefef5a48dcc2a6fd53fe63df1fbec502e464cbc37f848",
+      "mediaQaSha256": "2b44d76f5c3dcde5371e98604c43b1b2144807e01d3fe9462f0bab933bc3590a",
+      "technicalPass": true
+    },
+    {
+      "id": "transformation-to-arrival",
+      "frameStart": 10930,
+      "frameEnd": 10959,
+      "cutFrame": 10945,
+      "warmMedianSeconds": 0.5716102000151295,
+      "warmP90Seconds": 0.6387763599981554,
+      "worstFrameSeconds": 0.6598667000071146,
+      "mediaPath": "test-output/render-calibration/andromeda-v2-release-transition-transformation-to-arrival/transformation-to-arrival-final-quality.mp4",
+      "mediaSha256": "8a5a79325933567c5cd7296cea1deeffdfd1f0afef9a18ad5331c4cf775a0fb2",
+      "mediaQaSha256": "8e3fa9216405ab98a21092f4cace634c6a8b17c07be63ec0635744a1b7e26b48",
+      "technicalPass": true
+    }
+  ],
+  "technicalVisualInspection": {
+    "inspectedCutPairs": [
+      "6775-6776",
+      "8599-8600",
+      "10944-10945"
+    ],
+    "intentionalCutsReadClearly": true,
+    "protagonistReadableAcrossCuts": true,
+    "objectiveContinuityDefectsFound": 0
+  },
+  "technicalPass": true,
+  "humanArtisticApproval": false,
+  "humanReviewStatus": "pending-owner-or-artist-final-output-review"
+}

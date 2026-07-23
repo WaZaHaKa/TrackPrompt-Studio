@@ -1,0 +1,165 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-final-technical-authorization",
+  "authorizationId": "andromeda-v2-technical-authorization-v2",
+  "packageId": "andromeda-v2-final-render-package-v2",
+  "calibrationId": "andromeda-v2-final-calibration-v2",
+  "calibrationSha256": "31afac2cf80dfb37ba25125d68beb04c364486d30800947477d8ecb755e9d10f",
+  "identity": {
+    "schemaVersion": "2.0.0",
+    "releaseId": "andromeda-v2-final-release-v2",
+    "projectId": "trip-to-andromeda-v2",
+    "sourceAudioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "sourceCueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+    "ownerCreativeAcceptanceSha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+    "encodingProfilesSha256": "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8",
+    "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+    "storyPlanSha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+    "shotPlanSha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+    "outputVariantContractSha256": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+    "builderSourceSha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "sourceTreeSha256": "8e9bfef3f56caaaeede68b02100f01c3f793c190e192c177216d03ac0c266f3f",
+    "gitCommitSha": "61984132f05fd0a863687fedec58d34b4dd97019",
+    "deterministicSeed": 84291,
+    "outputMatrix": {
+      "schemaVersion": "2.0.0",
+      "matrixId": "andromeda-v2-horizontal-only-v2",
+      "enabledVariantIds": [
+        "horizontal-16x9-1080p"
+      ],
+      "variants": [
+        {
+          "id": "horizontal-16x9-1080p",
+          "enabled": true,
+          "required": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30,
+          "frameStart": 1,
+          "frameEnd": 13029,
+          "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+          "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+          "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+          "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+          "workerRequirementId": "local-rtx3060-eevee-v1",
+          "outputPattern": "final-output/andromeda-v2-horizontal/frames/frame_######.png"
+        }
+      ]
+    },
+    "workerRequirements": [
+      {
+        "id": "local-rtx3060-eevee-v1",
+        "deviceClass": "gpu",
+        "renderer": "BLENDER_EEVEE",
+        "blenderVersion": "5.2.0 LTS",
+        "minimumVramMib": 8192,
+        "maximumWorkersPerDevice": 1,
+        "chunkSizeFrames": 300,
+        "deterministicSeed": 84291,
+        "requiredCapabilities": [
+          "png-16bit-rgb",
+          "atomic-chunk-publication",
+          "validated-missing-frame-resume",
+          "variant-aware-telemetry"
+        ]
+      }
+    ]
+  },
+  "releaseIdentitySha256": "dd3036eb00baec5f4ab921bea0a7a1565e15fea9fcc5be752e69d114d3c58c56",
+  "status": "technically-ready",
+  "technicalReady": true,
+  "objectiveGates": [
+    {
+      "id": "deterministic-effects-and-disk",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "deterministic-effects-and-disk-report"
+      ],
+      "summary": "Deterministic keyframes, no required simulations, stable bounded VRAM, and refreshed 1.25x disk headroom all pass.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "live-dashboard",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "live-dashboard-proof"
+      ],
+      "summary": "The real local service and React UI displayed an exact completed frame, persistent progress, ETA, safe stop, reload, and resume.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "animatic-and-media-qa",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "full-audio-animatic",
+        "animatic-media-qa-report"
+      ],
+      "summary": "The 13,029-frame horizontal animatic uses the exact full audio and passes sequence, codec, sync, exposure, and review-frame QA.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "calibration-and-enabled-matrix-sla",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "final-calibration-v2"
+      ],
+      "summary": "The exact horizontal-only matrix has a conservative aggregate P90 of 18,799.5228 seconds, below the 24-hour SLA.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "dependency-health",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "dependency-health-report"
+      ],
+      "summary": "Scene, renderer, private source bindings, story contracts, and locked settings passed dependency checks without network access.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "enabled-output-matrix-identity",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "output-variants"
+      ],
+      "summary": "Only the required horizontal variant is enabled; authored vertical remains optional, disabled, and excluded from this SLA.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "scene-profile-source-identity",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "final-scene",
+        "story-plan",
+        "shot-plan",
+        "owner-creative-acceptance",
+        "final-look-profile",
+        "horizontal-render-profile",
+        "encoding-profiles",
+        "source-revision-report"
+      ],
+      "summary": "The final scene, profile, story, shots, builder, private-source hashes, owner acceptance, encoding contract, commit, and source tree are bound exactly.",
+      "evidenceKind": "objective-technical-evidence"
+    },
+    {
+      "id": "worker-requirements",
+      "status": "satisfied",
+      "evidenceArtifactRoles": [
+        "worker-requirements"
+      ],
+      "summary": "The local RTX 3060 and Blender 5.2.0 LTS match the one-worker deterministic Eevee capability contract.",
+      "evidenceKind": "objective-technical-evidence"
+    }
+  ],
+  "operatorStartGate": {
+    "status": "not-authorized",
+    "authorizationId": null,
+    "authorizedByRole": null,
+    "authorizedAt": null,
+    "authorizedReleaseIdentitySha256": null,
+    "explicitFullRenderStartAuthorized": false
+  },
+  "productionStartAllowed": false,
+  "finalRenderStarted": false,
+  "codexHumanArtisticApproval": false,
+  "humanArtisticJudgmentSource": "owner-attested-r13.1-baseline-not-codex"
+}

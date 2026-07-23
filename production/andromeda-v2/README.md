@@ -47,13 +47,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File `
   .\production\andromeda-v2\invoke-production.ps1 -Action Preflight
 
 # Run only after the exact operator-start gate has been authorized.
+$sourceAudioPath = "<private source-audio path>"
+$sourceCuePath = "<private visual-cues path>"
 powershell -NoProfile -ExecutionPolicy Bypass -File `
   .\production\andromeda-v2\invoke-production.ps1 `
   -Action StartOrResume `
+  -SourceAudioPath $sourceAudioPath `
+  -SourceCuePath $sourceCuePath `
   -AuthorizationToken "<exact scene/profile token>"
 ```
 
 `StartOrResume` validates and skips already published frames, so the same
-command safely resumes an interrupted job. `-EnableVertical` deliberately
-fails until the optional authored vertical variant has its own calibration,
-aggregate 24-hour forecast, enabled matrix, and exact operator authorization.
+command safely resumes an interrupted job. It also hashes the private audio and
+visual-cues files locally and refuses any identity drift; their paths are never
+committed. `-EnableVertical` deliberately fails until the optional authored
+vertical variant has its own calibration, aggregate 24-hour forecast, enabled
+matrix, and exact operator authorization.

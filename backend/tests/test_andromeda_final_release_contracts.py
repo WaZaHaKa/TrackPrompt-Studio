@@ -7,6 +7,8 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from app.cinematic.production_contracts import (
+    ENCODING_PROFILES_SHA256,
+    OWNER_CREATIVE_ACCEPTANCE_SHA256,
     SOURCE_AUDIO_SHA256,
     SOURCE_CUE_SHA256,
     AndromedaV2FinalCalibration,
@@ -38,6 +40,10 @@ REQUIRED_ARTIFACT_ROLES = (
     "output-variants",
     "story-plan",
     "shot-plan",
+    "owner-creative-acceptance",
+    "final-look-profile",
+    "horizontal-render-profile",
+    "encoding-profiles",
     "final-calibration-v2",
     "technical-authorization-v2",
     "deterministic-effects-and-disk-report",
@@ -64,6 +70,10 @@ GATE_EVIDENCE = {
         "final-scene",
         "story-plan",
         "shot-plan",
+        "owner-creative-acceptance",
+        "final-look-profile",
+        "horizontal-render-profile",
+        "encoding-profiles",
         "source-revision-report",
     ],
     "worker-requirements": ["worker-requirements"],
@@ -75,6 +85,10 @@ def _identity_payload() -> dict[str, object]:
         "schemaVersion": "2.0.0",
         "releaseId": "andromeda-v2-final-release-v2",
         "projectId": "trip-to-andromeda-v2",
+        "sourceAudioSha256": SOURCE_AUDIO_SHA256,
+        "sourceCueSha256": SOURCE_CUE_SHA256,
+        "ownerCreativeAcceptanceSha256": OWNER_CREATIVE_ACCEPTANCE_SHA256,
+        "encodingProfilesSha256": ENCODING_PROFILES_SHA256,
         "lookProfileSha256": HASH_A,
         "storyPlanSha256": HASH_B,
         "shotPlanSha256": HASH_C,
@@ -113,7 +127,7 @@ def _identity_payload() -> dict[str, object]:
                 "id": "local-rtx3060-eevee-v2",
                 "deviceClass": "gpu",
                 "renderer": "BLENDER_EEVEE",
-                "blenderVersion": "5.2",
+                "blenderVersion": "5.2.0 LTS",
                 "minimumVramMib": 8192,
                 "maximumWorkersPerDevice": 1,
                 "chunkSizeFrames": 300,
@@ -187,15 +201,22 @@ def _calibration_payload(
 
 
 def _artifacts(extra_count: int = 0) -> list[dict[str, object]]:
+    identity_hashes = {
+        "final-scene": "5" * 64,
+        "output-variants": "1" * 64,
+        "story-plan": HASH_B,
+        "shot-plan": HASH_C,
+        "owner-creative-acceptance": OWNER_CREATIVE_ACCEPTANCE_SHA256,
+        "final-look-profile": HASH_A,
+        "horizontal-render-profile": "6" * 64,
+        "encoding-profiles": ENCODING_PROFILES_SHA256,
+        "final-calibration-v2": CALIBRATION_SHA256,
+    }
     artifacts = [
         {
             "role": role,
             "path": f"production/andromeda-v2/final/{role}.json",
-            "sha256": (
-                CALIBRATION_SHA256
-                if role == "final-calibration-v2"
-                else f"{index + 1:064x}"
-            ),
+            "sha256": identity_hashes.get(role, f"{index + 1:064x}"),
             "immutable": True,
         }
         for index, role in enumerate(REQUIRED_ARTIFACT_ROLES)
@@ -375,6 +396,49 @@ def _materialize_filesystem_release(
     repository_root: Path,
 ) -> tuple[Path, Path, Path, dict[str, Path]]:
     identity_payload = _identity_payload()
+    evidence_root = repository_root / "test-output" / "ignored-local-final-evidence"
+    evidence_root.mkdir(parents=True, exist_ok=True)
+    fixture_sources = {
+        "owner-creative-acceptance": (
+            REPOSITORY_ROOT
+            / "production"
+            / "andromeda-v2"
+            / "creative-acceptance.json"
+        ),
+        "encoding-profiles": (
+            REPOSITORY_ROOT
+            / "production"
+            / "andromeda-v2"
+            / "encoding-profiles.json"
+        ),
+    }
+    artifact_paths: dict[str, Path] = {}
+    for role in REQUIRED_ARTIFACT_ROLES:
+        if role in {"final-calibration-v2", "technical-authorization-v2"}:
+            continue
+        artifact_path = evidence_root / f"{role}.artifact"
+        source = fixture_sources.get(role)
+        artifact_path.write_bytes(
+            source.read_bytes()
+            if source is not None
+            else f"bounded local evidence: {role}\n".encode()
+        )
+        artifact_paths[role] = artifact_path
+
+    role_hashes = {
+        role: file_sha256(path) for role, path in artifact_paths.items()
+    }
+    identity_payload["outputVariantContractSha256"] = role_hashes["output-variants"]
+    identity_payload["storyPlanSha256"] = role_hashes["story-plan"]
+    identity_payload["shotPlanSha256"] = role_hashes["shot-plan"]
+    identity_payload["lookProfileSha256"] = role_hashes["final-look-profile"]
+    matrix = identity_payload["outputMatrix"]
+    assert isinstance(matrix, dict)
+    variants = matrix["variants"]
+    assert isinstance(variants, list)
+    variants[0]["sceneSha256"] = role_hashes["final-scene"]
+    variants[0]["renderProfileSha256"] = role_hashes["horizontal-render-profile"]
+
     calibration = AndromedaV2FinalCalibration.model_validate(
         _calibration_payload(identity_payload)
     )
@@ -400,19 +464,11 @@ def _materialize_filesystem_release(
     )
     _write_model(authorization_path, authorization)
 
-    evidence_root = repository_root / "test-output" / "ignored-local-final-evidence"
-    artifact_paths: dict[str, Path] = {}
+    artifact_paths["final-calibration-v2"] = calibration_path
+    artifact_paths["technical-authorization-v2"] = authorization_path
     artifacts: list[dict[str, object]] = []
     for role in REQUIRED_ARTIFACT_ROLES:
-        if role == "final-calibration-v2":
-            artifact_path = calibration_path
-        elif role == "technical-authorization-v2":
-            artifact_path = authorization_path
-        else:
-            artifact_path = evidence_root / f"{role}.artifact"
-            artifact_path.parent.mkdir(parents=True, exist_ok=True)
-            artifact_path.write_bytes(f"bounded local evidence: {role}\n".encode())
-        artifact_paths[role] = artifact_path
+        artifact_path = artifact_paths[role]
         artifacts.append(
             {
                 "role": role,
@@ -454,6 +510,50 @@ def test_technical_readiness_does_not_authorize_production_start() -> None:
     assert {
         gate.id for gate in release.technical_authorization.objective_gates
     } == set(FinalReleaseObjectiveGateId)
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    (
+        ("sourceAudioSha256", "source-audio"),
+        ("sourceCueSha256", "source-cue"),
+        ("ownerCreativeAcceptanceSha256", "creative-acceptance"),
+        ("encodingProfilesSha256", "encoding-profiles"),
+    ),
+)
+def test_final_identity_rejects_wrong_immutable_source_hash(
+    field: str,
+    message: str,
+) -> None:
+    payload = _identity_payload()
+    payload[field] = "f" * 64
+
+    with pytest.raises(ValidationError, match=message):
+        FinalReleaseIdentity.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("role", "message"),
+    (
+        ("owner-creative-acceptance", "owner-creative-acceptance"),
+        ("final-look-profile", "final-look-profile"),
+        ("encoding-profiles", "encoding-profiles"),
+        ("horizontal-render-profile", "render profile"),
+    ),
+)
+def test_final_package_rejects_artifact_identity_drift(
+    role: str,
+    message: str,
+) -> None:
+    identity_payload = _identity_payload()
+    payload = _package_payload(identity_payload)
+    artifacts = payload["artifacts"]
+    assert isinstance(artifacts, list)
+    artifact = next(item for item in artifacts if item["role"] == role)
+    artifact["sha256"] = "f" * 64
+
+    with pytest.raises(ValidationError, match=message):
+        AndromedaV2FinalPackageManifest.model_validate(payload)
 
 
 def test_legacy_foundation_documents_remain_schema_compatible() -> None:

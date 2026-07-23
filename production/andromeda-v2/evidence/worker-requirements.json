@@ -7,7 +7,7 @@
       "id": "local-rtx3060-eevee-v1",
       "deviceClass": "gpu",
       "renderer": "BLENDER_EEVEE",
-      "blenderVersion": "5.2",
+      "blenderVersion": "5.2.0 LTS",
       "minimumVramMiB": 8192,
       "maximumWorkersPerDevice": 1,
       "chunkSizeFrames": 300,

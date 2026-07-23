@@ -26,6 +26,12 @@ R131_REVIEW_SHA256 = "8843cecbe55ff6a6a7bb1f69da36b1305e8632504ea2e56f9bb98b72c9
 
 SOURCE_AUDIO_SHA256 = "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5"
 SOURCE_CUE_SHA256 = "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2"
+OWNER_CREATIVE_ACCEPTANCE_SHA256 = (
+    "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48"
+)
+ENCODING_PROFILES_SHA256 = (
+    "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8"
+)
 
 _HEX_64 = r"^[0-9a-f]{64}$"
 _ACT_ORDER = (
@@ -795,6 +801,10 @@ _FINAL_RELEASE_GATE_EVIDENCE_ROLES: dict[
         "final-scene",
         "story-plan",
         "shot-plan",
+        "owner-creative-acceptance",
+        "final-look-profile",
+        "horizontal-render-profile",
+        "encoding-profiles",
         "source-revision-report",
     ),
     FinalReleaseObjectiveGateId.WORKER_REQUIREMENTS: ("worker-requirements",),
@@ -805,6 +815,10 @@ _FINAL_RELEASE_REQUIRED_ARTIFACT_ROLES = frozenset(
         "output-variants",
         "story-plan",
         "shot-plan",
+        "owner-creative-acceptance",
+        "final-look-profile",
+        "horizontal-render-profile",
+        "encoding-profiles",
         "final-calibration-v2",
         "technical-authorization-v2",
         "deterministic-effects-and-disk-report",
@@ -833,7 +847,7 @@ class FinalReleaseWorkerRequirement(APIModel):
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,79}$")
     device_class: Literal["cpu", "gpu"]
     renderer: Literal["BLENDER_EEVEE"]
-    blender_version: Literal["5.2"]
+    blender_version: Literal["5.2.0 LTS"]
     minimum_vram_mib: int = Field(ge=0)
     maximum_workers_per_device: int = Field(ge=1)
     chunk_size_frames: int = Field(ge=1)
@@ -915,6 +929,10 @@ class FinalReleaseIdentity(APIModel):
     schema_version: Literal["2.0.0"]
     release_id: Literal["andromeda-v2-final-release-v2"]
     project_id: Literal["trip-to-andromeda-v2"]
+    source_audio_sha256: str = Field(pattern=_HEX_64)
+    source_cue_sha256: str = Field(pattern=_HEX_64)
+    owner_creative_acceptance_sha256: str = Field(pattern=_HEX_64)
+    encoding_profiles_sha256: str = Field(pattern=_HEX_64)
     look_profile_sha256: str = Field(pattern=_HEX_64)
     story_plan_sha256: str = Field(pattern=_HEX_64)
     shot_plan_sha256: str = Field(pattern=_HEX_64)
@@ -928,6 +946,16 @@ class FinalReleaseIdentity(APIModel):
 
     @model_validator(mode="after")
     def exact_workers(self) -> FinalReleaseIdentity:
+        if self.source_audio_sha256 != SOURCE_AUDIO_SHA256:
+            raise ValueError("final-release identity source-audio hash is invalid")
+        if self.source_cue_sha256 != SOURCE_CUE_SHA256:
+            raise ValueError("final-release identity source-cue hash is invalid")
+        if self.owner_creative_acceptance_sha256 != OWNER_CREATIVE_ACCEPTANCE_SHA256:
+            raise ValueError(
+                "final-release identity owner creative-acceptance hash is invalid"
+            )
+        if self.encoding_profiles_sha256 != ENCODING_PROFILES_SHA256:
+            raise ValueError("final-release identity encoding-profiles hash is invalid")
         requirements = {requirement.id: requirement for requirement in self.worker_requirements}
         if len(requirements) != len(self.worker_requirements):
             raise ValueError("worker requirement identities must be unique")
@@ -1247,6 +1275,33 @@ class AndromedaV2FinalPackageManifest(APIModel):
             raise ValueError(
                 f"final package is missing mandatory artifact roles: {sorted(missing_roles)}"
             )
+        artifacts = {artifact.role: artifact for artifact in self.artifacts}
+        exact_artifact_hashes = {
+            "output-variants": self.identity.output_variant_contract_sha256,
+            "story-plan": self.identity.story_plan_sha256,
+            "shot-plan": self.identity.shot_plan_sha256,
+            "owner-creative-acceptance": (
+                self.identity.owner_creative_acceptance_sha256
+            ),
+            "final-look-profile": self.identity.look_profile_sha256,
+            "encoding-profiles": self.identity.encoding_profiles_sha256,
+        }
+        for role, expected_sha256 in exact_artifact_hashes.items():
+            if artifacts[role].sha256 != expected_sha256:
+                raise ValueError(
+                    f"final package artifact {role} does not match release identity"
+                )
+        artifact_hashes = {artifact.sha256 for artifact in self.artifacts}
+        for variant in self.identity.output_matrix.variants:
+            if variant.scene_sha256 not in artifact_hashes:
+                raise ValueError(
+                    f"final package is missing exact scene for enabled variant {variant.id}"
+                )
+            if variant.render_profile_sha256 not in artifact_hashes:
+                raise ValueError(
+                    "final package is missing exact render profile for enabled "
+                    f"variant {variant.id}"
+                )
         sources = {binding.role: binding for binding in self.source_bindings}
         if set(sources) != {"source-audio", "source-cue"}:
             raise ValueError("the final package must bind source audio and cue identities")
@@ -1254,6 +1309,14 @@ class AndromedaV2FinalPackageManifest(APIModel):
             raise ValueError("the final package source-audio hash is invalid")
         if sources["source-cue"].sha256 != SOURCE_CUE_SHA256:
             raise ValueError("the final package source-cue hash is invalid")
+        if sources["source-audio"].sha256 != self.identity.source_audio_sha256:
+            raise ValueError(
+                "the final package source-audio binding does not match release identity"
+            )
+        if sources["source-cue"].sha256 != self.identity.source_cue_sha256:
+            raise ValueError(
+                "the final package source-cue binding does not match release identity"
+            )
         expected_status = (
             "start-authorized"
             if self.production_start_allowed

@@ -44,7 +44,7 @@
     {
       "role": "typed-production-contracts",
       "path": "backend/app/cinematic/production_contracts.py",
-      "sha256": "1ba2db66aa3c5c28ab2c5b027cd2c5780423221100997e6e09de5ed558c671b9",
+      "sha256": "7a262654ac624021cc3fae16dda5a6d9cbba168eb73e7a06596d9a0e49cf01ec",
       "immutable": true
     },
     {
@@ -62,7 +62,7 @@
     {
       "role": "foundation-documentation",
       "path": "production/andromeda-v2/README.md",
-      "sha256": "56af787de3820b0b06a460a3eb996564312b4a8849c9d4237850e838a066bf82",
+      "sha256": "2a3e47dd4a894a86b2dccccd24240269fc19f0ef3bc96344e2430989bee8d283",
       "immutable": true
     }
   ],

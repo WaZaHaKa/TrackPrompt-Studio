@@ -159,16 +159,22 @@ implementation sprint:
 ```powershell
 # PRODUCTION ACTION: run only after explicit operator confirmation for the
 # exact release identity and output matrix.
+$sourceAudioPath = "<private source-audio path>"
+$sourceCuePath = "<private visual-cues path>"
 powershell -NoProfile -ExecutionPolicy Bypass -File `
   .\production\andromeda-v2\invoke-production.ps1 `
   -Action StartOrResume `
+  -SourceAudioPath $sourceAudioPath `
+  -SourceCuePath $sourceCuePath `
   -AuthorizationToken "<exact scene/profile token>"
 ```
 
 Before execution, compare the technical authorization's release identity,
 operator-start identity, enabled variant list, scene/profile hashes, output
 directory, frame range, FPS, forecasts, and headroom with the just-completed
-preflight. The wrapper must fail closed when any value disagrees.
+preflight. The wrapper locally verifies the private source-audio and visual-cues
+hashes plus the committed creative-acceptance and encoding-profile hashes. It
+must fail closed when any value disagrees; private source paths remain local.
 
 There is no authorized horizontal-plus-vertical launch command while
 `-EnableVertical` remains guarded. Do not bypass that guard or invoke low-level

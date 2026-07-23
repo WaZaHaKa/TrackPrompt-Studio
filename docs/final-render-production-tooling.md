@@ -45,10 +45,12 @@ The project wrapper is:
 
 Both commands are planning-only. `StartOrResume` is a production action and
 must fail until technical readiness and the exact operator-start gate authorize
-the same release. `-EnableVertical` is deliberately guarded until independent
-vertical calibration, separate QA, aggregate selected-matrix SLA, and a new
-authorization exist. It must not reuse horizontal-only evidence or silently
-crop horizontal frames.
+the same release. The action also requires private source-audio and visual-cues
+paths so their contents can be hashed locally against the authorized identity;
+the paths themselves are not persisted. `-EnableVertical` is deliberately
+guarded until independent vertical calibration, separate QA, aggregate
+selected-matrix SLA, and a new authorization exist. It must not reuse
+horizontal-only evidence or silently crop horizontal frames.
 
 Changing any enabled variant, scene, composition, camera, profile, frame clock,
 or bound hash invalidates authorization. Variant frame directories, in-flight

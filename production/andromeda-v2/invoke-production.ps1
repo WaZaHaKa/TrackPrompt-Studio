@@ -5,6 +5,8 @@ param(
     [string]$ScenePath = "",
     [string]$OutputDirectory = "",
     [string]$AuthorizationToken = "",
+    [string]$SourceAudioPath = "",
+    [string]$SourceCuePath = "",
     [switch]$EnableVertical,
     [string]$BlenderExecutable = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$PythonExecutable = ""
@@ -17,6 +19,29 @@ $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..\..")).
 $renderScript = Join-Path $repositoryRoot "render-trackprompt-final.ps1"
 $profilePath = Join-Path $repositoryRoot "render-profiles\trip-to-andromeda\andromeda-v2-horizontal-1080p-final.json"
 $authorizationPath = Join-Path $PSScriptRoot "technical-authorization-v2.json"
+$creativeAcceptancePath = Join-Path $PSScriptRoot "creative-acceptance.json"
+$encodingProfilesPath = Join-Path $PSScriptRoot "encoding-profiles.json"
+
+function Test-ExactFileBinding {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedSha256
+    )
+
+    if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        throw "Required $Label file is unavailable."
+    }
+    $actualSha256 = (
+        Get-FileHash -LiteralPath $FilePath -Algorithm SHA256
+    ).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $ExpectedSha256.ToLowerInvariant()) {
+        throw "The local $Label file does not match the exact authorized identity."
+    }
+}
 
 if ($EnableVertical) {
     throw (
@@ -35,7 +60,15 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $repositoryRoot "final-output\andromeda-v2-horizontal"
 }
 
-foreach ($requiredFile in @($renderScript, $profilePath, $ScenePath)) {
+foreach (
+    $requiredFile in @(
+        $renderScript,
+        $profilePath,
+        $ScenePath,
+        $creativeAcceptancePath,
+        $encodingProfilesPath
+    )
+) {
     if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
         throw "Required production file is unavailable: $requiredFile"
     }
@@ -112,6 +145,28 @@ if (
 ) {
     throw "The operator start gate does not bind the current release identity."
 }
+if ([string]::IsNullOrWhiteSpace($SourceAudioPath)) {
+    throw "StartOrResume requires -SourceAudioPath for exact private-source validation."
+}
+if ([string]::IsNullOrWhiteSpace($SourceCuePath)) {
+    throw "StartOrResume requires -SourceCuePath for exact private-source validation."
+}
+Test-ExactFileBinding `
+    -Label "source-audio" `
+    -FilePath $SourceAudioPath `
+    -ExpectedSha256 ([string]$authorization.identity.sourceAudioSha256)
+Test-ExactFileBinding `
+    -Label "source-cue" `
+    -FilePath $SourceCuePath `
+    -ExpectedSha256 ([string]$authorization.identity.sourceCueSha256)
+Test-ExactFileBinding `
+    -Label "owner creative-acceptance" `
+    -FilePath $creativeAcceptancePath `
+    -ExpectedSha256 ([string]$authorization.identity.ownerCreativeAcceptanceSha256)
+Test-ExactFileBinding `
+    -Label "encoding-profiles" `
+    -FilePath $encodingProfilesPath `
+    -ExpectedSha256 ([string]$authorization.identity.encodingProfilesSha256)
 if ([string]::IsNullOrWhiteSpace($AuthorizationToken)) {
     throw "StartOrResume requires the exact scene/profile -AuthorizationToken."
 }

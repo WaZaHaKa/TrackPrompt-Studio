@@ -12,24 +12,29 @@ from uuid import UUID, uuid4
 
 from .assembly import execute_assembly
 from .authorization import BatchAuthorization, authorization_phrase
-from .contracts import CompiledShot, ContractError, load_project_config
+from .continuity import derive_shot_seed
+from .contracts import CompiledReferenceImage, CompiledShot, ContractError, load_project_config
 from .costs import PRICE_SNAPSHOT_DATE, estimate
 from .exporter import export_davinci_package
 from .gcp_veo import (
     ProviderError,
+    ProviderRequestContext,
     VeoRestClient,
     build_request_payload,
     copy_gcs_uri,
     doctor,
     response_output_uris,
+    save_operation_failure_diagnostic,
+    upload_reference_image,
 )
-from .jsonio import atomic_write_json, read_json, sha256_json
+from .jsonio import atomic_write_json, read_json, sha256_file, sha256_json
 from .media import probe, verify_generated_clip
 from .mission_models import (
     VideoAnalysisSource,
     VideoArtifactSummary,
     VideoAuthorizationRequest,
     VideoCatalog,
+    VideoChainReferenceRequest,
     VideoContentPackage,
     VideoDoctorCheck,
     VideoDoctorRequest,
@@ -42,6 +47,7 @@ from .mission_models import (
     VideoPlanCreateRequest,
     VideoProfileSummary,
     VideoRequestPreview,
+    VideoRetryRequest,
     VideoReviewRequest,
     VideoReviewState,
     VideoShotAttempt,
@@ -75,27 +81,45 @@ class VideoMissionStore(Protocol):
 
 
 class AsyncVideoProvider(Protocol):
-    async def submit(self, shot: CompiledShot) -> dict[str, Any]: ...
-    async def fetch(self, *, model_id: str, operation_name: str) -> dict[str, Any]: ...
+    async def submit(self, shot: CompiledShot, *, context: ProviderRequestContext) -> dict[str, Any]: ...
+    async def fetch(
+        self, *, model_id: str, operation_name: str, context: ProviderRequestContext
+    ) -> dict[str, Any]: ...
     async def download(self, uri: str, destination: Path) -> None: ...
+    async def upload_reference(self, source: Path, destination_uri: str, expected_sha256: str) -> None: ...
 
 
 class _VeoProvider:
-    def __init__(self, project_id: str, region: str) -> None:
-        self.client = VeoRestClient(project_id=project_id, region=region)
+    def __init__(self, project_id: str, region: str, diagnostics_root: Path) -> None:
+        self.client = VeoRestClient(
+            project_id=project_id,
+            region=region,
+            diagnostics_root=diagnostics_root,
+        )
 
-    async def submit(self, shot: CompiledShot) -> dict[str, Any]:
-        return await asyncio.to_thread(self.client.submit, shot)
+    async def submit(self, shot: CompiledShot, *, context: ProviderRequestContext) -> dict[str, Any]:
+        return await asyncio.to_thread(self.client.submit, shot, context=context)
 
-    async def fetch(self, *, model_id: str, operation_name: str) -> dict[str, Any]:
+    async def fetch(
+        self, *, model_id: str, operation_name: str, context: ProviderRequestContext
+    ) -> dict[str, Any]:
         return await asyncio.to_thread(
             self.client.fetch,
             model_id=model_id,
             operation_name=operation_name,
+            context=context,
         )
 
     async def download(self, uri: str, destination: Path) -> None:
         await asyncio.to_thread(copy_gcs_uri, uri, destination)
+
+    async def upload_reference(self, source: Path, destination_uri: str, expected_sha256: str) -> None:
+        await asyncio.to_thread(
+            upload_reference_image,
+            source,
+            destination_uri,
+            expected_sha256=expected_sha256,
+        )
 
 
 ProviderFactory = Callable[[str, str], AsyncVideoProvider]
@@ -126,7 +150,11 @@ class VideoGenerationController:
         self.store = store
         self.notify_event = notify_event
         self.provider_factory = provider_factory or (
-            lambda project_id, region: _VeoProvider(project_id, region)
+            lambda project_id, region: _VeoProvider(
+                project_id,
+                region,
+                self.runtime_root / "provider-errors",
+            )
         )
         self.ffmpeg_path = ffmpeg_path or (lambda: None)
         self.ffprobe_path = ffprobe_path or (lambda: None)
@@ -226,6 +254,10 @@ class VideoGenerationController:
                 config = load_project_config(config_path)
                 profile = config.selected_profile()
                 costs = estimate(profile, len(config.required_shot_ids), config.retry_reserve_factor)
+                available = not (
+                    profile.resolution == "4k"
+                    and profile.model_id in {"veo-3.1-generate-001", "veo-3.1-fast-generate-001"}
+                )
                 profiles.append(
                     VideoProfileSummary(
                         id=profile_id,
@@ -244,6 +276,12 @@ class VideoGenerationController:
                         base_estimated_usd=float(costs.base_usd),
                         conservative_estimated_usd=float(costs.conservative_usd),
                         max_spend_usd=config.max_spend_usd,
+                        available=available,
+                        availability_note=(
+                            None
+                            if available
+                            else "Current GA Vertex Veo 3.1 endpoints support 720p/1080p; 4K remains optional and disabled until a supported model contract is configured."
+                        ),
                     )
                 )
             config = load_project_config(project_path)
@@ -269,12 +307,21 @@ class VideoGenerationController:
         story_path = analysis_directory / "story-plan.json"
         shot_path = analysis_directory / "shot-plan.json"
         audio_path: Path | None = None
+        reference_image_path: Path | None = None
         if request.audio_path:
             audio_path = Path(request.audio_path).expanduser().resolve()
         elif (analysis_directory / "source.bin").is_file():
             audio_path = (analysis_directory / "source.bin").resolve()
         if audio_path is not None and not audio_path.is_file():
             raise self._error(422, "audio_master_missing", "The selected local audio master is unavailable")
+        if request.reference_image_path:
+            reference_image_path = Path(request.reference_image_path).expanduser().resolve()
+            if not reference_image_path.is_file():
+                raise self._error(
+                    422,
+                    "continuity_reference_missing",
+                    "The selected local continuity reference image is unavailable",
+                )
         try:
             plan = await asyncio.to_thread(
                 compile_project_plan,
@@ -286,6 +333,10 @@ class VideoGenerationController:
                 audio_master_path=audio_path,
                 story_plan_path=story_path if story_path.is_file() else None,
                 shot_plan_path=shot_path if shot_path.is_file() else None,
+                continuity_profile_path=project_root / "continuity-profile.json",
+                master_seed=request.master_seed,
+                seed_locked=request.seed_locked,
+                reference_image_path=reference_image_path,
             )
         except (ContractError, OSError, ValueError) as exc:
             raise self._error(422, "video_plan_invalid", str(exc)) from exc
@@ -302,6 +353,18 @@ class VideoGenerationController:
             gcp_project_id=request.gcp_project_id,
             gcs_bucket=bucket,
             audio_path=str(audio_path) if audio_path else None,
+            reference_assets=(
+                {
+                    plan.shots[0].first_frame_reference.asset_id: {
+                        **plan.shots[0].first_frame_reference.to_dict(),
+                        "localPath": str(reference_image_path),
+                    }
+                }
+                if reference_image_path is not None
+                and plan.shots
+                and plan.shots[0].first_frame_reference is not None
+                else {}
+            ),
             shots=tuple(
                 VideoShotRecord(
                     shot_id=shot.shot_id,
@@ -342,6 +405,7 @@ class VideoGenerationController:
     async def authorize(self, job_id: str, request: VideoAuthorizationRequest) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_current_request_contract(job)
             if job.state not in {VideoJobState.PLANNED, VideoJobState.AUTHORIZED}:
                 raise self._error(
                     409, "video_plan_not_authorizable", "Only an unchanged planned batch can be authorized"
@@ -365,6 +429,7 @@ class VideoGenerationController:
                     "updated_at": utc_now(),
                 }
             )
+            self._archive_authorization_receipt(updated)
             atomic_write_json(self._job_root(updated) / "authorization.json", authorization.to_dict())
             return self._view(await self._save(updated))
 
@@ -415,7 +480,12 @@ class VideoGenerationController:
             )
             return self._view(await self._save(cancelled))
 
-    async def retry(self, job_id: str, shot_id: str) -> VideoJobView:
+    async def retry(
+        self,
+        job_id: str,
+        shot_id: str,
+        request: VideoRetryRequest,
+    ) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
             shot = self._shot(job, shot_id)
@@ -426,6 +496,8 @@ class VideoGenerationController:
                 VideoShotState.VERIFIED,
             }:
                 raise self._error(409, "video_shot_not_retryable", "This shot is not in a retryable state")
+            if request.mode == "new_variation":
+                return self._view(await self._prepare_new_variation(job, shot))
             self._authorization(job, next_cost=shot.estimated_cost_usd)
             shot = shot.model_copy(
                 update={
@@ -440,6 +512,77 @@ class VideoGenerationController:
             job = await self._save(job)
             self._schedule(job.id)
             return self._view(job)
+
+    async def _prepare_new_variation(
+        self,
+        job: VideoJobRecord,
+        shot: VideoShotRecord,
+    ) -> VideoJobRecord:
+        self._require_current_request_contract(job)
+        plan = cast(dict[str, Any], json.loads(json.dumps(job.plan)))
+        plan_shots = cast(list[dict[str, Any]], plan["shots"])
+        planned_shot = next(item for item in plan_shots if item["shotId"] == shot.shot_id)
+        variation_index = int(planned_shot.get("variationIndex", 0)) + 1
+        continuity = cast(dict[str, Any], plan.get("continuity", {}))
+        master_seed = int(continuity["masterSeed"])
+        group_ids = tuple(str(item) for item in planned_shot.get("continuityGroupIds", []))
+        seed = derive_shot_seed(
+            master_seed=master_seed,
+            project_id=job.project_id,
+            continuity_group_ids=group_ids,
+            shot_id=shot.shot_id,
+            variation_index=variation_index,
+        )
+        planned_shot["variationIndex"] = variation_index
+        planned_shot["seed"] = seed
+        plan.pop("planDigest", None)
+        digest = sha256_json(plan)
+        plan["planDigest"] = digest
+        revised_shot = shot.model_copy(
+            update={
+                "seed": seed,
+                "review_state": VideoReviewState.PENDING,
+                "accepted_attempt_id": None,
+                "retry_requested": True,
+            }
+        )
+        self._archive_authorization_receipt(job)
+        updated = self._replace_shot(job, revised_shot).model_copy(
+            update={
+                "plan": plan,
+                "plan_digest": digest,
+                "authorization": None,
+                "state": VideoJobState.PLANNED,
+                "error": None,
+                "updated_at": utc_now(),
+            }
+        )
+        self._persist_plan_revision(job, updated)
+        return await self._save(updated)
+
+    def _persist_plan_revision(self, previous: VideoJobRecord, updated: VideoJobRecord) -> None:
+        root = self._job_root(updated)
+        old_plan = root / "plan.json"
+        history = root / "plan-history" / f"{previous.plan_digest}.json"
+        if old_plan.is_file() and not history.exists():
+            value = read_json(old_plan)
+            if isinstance(value, dict):
+                atomic_write_json(history, value)
+        previous_preview_root = root / "request-preview"
+        history_preview_root = root / "request-preview-history" / previous.plan_digest
+        for old_shot in previous.shots:
+            preview = previous_preview_root / f"{old_shot.shot_id}.json"
+            archived = history_preview_root / preview.name
+            if preview.is_file() and not archived.exists():
+                value = read_json(preview)
+                if isinstance(value, dict):
+                    atomic_write_json(archived, value)
+        atomic_write_json(root / "plan.json", updated.plan)
+        for revised in updated.shots:
+            atomic_write_json(
+                root / "request-preview" / f"{revised.shot_id}.json",
+                build_request_payload(self._compiled(updated, revised.shot_id)),
+            )
 
     async def review(self, job_id: str, shot_id: str, request: VideoReviewRequest) -> VideoJobView:
         async with self._lock:
@@ -460,6 +603,139 @@ class VideoGenerationController:
                 }
             )
             return self._view(await self._save(self._replace_shot(job, updated_shot)))
+
+    async def chain_reference(
+        self,
+        job_id: str,
+        shot_id: str,
+        request: VideoChainReferenceRequest,
+    ) -> VideoJobView:
+        async with self._lock:
+            job = self._record(job_id)
+            self._require_current_request_contract(job)
+            target = self._shot(job, shot_id)
+            source = self._shot(job, request.source_shot_id)
+            compiled_target = self._compiled(job, shot_id)
+            if compiled_target.previous_shot_id != source.shot_id:
+                raise self._error(
+                    409,
+                    "continuity_chain_invalid",
+                    "Only the target shot's declared previous shot can supply its continuity frame",
+                )
+            if source.review_state is not VideoReviewState.ACCEPTED or not source.accepted_attempt_id:
+                raise self._error(
+                    409,
+                    "continuity_source_not_accepted",
+                    "Accept the previous technically verified shot before chaining its final frame",
+                )
+            source_attempt = next(
+                (item for item in source.attempts if item.id == source.accepted_attempt_id),
+                None,
+            )
+            if (
+                source_attempt is None
+                or source_attempt.state is not VideoShotState.VERIFIED
+                or not source_attempt.local_clip_path
+            ):
+                raise self._error(
+                    409,
+                    "continuity_source_unavailable",
+                    "The accepted previous shot has no durable verified local clip",
+                )
+            ffmpeg = self.ffmpeg_path()
+            if ffmpeg is None:
+                raise self._error(
+                    409,
+                    "continuity_ffmpeg_required",
+                    "FFmpeg is required to extract an accepted-shot continuity frame",
+                )
+            frame = self._job_root(job) / "references" / f"{source_attempt.id}-end-frame.png"
+            if not frame.is_file():
+                frame.parent.mkdir(parents=True, exist_ok=True)
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    [
+                        str(ffmpeg),
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-sseof",
+                        "-0.05",
+                        "-i",
+                        source_attempt.local_clip_path,
+                        "-frames:v",
+                        "1",
+                        "-compression_level",
+                        "6",
+                        str(frame),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+                if result.returncode != 0 or not frame.is_file():
+                    raise self._error(
+                        422,
+                        "continuity_frame_extraction_failed",
+                        "The accepted-shot final frame could not be extracted",
+                    )
+            frame_sha256 = sha256_file(frame)
+            with frame.open("rb") as handle:
+                if not handle.read(8).startswith(b"\x89PNG\r\n\x1a\n"):
+                    raise self._error(
+                        422,
+                        "continuity_frame_invalid",
+                        "The extracted continuity frame is not a valid PNG",
+                    )
+            asset_id = f"{source.shot_id}-accepted-end-frame-for-{target.shot_id}"
+            if not compiled_target.storage_uri:
+                raise self._error(
+                    422,
+                    "continuity_storage_uri_missing",
+                    "The target shot has no exact GCS storage prefix",
+                )
+            project_storage_prefix = compiled_target.storage_uri.removesuffix(f"{target.shot_id}/")
+            reference = CompiledReferenceImage(
+                asset_id=asset_id,
+                gcs_uri=f"{project_storage_prefix}_references/{frame_sha256}.png",
+                mime_type="image/png",
+                sha256=frame_sha256,
+                source_kind="accepted-previous-shot-end-frame",
+            )
+            plan = cast(dict[str, Any], json.loads(json.dumps(job.plan)))
+            plan_shots = cast(list[dict[str, Any]], plan["shots"])
+            planned_target = next(item for item in plan_shots if item["shotId"] == target.shot_id)
+            planned_target["firstFrameReference"] = reference.to_dict()
+            planned_target["continuationMode"] = "accepted-previous-shot-end-frame"
+            source_artifacts = cast(dict[str, Any], plan["sourceArtifacts"])
+            source_artifacts[f"reference:{asset_id}:sha256"] = frame_sha256
+            plan.pop("planDigest", None)
+            digest = sha256_json(plan)
+            plan["planDigest"] = digest
+            reference_assets = dict(job.reference_assets)
+            reference_assets[asset_id] = {**reference.to_dict(), "localPath": str(frame)}
+            revised_target = target.model_copy(
+                update={
+                    "review_state": VideoReviewState.PENDING,
+                    "accepted_attempt_id": None,
+                    "retry_requested": bool(target.attempts),
+                }
+            )
+            self._archive_authorization_receipt(job)
+            updated = self._replace_shot(job, revised_target).model_copy(
+                update={
+                    "plan": plan,
+                    "plan_digest": digest,
+                    "authorization": None,
+                    "reference_assets": reference_assets,
+                    "state": VideoJobState.PLANNED,
+                    "error": None,
+                    "updated_at": utc_now(),
+                }
+            )
+            self._persist_plan_revision(job, updated)
+            return self._view(await self._save(updated))
 
     async def resolve(self, job_id: str) -> VideoJobView:
         async with self._lock:
@@ -664,7 +940,16 @@ class VideoGenerationController:
                 return False
             compiled = self._compiled(job, shot_id)
             try:
-                response = await provider.submit(compiled)
+                await self._prepare_reference(job, compiled, provider)
+                response = await provider.submit(
+                    compiled,
+                    context=ProviderRequestContext(
+                        phase="submit",
+                        job_id=job.id,
+                        shot_id=shot_id,
+                        attempt_id=attempt.id,
+                    ),
+                )
                 operation_name = response.get("name")
                 if not isinstance(operation_name, str) or not operation_name:
                     raise ProviderError(
@@ -713,6 +998,12 @@ class VideoGenerationController:
                 response = await provider.fetch(
                     model_id=self._compiled(self._record(job_id), shot_id).model_id,
                     operation_name=attempt.operation_name,
+                    context=ProviderRequestContext(
+                        phase="poll",
+                        job_id=job_id,
+                        shot_id=shot_id,
+                        attempt_id=attempt.id,
+                    ),
                 )
                 transient_failures = 0
             except ProviderError as exc:
@@ -735,6 +1026,16 @@ class VideoGenerationController:
                 error = cast(dict[str, Any], response["error"])
                 text = json.dumps(error, ensure_ascii=False).lower()
                 filtered = "safety" in text or "rai" in text or "filtered" in text
+                diagnostic = save_operation_failure_diagnostic(
+                    self.runtime_root / "provider-errors",
+                    context=ProviderRequestContext(
+                        phase="operation",
+                        job_id=job_id,
+                        shot_id=shot_id,
+                        attempt_id=attempt.id,
+                    ),
+                    response=response,
+                )
                 await self._terminal_attempt(
                     job_id,
                     shot_id,
@@ -745,6 +1046,10 @@ class VideoGenerationController:
                         summary="The provider filtered this shot."
                         if filtered
                         else "The provider operation failed.",
+                        http_status=diagnostic.http_status,
+                        provider_status=diagnostic.provider_status,
+                        provider_error_code=diagnostic.provider_error_code,
+                        diagnostic_id=diagnostic.diagnostic_id,
                     ),
                 )
                 return False
@@ -755,12 +1060,27 @@ class VideoGenerationController:
                 else 0
             )
             if filtered_count:
+                diagnostic = save_operation_failure_diagnostic(
+                    self.runtime_root / "provider-errors",
+                    context=ProviderRequestContext(
+                        phase="operation-filtered",
+                        job_id=job_id,
+                        shot_id=shot_id,
+                        attempt_id=attempt.id,
+                    ),
+                    response=response,
+                )
                 await self._terminal_attempt(
                     job_id,
                     shot_id,
                     attempt.id,
                     state=VideoShotState.FILTERED,
-                    error=VideoError(code="provider_filtered", summary="The provider filtered this shot."),
+                    error=VideoError(
+                        code="provider_filtered",
+                        summary="The provider filtered this shot.",
+                        http_status=diagnostic.http_status,
+                        diagnostic_id=diagnostic.diagnostic_id,
+                    ),
                 )
                 return False
             compiled = self._compiled(self._record(job_id), shot_id)
@@ -838,6 +1158,50 @@ class VideoGenerationController:
             )
             return True
         return attempt.state is VideoShotState.VERIFIED
+
+    async def _prepare_reference(
+        self,
+        job: VideoJobRecord,
+        shot: CompiledShot,
+        provider: AsyncVideoProvider,
+    ) -> None:
+        reference = shot.first_frame_reference
+        if reference is None:
+            return
+        private = job.reference_assets.get(reference.asset_id)
+        if not isinstance(private, dict):
+            raise ProviderError(
+                "The exact plan's private reference mapping is unavailable; compile a fresh plan.",
+                code="reference_asset_missing",
+            )
+        local_path = private.get("localPath")
+        if not isinstance(local_path, str):
+            raise ProviderError(
+                "The exact plan's private reference path is unavailable; compile a fresh plan.",
+                code="reference_asset_missing",
+            )
+        receipt = self._job_root(job) / "reference-uploads" / f"{reference.asset_id}.json"
+        if receipt.is_file():
+            value = read_json(receipt)
+            if (
+                isinstance(value, dict)
+                and value.get("sha256") == reference.sha256
+                and value.get("gcsUri") == reference.gcs_uri
+            ):
+                return
+        await provider.upload_reference(Path(local_path), reference.gcs_uri, reference.sha256)
+        atomic_write_json(
+            receipt,
+            {
+                "schemaVersion": "1.0.0",
+                "assetId": reference.asset_id,
+                "sha256": reference.sha256,
+                "gcsUri": reference.gcs_uri,
+                "mimeType": reference.mime_type,
+                "uploadedAt": utc_now().isoformat(),
+                "planDigest": job.plan_digest,
+            },
+        )
 
     async def _reserve(
         self, job_id: str, shot_id: str
@@ -1098,6 +1462,18 @@ class VideoGenerationController:
     def _compiled(job: VideoJobRecord, shot_id: str) -> CompiledShot:
         values = cast(list[dict[str, Any]], job.plan["shots"])
         value = next(item for item in values if item["shotId"] == shot_id)
+        reference_value = value.get("firstFrameReference")
+        reference = (
+            CompiledReferenceImage(
+                asset_id=str(reference_value["assetId"]),
+                gcs_uri=str(reference_value["gcsUri"]),
+                mime_type=str(reference_value["mimeType"]),
+                sha256=str(reference_value["sha256"]),
+                source_kind=str(reference_value["sourceKind"]),
+            )
+            if isinstance(reference_value, dict)
+            else None
+        )
         return CompiledShot(
             shot_id=str(value["shotId"]),
             chapter_id=str(value["chapterId"]),
@@ -1120,9 +1496,15 @@ class VideoGenerationController:
             estimated_cost_usd=float(value["estimatedCostUsd"]),
             source_section_hints=tuple(str(item) for item in value.get("sourceSectionHints", [])),
             review_notes=tuple(str(item) for item in value.get("reviewNotes", [])),
+            variation_index=int(value.get("variationIndex", 0)),
+            continuity_group_ids=tuple(str(item) for item in value.get("continuityGroupIds", [])),
+            previous_shot_id=(str(value["previousShotId"]) if value.get("previousShotId") else None),
+            continuation_mode=str(value.get("continuationMode", "prompt-anchors")),
+            first_frame_reference=reference,
         )
 
     def _authorization(self, job: VideoJobRecord, *, next_cost: float) -> BatchAuthorization:
+        self._require_current_request_contract(job)
         if not job.authorization:
             raise self._error(
                 409,
@@ -1141,6 +1523,39 @@ class VideoGenerationController:
             code = "video_budget_exceeded" if "exceed" in str(exc).lower() else "video_authorization_invalid"
             raise self._error(409, code, str(exc)) from exc
         return authorization
+
+    @staticmethod
+    def _require_current_request_contract(job: VideoJobRecord) -> None:
+        if job.plan.get("requestContractVersion") != "vertex-veo-predict-long-running-v2":
+            raise VideoGenerationController._error(
+                409,
+                "video_plan_request_contract_changed",
+                "This plan predates the corrected Veo request contract. Compile and authorize a fresh exact plan before any paid retry.",
+            )
+        profile = cast(dict[str, Any], job.plan.get("profile", {}))
+        if profile.get("resolution") == "4k" and profile.get("modelId") in {
+            "veo-3.1-generate-001",
+            "veo-3.1-fast-generate-001",
+        }:
+            raise VideoGenerationController._error(
+                409,
+                "video_plan_model_capability_changed",
+                "The selected GA Veo model does not accept 4K output. Compile and authorize a fresh 1080p exact plan.",
+            )
+
+    def _archive_authorization_receipt(self, job: VideoJobRecord) -> None:
+        current = self._job_root(job) / "authorization.json"
+        if not current.is_file():
+            return
+        value = read_json(current)
+        if not isinstance(value, dict):
+            return
+        digest = str(value.get("planDigest", "unknown"))
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            digest = sha256_json(value)
+        history = self._job_root(job) / "authorization-history" / f"{digest}.json"
+        if not history.exists():
+            atomic_write_json(history, value)
 
     async def _save(self, job: VideoJobRecord) -> VideoJobRecord:
         updated = job.model_copy(update={"updated_at": utc_now()})
@@ -1178,6 +1593,7 @@ class VideoGenerationController:
         shots = []
         for shot in sorted(job.shots, key=lambda item: item.order):
             attempt = shot.latest_attempt
+            compiled = self._compiled(job, shot.shot_id)
             shots.append(
                 VideoShotView(
                     shot_id=shot.shot_id,
@@ -1198,11 +1614,24 @@ class VideoGenerationController:
                         if attempt is not None and attempt.state is VideoShotState.VERIFIED
                         else None
                     ),
+                    variation_index=compiled.variation_index,
+                    continuity_group_ids=compiled.continuity_group_ids,
+                    previous_shot_id=compiled.previous_shot_id,
+                    continuation_mode=compiled.continuation_mode,
+                    reference_asset_id=(
+                        compiled.first_frame_reference.asset_id if compiled.first_frame_reference else None
+                    ),
                 )
             )
         base = f"/api/mission-control/video/jobs/{job.id}/artifacts"
         export_ready = bool(job.export_root)
         preview_ready = bool(job.preview_path and Path(job.preview_path).is_file())
+        plan_error = job.error
+        if job.plan.get("requestContractVersion") != "vertex-veo-predict-long-running-v2":
+            plan_error = VideoError(
+                code="video_plan_request_contract_changed",
+                summary="This saved plan used the previous Veo request contract and cannot be resumed. Compile and authorize a fresh exact 1080p plan.",
+            )
         return VideoJobView(
             job_id=job.id,
             analysis_job_id=job.analysis_job_id,
@@ -1213,7 +1642,7 @@ class VideoGenerationController:
             profile=cast(dict[str, Any], job.plan["profile"]),
             cost=cast(dict[str, Any], job.plan["cost"]),
             source_artifacts=cast(dict[str, str], job.plan["sourceArtifacts"]),
-            authorization_phrase=authorization_phrase(job.project_id, maximum),
+            authorization_phrase=authorization_phrase(job.project_id, job.plan_digest, maximum),
             authorization_expires_at=(str(job.authorization["expiresAt"]) if job.authorization else None),
             audio_master_bound=bool(job.audio_path),
             shots=tuple(shots),
@@ -1223,7 +1652,8 @@ class VideoGenerationController:
             reserved_cost_usd=job.reserved_cost_usd,
             remaining_authorized_usd=max(0, round(maximum - job.reserved_cost_usd, 4)),
             request_preview_url=f"/api/mission-control/video/plans/{job.id}/requests",
-            consistency_notice="Seeds and continuity tokens improve repeatability, but independent text-to-video generations do not provide a guaranteed character lock.",
+            consistency_notice="Locked continuity anchors and deterministic seeds improve repeatability. First-frame conditioning is applied only when an approved, hash-bound reference is in the exact plan; no generative model guarantees perfect identity lock.",
+            continuity=cast(dict[str, Any], job.plan.get("continuity", {})),
             artifacts=VideoArtifactSummary(
                 timeline_ready=bool(job.timeline_path),
                 davinci_package_ready=export_ready,
@@ -1235,7 +1665,7 @@ class VideoGenerationController:
                 markers_url=f"{base}/markers" if export_ready else None,
                 preview_url=f"{base}/preview" if preview_ready else None,
             ),
-            error=job.error,
+            error=plan_error,
             created_at=job.created_at,
             updated_at=job.updated_at,
         )
@@ -1245,7 +1675,15 @@ class VideoGenerationController:
         from app.mission_control.errors import MissionControlError
 
         if isinstance(exc, ProviderError):
-            return VideoError(code=exc.code, summary=str(exc), retryable=exc.retryable)
+            return VideoError(
+                code=exc.code,
+                summary=str(exc),
+                retryable=exc.retryable,
+                http_status=exc.http_status,
+                provider_status=exc.provider_status,
+                provider_error_code=exc.provider_error_code,
+                diagnostic_id=exc.diagnostic_id,
+            )
         if isinstance(exc, MissionControlError):
             return VideoError(
                 code=exc.error.code,

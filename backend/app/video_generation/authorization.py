@@ -12,8 +12,8 @@ from .jsonio import atomic_write_json, read_json, sha256_json
 AUTH_SCHEMA_VERSION = "1.0.0"
 
 
-def authorization_phrase(project_id: str, max_spend_usd: float) -> str:
-    return f"AUTHORIZE {project_id} VIDEO BATCH UP TO USD {max_spend_usd:.2f}"
+def authorization_phrase(project_id: str, plan_digest: str, max_spend_usd: float) -> str:
+    return f"AUTHORIZE {project_id} VIDEO PLAN {plan_digest[:12]} UP TO USD {max_spend_usd:.2f}"
 
 
 @dataclass(frozen=True)
@@ -36,7 +36,7 @@ class BatchAuthorization:
         confirmation: str,
         valid_hours: int = 24,
     ) -> BatchAuthorization:
-        expected = authorization_phrase(project_id, max_spend_usd)
+        expected = authorization_phrase(project_id, plan_digest, max_spend_usd)
         if confirmation != expected:
             raise ContractError("Confirmation did not match the displayed project-level phrase")
         if valid_hours < 1 or valid_hours > 168:

@@ -1,10 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { VideoGenerationScreen } from './VideoGenerationScreen'
 import { parseVideoJob } from '../videoGenerationApi'
 
-const phrase = 'AUTHORIZE the-glitch-is-me VIDEO BATCH UP TO USD 24.00'
+const phrase = 'AUTHORIZE the-glitch-is-me VIDEO PLAN aaaaaaaaaaaa UP TO USD 24.00'
 
 const plannedJob = {
   schemaVersion: '1.0.0',
@@ -32,6 +32,8 @@ const plannedJob = {
     negativePrompt: 'No text, logos, lyrics, watermarks, or embedded metadata.',
     seed: 101, state: 'planned', reviewState: 'pending', reviewNote: null,
     attemptCount: 0, reservedCostUsd: 0, error: null, clipUrl: null,
+    variationIndex: 0, continuityGroupIds: ['world-global'], previousShotId: null,
+    continuationMode: 'prompt-anchors', referenceAssetId: null,
   }],
   progressPercent: 0,
   verifiedShotCount: 0,
@@ -40,6 +42,10 @@ const plannedJob = {
   remainingAuthorizedUsd: 24,
   requestPreviewUrl: '/api/mission-control/video/plans/111/requests',
   consistencyNotice: 'Seeds improve repeatability but cannot guarantee a character lock.',
+  continuity: {
+    masterSeed: 18031000, seedLocked: true, seedDerivation: 'sha256-v1',
+    characterProfiles: [], visualAnchors: {}, groups: [],
+  },
   artifacts: {
     timelineReady: false, davinciPackageReady: false, previewReady: false,
     fcpxmlUrl: null, fcp7XmlUrl: null, edlUrl: null, editSheetUrl: null,
@@ -66,11 +72,13 @@ const catalog = {
       modelId: 'veo-3.1-fast-generate-001', resolution: '1080p', durationSeconds: 8,
       fps: 24, sampleCount: 1, default: true, optional: false,
       baseEstimatedUsd: 12.8, conservativeEstimatedUsd: 19.2, maxSpendUsd: 24,
+      available: true, availabilityNote: null,
     }, {
       id: 'quality-4k', displayName: 'Veo 3.1 Quality · 4K (optional)',
       modelId: 'veo-3.1-generate-001', resolution: '4k', durationSeconds: 8,
       fps: 24, sampleCount: 1, default: false, optional: true,
       baseEstimatedUsd: 51.2, conservativeEstimatedUsd: 76.8, maxSpendUsd: 80,
+      available: false, availabilityNote: 'Current GA model does not support 4K.',
     }],
   }],
   pricingSnapshotDate: '2026-08-13',
@@ -98,15 +106,15 @@ describe('VideoGenerationScreen', () => {
 
   it('shows exact cost before authorization and never starts generation implicitly', async () => {
     const calls: Array<{ path: string; method: string; body?: unknown }> = []
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const path = String(input)
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const path = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
       const method = init?.method ?? 'GET'
-      calls.push({ path, method, body: init?.body ? JSON.parse(String(init.body)) as unknown : undefined })
-      if (path.endsWith('/video/catalog')) return json(catalog)
-      if (path.endsWith('/video/jobs')) return json([])
-      if (path.endsWith('/video/plans') && method === 'POST') return json(plannedJob)
-      if (path.endsWith('/requests')) return json({ schemaVersion: '1.0.0', jobId: plannedJob.jobId, planDigest: plannedJob.planDigest, requests: [{ parameters: { resolution: '1080p' } }] })
-      if (path.endsWith('/authorize')) return json({ ...plannedJob, state: 'authorized', authorizationExpiresAt: '2026-08-14T10:00:00Z' })
+      calls.push({ path, method, body: typeof init?.body === 'string' ? JSON.parse(init.body) as unknown : undefined })
+      if (path.endsWith('/video/catalog')) return Promise.resolve(json(catalog))
+      if (path.endsWith('/video/jobs')) return Promise.resolve(json([]))
+      if (path.endsWith('/video/plans') && method === 'POST') return Promise.resolve(json(plannedJob))
+      if (path.endsWith('/requests')) return Promise.resolve(json({ schemaVersion: '1.0.0', jobId: plannedJob.jobId, planDigest: plannedJob.planDigest, requests: [{ parameters: { resolution: '1080p' } }] }))
+      if (path.endsWith('/authorize')) return Promise.resolve(json({ ...plannedJob, state: 'authorized', authorizationExpiresAt: '2026-08-14T10:00:00Z' }))
       throw new Error(`Unexpected request: ${method} ${path}`)
     }))
 
@@ -128,6 +136,8 @@ describe('VideoGenerationScreen', () => {
       profileId: 'fast-1080p',
       gcpProjectId: 'my-gcp-project',
       gcsBucket: 'my-private-video-bucket',
+      masterSeed: 18031000,
+      seedLocked: true,
     })
     expect(calls.some((call) => call.path.endsWith('/start'))).toBe(false)
 
@@ -145,5 +155,32 @@ describe('VideoGenerationScreen', () => {
   it('rejects malformed job payloads instead of silently inventing status', () => {
     expect(() => parseVideoJob({ ...plannedJob, state: 'mystery' })).toThrow(/job state is unsupported/i)
     expect(() => parseVideoJob({ ...plannedJob, cost: { maxSpendUsd: 24 } })).toThrow(/baseEstimatedUsd/i)
+  })
+
+  it('shows safe provider status and diagnostic identity without a raw response body', async () => {
+    const failed = {
+      ...plannedJob,
+      state: 'failed',
+      error: {
+        code: 'provider_request_failed',
+        summary: 'Google Veo returned HTTP 400 (provider_request_failed). INVALID_ARGUMENT: Unsupported parameter. Diagnostic ID veo-safe-123.',
+        retryable: false,
+        httpStatus: 400,
+        providerStatus: 'INVALID_ARGUMENT',
+        providerErrorCode: '400',
+        diagnosticId: 'veo-safe-123',
+      },
+    }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const path = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (path.endsWith('/video/catalog')) return Promise.resolve(json(catalog))
+      if (path.endsWith('/video/jobs')) return Promise.resolve(json([failed]))
+      if (path.endsWith('/requests')) return Promise.resolve(json({ schemaVersion: '1.0.0', jobId: failed.jobId, planDigest: failed.planDigest, requests: [] }))
+      throw new Error(`Unexpected request: ${path}`)
+    }))
+    render(<VideoGenerationScreen />)
+    expect(await screen.findByText(/unsupported parameter/i)).toBeInTheDocument()
+    expect(screen.getByText(/HTTP 400 · INVALID_ARGUMENT · diagnostic veo-safe-123/i)).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/responseBody|must-not-survive/i)
   })
 })

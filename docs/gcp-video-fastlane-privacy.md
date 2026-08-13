@@ -38,7 +38,7 @@ The first content pack explicitly describes an invented adult protagonist and pr
 - Redact unsafe local paths from browser-visible API payloads.
 - Runtime paths may exist in ignored local artifacts needed by the Resolve handoff.
 
-The browser-facing video job omits the GCP project, bucket, audio path, local clip paths, operation names, and raw provider responses. Request previews intentionally show the exact sanitized prompt and authorized GCS output prefix to the local operator before spending.
+The browser-facing video job omits the GCP project, bucket, audio path, local clip paths, private reference-image paths, operation names, provider-diagnostic paths, and raw provider responses. Request previews intentionally show the exact sanitized prompt, approved reference GCS identity, and authorized GCS output prefix to the local operator before spending. Redacted provider diagnostics remain local under `.trackprompt-data/video-generation/provider-errors/`; only their bounded status and diagnostic ID reach the UI.
 
 ## Deletion
 

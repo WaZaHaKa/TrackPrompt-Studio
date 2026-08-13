@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .continuity import compile_reference_image, derive_shot_seed, load_continuity_profile
 from .contracts import (
     CompiledPlan,
     CompiledShot,
@@ -26,15 +27,37 @@ def compile_project_plan(
     audio_master_path: Path | None = None,
     story_plan_path: Path | None = None,
     shot_plan_path: Path | None = None,
+    continuity_profile_path: Path | None = None,
+    master_seed: int | None = None,
+    seed_locked: bool | None = None,
+    reference_image_path: Path | None = None,
 ) -> CompiledPlan:
     config = load_project_config(project_config_path)
     bible = load_creative_bible(creative_bible_path)
     shots = load_shot_bank(shot_bank_path)
     if bible.project_id != config.project_id:
         raise ContractError("project config and creative bible project IDs differ")
+    if continuity_profile_path is None:
+        continuity_profile_path = project_config_path.parent / "continuity-profile.json"
+    if not continuity_profile_path.is_file():
+        raise ContractError("a continuity profile is required")
+    continuity = load_continuity_profile(continuity_profile_path)
+    if continuity.project_id != config.project_id:
+        raise ContractError("project config and continuity profile project IDs differ")
+    selected_master_seed = continuity.master_seed if master_seed is None else master_seed
+    if not 0 <= selected_master_seed <= 4_294_967_295:
+        raise ContractError("masterSeed is outside uint32")
 
     selected = require_shots(shots, config.required_shot_ids)
     profile = config.selected_profile()
+    if profile.resolution == "4k" and profile.model_id in {
+        "veo-3.1-generate-001",
+        "veo-3.1-fast-generate-001",
+    }:
+        raise ContractError(
+            f"{profile.model_id} currently supports 720p/1080p through this Vertex API, not 4k; "
+            "1080p is the supported final-delivery target"
+        )
     estimate_result = estimate(profile, len(selected), config.retry_reserve_factor)
     if float(estimate_result.base_usd) > config.max_spend_usd:
         raise ContractError(
@@ -46,6 +69,7 @@ def compile_project_plan(
         "projectConfigSha256": sha256_file(project_config_path),
         "creativeBibleSha256": sha256_file(creative_bible_path),
         "shotBankSha256": sha256_file(shot_bank_path),
+        "continuityProfileSha256": sha256_file(continuity_profile_path),
     }
     if story_plan_path:
         source_artifacts["storyPlanSha256"] = sha256_file(story_plan_path)
@@ -56,8 +80,26 @@ def compile_project_plan(
 
     compiled: list[CompiledShot] = []
     cost_per_shot = float(per_shot_cost(profile))
+    first_frame_reference = None
+    if reference_image_path is not None:
+        if not gcs_bucket:
+            raise ContractError("a GCS bucket is required when a reference image is selected")
+        first_frame_reference = compile_reference_image(
+            path=reference_image_path,
+            asset_id="primary-character-reference",
+            gcs_bucket=gcs_bucket,
+            storage_prefix=config.storage_prefix,
+            project_id=config.project_id,
+            source_kind="operator-selected-character-reference",
+        )
+        source_artifacts["primaryCharacterReferenceSha256"] = first_frame_reference.sha256
     for shot in selected:
-        prompt, negative = compile_prompt(bible, shot)
+        group_anchors = tuple(
+            token
+            for group_id in shot.continuity_group_ids
+            for token in continuity.group(group_id).locked_tokens
+        )
+        prompt, negative = compile_prompt(bible, shot, continuity_anchors=group_anchors)
         storage_uri = None
         if gcs_bucket:
             normalized_bucket = gcs_bucket.removeprefix("gs://").strip("/")
@@ -73,7 +115,13 @@ def compile_project_plan(
                 duration_seconds=profile.duration_seconds,
                 prompt=prompt,
                 negative_prompt=negative,
-                seed=shot.seed,
+                seed=derive_shot_seed(
+                    master_seed=selected_master_seed,
+                    project_id=config.project_id,
+                    continuity_group_ids=shot.continuity_group_ids,
+                    shot_id=shot.shot_id,
+                    variation_index=0,
+                ),
                 model_id=profile.model_id,
                 resolution=profile.resolution,
                 aspect_ratio=profile.aspect_ratio,
@@ -87,6 +135,13 @@ def compile_project_plan(
                 estimated_cost_usd=cost_per_shot,
                 source_section_hints=shot.source_section_hints,
                 review_notes=shot.review_notes,
+                variation_index=0,
+                continuity_group_ids=shot.continuity_group_ids,
+                previous_shot_id=shot.previous_shot_id,
+                continuation_mode=(
+                    "first-frame-reference" if first_frame_reference else shot.continuation_mode
+                ),
+                first_frame_reference=first_frame_reference,
             )
         )
 
@@ -103,4 +158,8 @@ def compile_project_plan(
         analysis_job_id=analysis_job_id,
         pricing_snapshot_date=PRICE_SNAPSHOT_DATE,
         rate_usd_per_output_second=float(rate_for(profile)),
+        continuity=continuity.to_plan_dict(
+            master_seed=selected_master_seed,
+            seed_locked=seed_locked,
+        ),
     ).with_digest()

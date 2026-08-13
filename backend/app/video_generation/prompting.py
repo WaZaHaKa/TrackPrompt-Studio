@@ -11,7 +11,12 @@ def _join(values: tuple[str, ...]) -> str:
     return ", ".join(item.strip() for item in values if item.strip())
 
 
-def compile_prompt(bible: CreativeBible, shot: ShotSpec) -> tuple[str, str]:
+def compile_prompt(
+    bible: CreativeBible,
+    shot: ShotSpec,
+    *,
+    continuity_anchors: tuple[str, ...] = (),
+) -> tuple[str, str]:
     """Compile a project shot into one self-contained Veo prompt.
 
     The generated prompt intentionally excludes source audio, transcript text,
@@ -33,6 +38,8 @@ def compile_prompt(bible: CreativeBible, shot: ShotSpec) -> tuple[str, str]:
     ]
     if shot.continuity_tokens:
         parts.append(f"Continuity anchors: {_join(shot.continuity_tokens)}.")
+    if continuity_anchors:
+        parts.append(f"Locked continuity profile: {_join(continuity_anchors)}.")
 
     prompt = _SPACE.sub(" ", " ".join(parts)).strip()
     negative = _SPACE.sub(

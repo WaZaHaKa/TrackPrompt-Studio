@@ -27,6 +27,14 @@
             },
             "type": "array"
           },
+          "continuityGroupIds": {
+            "items": { "type": "string" },
+            "minItems": 1,
+            "type": "array"
+          },
+          "continuationMode": {
+            "enum": ["prompt-anchors", "first-frame-reference", "accepted-previous-shot-end-frame"]
+          },
           "energyRange": {
             "items": {
               "maximum": 1,
@@ -48,6 +56,9 @@
           "order": {
             "minimum": 1,
             "type": "integer"
+          },
+          "previousShotId": {
+            "type": ["string", "null"]
           },
           "prompt": {
             "minLength": 40,
@@ -103,6 +114,9 @@
           "required",
           "reuseModes",
           "continuityTokens",
+          "continuityGroupIds",
+          "previousShotId",
+          "continuationMode",
           "reviewNotes"
         ],
         "type": "object"

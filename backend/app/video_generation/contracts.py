@@ -12,7 +12,7 @@ SCHEMA_VERSION = "1.0.0"
 SUPPORTED_DURATIONS = {4, 6, 8}
 SUPPORTED_ASPECT_RATIOS = {"16:9", "9:16"}
 SUPPORTED_RESOLUTIONS = {"720p", "1080p", "4k"}
-SUPPORTED_PERSON_GENERATION = {"allow_adult", "dont_allow"}
+SUPPORTED_PERSON_GENERATION = {"allow_adult", "disallow"}
 
 
 class ContractError(ValueError):
@@ -61,14 +61,10 @@ class GenerationProfile:
         if not 1 <= self.sample_count <= 4:
             raise ContractError("sampleCount must be between 1 and 4")
         if self.person_generation not in SUPPORTED_PERSON_GENERATION:
-            raise ContractError("personGeneration must be allow_adult or dont_allow")
+            raise ContractError("personGeneration must be allow_adult or disallow")
         if self.generate_audio:
             raise ContractError(
                 "This music-video fast lane requires generateAudio=false; the final track is muxed locally"
-            )
-        if self.resolution == "4k" and self.model_id == "veo-3.1-fast-generate-001":
-            raise ContractError(
-                "The GA Fast model profile is limited to 720p/1080p; use the standard Veo 3.1 profile for 4k"
             )
 
     @classmethod
@@ -121,6 +117,9 @@ class ShotSpec:
     reuse_modes: tuple[str, ...] = ("forward", "alternate-inpoint")
     continuity_tokens: tuple[str, ...] = ()
     review_notes: tuple[str, ...] = ()
+    continuity_group_ids: tuple[str, ...] = ()
+    previous_shot_id: str | None = None
+    continuation_mode: str = "prompt-anchors"
 
     def validate(self) -> None:
         if not self.shot_id or not self.chapter_id:
@@ -159,6 +158,9 @@ class ShotSpec:
             ),
             continuity_tokens=tuple(str(item) for item in value.get("continuityTokens", [])),
             review_notes=tuple(str(item) for item in value.get("reviewNotes", [])),
+            continuity_group_ids=tuple(str(item) for item in value.get("continuityGroupIds", [])),
+            previous_shot_id=(str(value["previousShotId"]) if value.get("previousShotId") else None),
+            continuation_mode=str(value.get("continuationMode", "prompt-anchors")),
         )
         shot.validate()
         return shot
@@ -179,6 +181,9 @@ class ShotSpec:
             "reuseModes": list(self.reuse_modes),
             "continuityTokens": list(self.continuity_tokens),
             "reviewNotes": list(self.review_notes),
+            "continuityGroupIds": list(self.continuity_group_ids),
+            "previousShotId": self.previous_shot_id,
+            "continuationMode": self.continuation_mode,
         }
 
 
@@ -286,6 +291,24 @@ class ProjectConfig:
 
 
 @dataclass(frozen=True)
+class CompiledReferenceImage:
+    asset_id: str
+    gcs_uri: str
+    mime_type: str
+    sha256: str
+    source_kind: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "assetId": self.asset_id,
+            "gcsUri": self.gcs_uri,
+            "mimeType": self.mime_type,
+            "sha256": self.sha256,
+            "sourceKind": self.source_kind,
+        }
+
+
+@dataclass(frozen=True)
 class CompiledShot:
     shot_id: str
     chapter_id: str
@@ -308,6 +331,11 @@ class CompiledShot:
     estimated_cost_usd: float
     source_section_hints: tuple[str, ...]
     review_notes: tuple[str, ...]
+    variation_index: int = 0
+    continuity_group_ids: tuple[str, ...] = ()
+    previous_shot_id: str | None = None
+    continuation_mode: str = "prompt-anchors"
+    first_frame_reference: CompiledReferenceImage | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -332,6 +360,13 @@ class CompiledShot:
             "estimatedCostUsd": round(self.estimated_cost_usd, 4),
             "sourceSectionHints": list(self.source_section_hints),
             "reviewNotes": list(self.review_notes),
+            "variationIndex": self.variation_index,
+            "continuityGroupIds": list(self.continuity_group_ids),
+            "previousShotId": self.previous_shot_id,
+            "continuationMode": self.continuation_mode,
+            "firstFrameReference": (
+                self.first_frame_reference.to_dict() if self.first_frame_reference else None
+            ),
         }
 
 
@@ -349,6 +384,8 @@ class CompiledPlan:
     analysis_job_id: str | None = None
     pricing_snapshot_date: str = ""
     rate_usd_per_output_second: float = 0.0
+    request_contract_version: str = "vertex-veo-predict-long-running-v2"
+    continuity: dict[str, Any] = field(default_factory=dict)
     plan_digest: str = ""
 
     def unsigned_dict(self) -> dict[str, Any]:
@@ -367,6 +404,8 @@ class CompiledPlan:
                 "rateUsdPerOutputSecond": round(self.rate_usd_per_output_second, 4),
             },
             "sourceArtifacts": dict(sorted(self.source_artifacts.items())),
+            "requestContractVersion": self.request_contract_version,
+            "continuity": self.continuity,
         }
 
     def with_digest(self) -> CompiledPlan:
@@ -408,6 +447,12 @@ def load_shot_bank(path: Path) -> tuple[ShotSpec, ...]:
     orders = [shot.order for shot in shots]
     if len(orders) != len(set(orders)):
         raise ContractError("shot orders must be unique")
+    by_id = {shot.shot_id: shot for shot in shots}
+    for shot in shots:
+        if shot.previous_shot_id is not None:
+            previous = by_id.get(shot.previous_shot_id)
+            if previous is None or previous.order >= shot.order:
+                raise ContractError(f"{shot.shot_id}: previousShotId must reference an earlier shot")
     return tuple(sorted(shots, key=lambda item: item.order))
 
 

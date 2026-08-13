@@ -16,11 +16,13 @@ from ..cinematic.schemas import ArtDirectionReview
 from ..video_generation.mission_models import (
     VideoAuthorizationRequest,
     VideoCatalog,
+    VideoChainReferenceRequest,
     VideoDoctorRequest,
     VideoDoctorView,
     VideoJobView,
     VideoPlanCreateRequest,
     VideoRequestPreview,
+    VideoRetryRequest,
     VideoReviewRequest,
 )
 from .config import MissionControlConfig
@@ -512,8 +514,26 @@ async def cancel_video_job(job_id: str, request: Request) -> VideoJobView:
 
 
 @router.post("/video/jobs/{job_id}/shots/{shot_id}/retry", response_model=VideoJobView)
-async def retry_video_shot(job_id: str, shot_id: str, request: Request) -> VideoJobView:
-    return await _service(request).video_generation.retry(job_id, shot_id)
+async def retry_video_shot(
+    job_id: str,
+    shot_id: str,
+    payload: VideoRetryRequest,
+    request: Request,
+) -> VideoJobView:
+    return await _service(request).video_generation.retry(job_id, shot_id, payload)
+
+
+@router.post(
+    "/video/jobs/{job_id}/shots/{shot_id}/chain-reference",
+    response_model=VideoJobView,
+)
+async def chain_video_shot_reference(
+    job_id: str,
+    shot_id: str,
+    payload: VideoChainReferenceRequest,
+    request: Request,
+) -> VideoJobView:
+    return await _service(request).video_generation.chain_reference(job_id, shot_id, payload)
 
 
 @router.post("/video/jobs/{job_id}/shots/{shot_id}/review", response_model=VideoJobView)

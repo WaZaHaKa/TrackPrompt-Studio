@@ -62,16 +62,17 @@ On **Video**:
 
 1. Select the completed analysis, `The Glitch Is Me` content package, and **Veo 3.1 Fast · 1080p**. This is the default completion target.
 2. Enter the GCP project and private GCS bucket. Select the original local audio master when it is not retained in the analysis job.
-3. Run **GCP readiness check**. It contacts only read-only GCP capability surfaces and explicitly does not submit a generation.
-4. Choose **Compile exact video plan**. Review all 16 prompts, exact request JSON, source hashes, pricing snapshot, base/conservative estimates, and hard maximum spend.
-5. Type the displayed phrase exactly and choose **Authorize this complete exact batch once**.
-6. Choose **Start smoke shot and complete batch**. This is the first action allowed to submit a paid request.
+3. Review the continuity profile. Keep the master seed locked for reproducible planning, or explicitly generate a new seed before compilation. Optionally attach one private JPEG/PNG first-frame reference; its hash and future GCS URI become part of the exact plan.
+4. Run **GCP readiness check**. It contacts only read-only GCP capability surfaces and explicitly does not submit a generation.
+5. Choose **Compile exact video plan**. Review all 16 prompts, exact request JSON, source hashes, pricing snapshot, base/conservative estimates, and hard maximum spend.
+6. Type the displayed digest-specific phrase exactly and choose **Authorize this complete exact batch once**.
+7. Choose **Start smoke shot and complete batch**. This is the first action allowed to submit a paid request.
 
 Mission Control reserves the request cost before every submission. The smoke shot uses the same plan, model, resolution, and parameters as the batch. Only after it downloads and passes local MP4 verification does the unchanged remaining batch continue automatically.
 
 ## 6. Review and finish
 
-Per-shot cards expose progress, safe failure/filter summaries, verified preview media, accept/reject, and bounded retry. A retry creates a new attempt under the same plan and is blocked before submission when its conservative reservation would cross the approved maximum.
+Per-shot cards expose progress, safe failure/filter summaries and diagnostic IDs, verified preview media, accept/reject, and bounded retry. **Retry same setup** creates a new attempt with the same seed/reference/request and is blocked before submission when the next reservation would cross the approved maximum. **Generate new variation** changes the plan and requires a new digest-specific authorization. **Use previous accepted end frame** extracts and hash-binds a local keyframe for the declared next shot, also requiring fresh authorization.
 
 When all latest selected attempts are verified and a local audio master is bound, Mission Control automatically:
 

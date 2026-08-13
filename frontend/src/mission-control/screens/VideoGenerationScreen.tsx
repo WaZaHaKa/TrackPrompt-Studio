@@ -41,6 +41,10 @@ function label(value: string): string {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function randomSeed(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
+}
+
 function badgeTone(value: string): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
   if (['complete', 'verified', 'accepted', 'timeline_ready', 'exported', 'review_ready'].includes(value)) return 'success'
   if (['failed', 'filtered', 'rejected', 'blocked_budget', 'blocked_provider_access', 'blocked_provider_quota'].includes(value)) return 'error'
@@ -61,6 +65,9 @@ export function VideoGenerationScreen() {
   const [gcpProjectId, setGcpProjectId] = useState(() => localStorage.getItem('wzhk.video.gcp-project') ?? '')
   const [gcsBucket, setGcsBucket] = useState(() => localStorage.getItem('wzhk.video.gcs-bucket') ?? '')
   const [audioPath, setAudioPath] = useState('')
+  const [masterSeed, setMasterSeed] = useState(18_031_000)
+  const [seedLocked, setSeedLocked] = useState(true)
+  const [referenceImagePath, setReferenceImagePath] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<StructuredError | null>(null)
@@ -96,15 +103,18 @@ export function VideoGenerationScreen() {
     }
   }, [])
 
+  const activeJobId = job?.jobId
+  const activeJobState = job?.state
+
   useEffect(() => {
-    if (!job) return
+    if (!activeJobId || !activeJobState) return
     let closed = false
     let source: EventSource | null = null
     let reconnectTimer: number | undefined
     let retries = 0
     const connect = (): void => {
       if (closed) return
-      const query = new URLSearchParams({ jobId: job.jobId, afterSequence: String(lastSequence.current) })
+      const query = new URLSearchParams({ jobId: activeJobId, afterSequence: String(lastSequence.current) })
       source = new EventSource(`/api/mission-control/events?${query.toString()}`, { withCredentials: true })
       source.onopen = () => { retries = 0 }
       source.addEventListener('video_generation', (event) => {
@@ -114,9 +124,9 @@ export function VideoGenerationScreen() {
           if (typeof payload === 'object' && payload !== null && 'sequence' in payload && typeof payload.sequence === 'number') {
             lastSequence.current = Math.max(lastSequence.current, payload.sequence)
           }
-          void refreshJob(job.jobId)
+          void refreshJob(activeJobId)
         } catch {
-          void refreshJob(job.jobId)
+          void refreshJob(activeJobId)
         }
       })
       source.onerror = () => {
@@ -131,8 +141,8 @@ export function VideoGenerationScreen() {
       }
     }
     connect()
-    const polling = LIVE_STATES.has(job.state)
-      ? window.setInterval(() => { void refreshJob(job.jobId) }, 5_000)
+    const polling = LIVE_STATES.has(activeJobState)
+      ? window.setInterval(() => { void refreshJob(activeJobId) }, 5_000)
       : undefined
     return () => {
       closed = true
@@ -140,19 +150,21 @@ export function VideoGenerationScreen() {
       if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer)
       if (polling !== undefined) window.clearInterval(polling)
     }
-  }, [job?.jobId, job?.state, refreshJob])
+  }, [activeJobId, activeJobState, refreshJob])
 
   useEffect(() => {
-    if (!job) {
+    if (!activeJobId) {
       setRequests(null)
       return
     }
-    void videoGenerationClient.requests(job.jobId).then(setRequests).catch(() => setRequests(null))
-  }, [job?.jobId])
+    void videoGenerationClient.requests(activeJobId).then(setRequests).catch(() => setRequests(null))
+  }, [activeJobId])
 
   const selectedPackage = catalog?.packages.find((item) => item.projectId === projectId) ?? catalog?.packages[0]
   const selectedProfile = selectedPackage?.profiles.find((item) => item.id === profileId)
-  const canCompile = Boolean(analysisId && projectId && gcpProjectId.trim() && gcsBucket.trim())
+  const canCompile = Boolean(
+    analysisId && projectId && gcpProjectId.trim() && gcsBucket.trim() && selectedProfile?.available,
+  )
   const exactConfirmation = job?.authorizationPhrase ?? ''
 
   const run = async (name: string, action: () => Promise<VideoJob>, success?: (value: VideoJob) => void) => {
@@ -173,6 +185,10 @@ export function VideoGenerationScreen() {
   const compile = (): void => {
     localStorage.setItem('wzhk.video.gcp-project', gcpProjectId.trim())
     localStorage.setItem('wzhk.video.gcs-bucket', gcsBucket.trim())
+    const effectiveSeed = seedLocked
+      ? masterSeed
+      : randomSeed()
+    if (!seedLocked) setMasterSeed(effectiveSeed)
     void run('compile', () => videoGenerationClient.createPlan({
       analysisJobId: analysisId,
       projectId,
@@ -180,6 +196,9 @@ export function VideoGenerationScreen() {
       gcpProjectId: gcpProjectId.trim(),
       gcsBucket: gcsBucket.trim(),
       audioPath: audioPath.trim() || null,
+      masterSeed: effectiveSeed,
+      seedLocked,
+      referenceImagePath: referenceImagePath.trim() || null,
     }), () => setConfirmation(''))
   }
 
@@ -205,6 +224,22 @@ export function VideoGenerationScreen() {
     } finally {
       setBusy(null)
     }
+  }
+
+  const pickReferenceImage = async (): Promise<void> => {
+    setBusy('reference')
+    try {
+      const selected = await videoGenerationClient.selectReferenceImage(referenceImagePath || null)
+      if (selected) setReferenceImagePath(selected)
+    } catch (caught) {
+      setError(errorFromUnknown(caught, 'Continuity reference selection failed'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const generateMasterSeed = (): void => {
+    setMasterSeed(randomSeed())
   }
 
   const artifactLinks = useMemo(() => job ? [
@@ -244,13 +279,22 @@ export function VideoGenerationScreen() {
           </label>
           <label className="mc-field">Delivery profile
             <select value={profileId} onChange={(event) => setProfileId(event.target.value as VideoProfile['id'])}>
-              {selectedPackage?.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.displayName}{profile.default ? ' · default' : ' · optional'}</option>)}
+              {selectedPackage?.profiles.map((profile) => <option key={profile.id} value={profile.id} disabled={!profile.available}>{profile.displayName}{profile.default ? ' · default' : ' · optional'}{profile.available ? '' : ' · unavailable'}</option>)}
             </select>
+            {selectedProfile?.availabilityNote ? <small>{selectedProfile.availabilityNote}</small> : null}
           </label>
           <label className="mc-field">GCP project ID<input value={gcpProjectId} onChange={(event) => setGcpProjectId(event.target.value)} autoComplete="off" /></label>
           <label className="mc-field">GCS bucket<input value={gcsBucket} onChange={(event) => setGcsBucket(event.target.value)} placeholder="my-private-video-bucket" autoComplete="off" /></label>
           <label className="mc-field mc-video-audio">Original local audio master
             <span><input value={audioPath} onChange={(event) => setAudioPath(event.target.value)} placeholder="Optional until assembly" /><Button type="button" busy={busy === 'audio'} icon={<FolderOpen aria-hidden="true" />} onClick={() => { void pickAudio() }}>Browse</Button></span>
+          </label>
+          <label className="mc-field mc-video-seed">Master continuity seed
+            <span><input type="number" min="0" max="4294967295" value={masterSeed} onChange={(event) => setMasterSeed(Number(event.target.value))} /><Button type="button" disabled={seedLocked} onClick={generateMasterSeed}>Generate new seed</Button></span>
+            <span><input type="checkbox" checked={seedLocked} onChange={(event) => setSeedLocked(event.target.checked)} /> Lock seed for this plan</span>
+          </label>
+          <label className="mc-field mc-video-audio">Private character / first-frame reference
+            <span><input value={referenceImagePath} onChange={(event) => setReferenceImagePath(event.target.value)} placeholder="Optional JPEG or PNG" /><Button type="button" busy={busy === 'reference'} icon={<FolderOpen aria-hidden="true" />} onClick={() => { void pickReferenceImage() }}>Attach reference</Button></span>
+            <small>Hash-bound into the plan and uploaded only after exact-batch authorization. Veo receives it as a supported first-frame image, not as an unsupported referenceImages field.</small>
           </label>
         </div>
         {selectedProfile ? <div className="mc-video-metrics"><Metric label="Base estimate" value={money(selectedProfile.baseEstimatedUsd)} /><Metric label="Conservative estimate" value={money(selectedProfile.conservativeEstimatedUsd)} /><Metric label="Hard ceiling" value={money(selectedProfile.maxSpendUsd)} /><Metric label="Pricing snapshot" value={catalog?.pricingSnapshotDate ?? '—'} /></div> : null}
@@ -273,7 +317,11 @@ export function VideoGenerationScreen() {
           <div className="mc-video-metrics"><Metric label="Shots" value={job.totalShotCount} detail={`${job.verifiedShotCount} verified`} /><Metric label="Base estimate" value={money(job.cost.baseEstimatedUsd)} /><Metric label="Conservative" value={money(job.cost.conservativeEstimatedUsd)} /><Metric label="Maximum spend" value={money(job.cost.maxSpendUsd)} /></div>
           <ProgressBar value={job.progressPercent} label="Video generation progress" />
           <p className="mc-muted">Pricing snapshot {job.cost.pricingSnapshotDate} · {money(job.cost.rateUsdPerOutputSecond)} per output second · reserved {money(job.reservedCostUsd)} · remaining {money(job.remainingAuthorizedUsd)}</p>
-          <Notice tone="warning" title="Continuity is best effort"><p>{job.consistencyNotice}</p></Notice>
+          <Notice tone="warning" title="Continuity profile is deterministic; model identity remains best effort"><p>{job.consistencyNotice}</p></Notice>
+          <AdvancedDetails summary="Continuity profile, master seed, and groups">
+            <p><strong>Master seed</strong> <code>{String(job.continuity.masterSeed ?? 'unknown')}</code> · {job.continuity.seedLocked ? 'locked' : 'unlocked at compile'} · {String(job.continuity.seedDerivation ?? 'unknown')}</p>
+            <pre>{JSON.stringify({ characterProfiles: job.continuity.characterProfiles, visualAnchors: job.continuity.visualAnchors, groups: job.continuity.groups }, null, 2)}</pre>
+          </AdvancedDetails>
           <AdvancedDetails summary="Exact provider requests and plan identity">
             <p><strong>Plan digest</strong><br /><code>{job.planDigest}</code></p>
             <pre>{JSON.stringify(requests?.requests ?? [], null, 2)}</pre>
@@ -287,7 +335,7 @@ export function VideoGenerationScreen() {
           </div> : null}
           {job.state === 'authorized' ? <Notice tone="success" title="Exact batch authorized"><p>Start submits the smoke shot first. Mission Control automatically continues the unchanged remaining batch only after that clip passes technical verification.</p><Button tone="primary" busy={busy === 'start'} icon={<Play aria-hidden="true" />} onClick={() => { void run('start', () => videoGenerationClient.action(job.jobId, 'start')) }}>Start smoke shot and complete batch</Button></Notice> : null}
           {LIVE_STATES.has(job.state) ? <div className="mc-button-row"><Button tone="danger" busy={busy === 'cancel'} onClick={() => { void run('cancel', () => videoGenerationClient.action(job.jobId, 'cancel')) }}>Cancel batch safely</Button></div> : null}
-          {job.error ? <Notice tone="error" title={label(job.error.code)}><p>{job.error.summary}</p>{job.error.retryable || job.state.startsWith('blocked_') ? <Button busy={busy === 'resume'} onClick={() => { void run('resume', () => videoGenerationClient.action(job.jobId, 'resume')) }}>Resume exact plan</Button> : null}</Notice> : null}
+          {job.error ? <Notice tone="error" title={label(job.error.code)}><p>{job.error.summary}</p>{job.error.httpStatus ? <p>HTTP {job.error.httpStatus}{job.error.providerStatus ? ` · ${job.error.providerStatus}` : ''}{job.error.diagnosticId ? ` · diagnostic ${job.error.diagnosticId}` : ''}</p> : null}{job.error.retryable || job.state.startsWith('blocked_') ? <Button busy={busy === 'resume'} onClick={() => { void run('resume', () => videoGenerationClient.action(job.jobId, 'resume')) }}>Resume exact plan</Button> : null}</Notice> : null}
         </section>
 
         <section className="mc-video-shot-grid" aria-label="Planned video shots">
@@ -296,10 +344,11 @@ export function VideoGenerationScreen() {
             <h2>{shot.title}</h2>
             {shot.clipUrl ? <video controls preload="metadata" src={shot.clipUrl} aria-label={`${shot.title} generated clip`} /> : <div className="mc-video-shot__placeholder"><Film aria-hidden="true" /><span>Clip not verified yet</span></div>}
             <p>{shot.prompt}</p>
-            <AdvancedDetails summary="Negative prompt and seed"><p>{shot.negativePrompt}</p><code>Seed {shot.seed}</code></AdvancedDetails>
+            <AdvancedDetails summary="Negative prompt, seed, and continuity"><p>{shot.negativePrompt}</p><p><code>Seed {shot.seed}</code> · variation {shot.variationIndex} · {shot.continuationMode}</p><p>Groups: {shot.continuityGroupIds.join(', ') || 'none'}{shot.referenceAssetId ? ` · reference ${shot.referenceAssetId}` : ''}</p></AdvancedDetails>
             <footer><span>Attempt {shot.attemptCount || '—'} · {money(shot.reservedCostUsd)}</span><div className="mc-button-row">
               {shot.state === 'verified' ? <><Button tone="quiet" onClick={() => { void run(`accept-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'accepted')) }}><Check aria-hidden="true" />Accept</Button><Button tone="quiet" onClick={() => { void run(`reject-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'rejected')) }}>Reject</Button></> : null}
-              {['failed', 'filtered', 'verified'].includes(shot.state) ? <Button busy={busy === `retry-${shot.shotId}`} onClick={() => { void run(`retry-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId)) }}>Retry</Button> : null}
+              {['failed', 'filtered', 'verified'].includes(shot.state) ? <><Button busy={busy === `retry-${shot.shotId}`} onClick={() => { void run(`retry-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'same_setup')) }}>Retry same setup</Button><Button tone="quiet" busy={busy === `variation-${shot.shotId}`} onClick={() => { void run(`variation-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'new_variation'), () => setConfirmation('')) }}>Generate new variation</Button></> : null}
+              {shot.previousShotId && job.shots.some((candidate) => candidate.shotId === shot.previousShotId && candidate.reviewState === 'accepted') ? <Button tone="quiet" busy={busy === `chain-${shot.shotId}`} onClick={() => { void run(`chain-${shot.shotId}`, () => videoGenerationClient.chainReference(job.jobId, shot.shotId, shot.previousShotId as string), () => setConfirmation('')) }}>Use previous accepted end frame</Button> : null}
             </div></footer>
             {shot.error ? <small className="mc-video-shot__error">{shot.error.summary}</small> : null}
           </article>)}

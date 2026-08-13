@@ -59,6 +59,10 @@ class VideoError(VideoMissionModel):
     code: str = Field(min_length=1, max_length=100)
     summary: str = Field(min_length=1, max_length=1_000)
     retryable: bool = False
+    http_status: int | None = Field(default=None, ge=100, le=599)
+    provider_status: str | None = Field(default=None, max_length=160)
+    provider_error_code: str | None = Field(default=None, max_length=160)
+    diagnostic_id: str | None = Field(default=None, max_length=160)
 
 
 class VideoShotAttempt(VideoMissionModel):
@@ -112,6 +116,7 @@ class VideoJobRecord(VideoMissionModel):
     region: Literal["us-central1"] = "us-central1"
     audio_path: str | None = None
     authorization: dict[str, Any] | None = None
+    reference_assets: dict[str, dict[str, Any]] = Field(default_factory=dict)
     shots: tuple[VideoShotRecord, ...]
     reserved_cost_usd: float = Field(default=0, ge=0)
     timeline_path: str | None = None
@@ -134,6 +139,9 @@ class VideoPlanCreateRequest(VideoMissionModel):
     gcp_project_id: str = Field(min_length=1, max_length=300)
     gcs_bucket: str = Field(min_length=3, max_length=300)
     audio_path: str | None = Field(default=None, max_length=32_000)
+    master_seed: int | None = Field(default=None, ge=0, le=4_294_967_295)
+    seed_locked: bool = True
+    reference_image_path: str | None = Field(default=None, max_length=32_000)
 
     @field_validator("gcp_project_id", "gcs_bucket")
     @classmethod
@@ -158,6 +166,14 @@ class VideoReviewRequest(VideoMissionModel):
         if value is VideoReviewState.PENDING:
             raise ValueError("review decision must be accepted or rejected")
         return value
+
+
+class VideoRetryRequest(VideoMissionModel):
+    mode: Literal["same_setup", "new_variation"] = "same_setup"
+
+
+class VideoChainReferenceRequest(VideoMissionModel):
+    source_shot_id: str = Field(min_length=1, max_length=160)
 
 
 class VideoDoctorRequest(VideoMissionModel):
@@ -187,6 +203,8 @@ class VideoProfileSummary(VideoMissionModel):
     base_estimated_usd: float
     conservative_estimated_usd: float
     max_spend_usd: float
+    available: bool = True
+    availability_note: str | None = None
 
 
 class VideoContentPackage(VideoMissionModel):
@@ -219,6 +237,11 @@ class VideoShotView(VideoMissionModel):
     reserved_cost_usd: float
     error: VideoError | None
     clip_url: str | None
+    variation_index: int = Field(ge=0)
+    continuity_group_ids: tuple[str, ...]
+    previous_shot_id: str | None
+    continuation_mode: str
+    reference_asset_id: str | None
 
 
 class VideoArtifactSummary(VideoMissionModel):
@@ -255,6 +278,7 @@ class VideoJobView(VideoMissionModel):
     remaining_authorized_usd: float = Field(ge=0)
     request_preview_url: str
     consistency_notice: str
+    continuity: dict[str, Any]
     artifacts: VideoArtifactSummary
     error: VideoError | None
     created_at: datetime

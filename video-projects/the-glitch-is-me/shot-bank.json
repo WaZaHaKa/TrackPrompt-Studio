@@ -32,6 +32,9 @@
         "violet signal plankton",
         "restrained amber glint"
       ],
+      "continuityGroupIds": ["world-global", "digital-ocean"],
+      "previousShotId": null,
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Droplet must remain coherent.",
         "No text-like symbols inside the droplet.",
@@ -67,6 +70,9 @@
         "charcoal floating fabric",
         "translucent signal fractures"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "digital-ocean"],
+      "previousShotId": "shot-001",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Adult appearance must be unambiguous.",
         "Face and costume become continuity reference for all later Siren shots."
@@ -101,6 +107,9 @@
         "wet concrete room",
         "single failing practical light"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "flicker-room"],
+      "previousShotId": "shot-002",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Flicker must be slow enough for comfortable viewing.",
         "Keep face readable when visible."
@@ -135,6 +144,9 @@
         "Siren hand",
         "wet silver refraction"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "flicker-room"],
+      "previousShotId": "shot-003",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "The smile remains abstract and non-identifying.",
         "Hand anatomy must be clean."
@@ -169,6 +181,9 @@
         "translucent impossible planes",
         "distant amber glow"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture"],
+      "previousShotId": "shot-004",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Keep the warm figure abstract.",
         "Geometry should expand clearly without becoming frenetic."
@@ -203,6 +218,9 @@
         "Quantum Siren",
         "black digital ocean"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture"],
+      "previousShotId": "shot-005",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Bone architecture must feel sculptural, not graphic or gory.",
         "Capture a clean wide ending frame for reuse."
@@ -237,6 +255,9 @@
         "wet black mirror",
         "violet chamber"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "mirror-world"],
+      "previousShotId": "shot-006",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Delay in the reflection should be readable but subtle.",
         "Real face must remain consistent."
@@ -271,6 +292,9 @@
         "rain-covered cobalt glass",
         "anonymous soft crowd"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "mirror-world"],
+      "previousShotId": "shot-007",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "No readable signage.",
         "Background crowd must stay anonymous and non-distracting."
@@ -305,6 +329,9 @@
         "unbranded broken microphone",
         "single violet pulse"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "split-corridor"],
+      "previousShotId": "shot-008",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Hand is attached/implied attached and never graphic.",
         "Microphone must have no visible trademark."
@@ -339,6 +366,9 @@
         "three temporal echoes",
         "stable black corridor"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "split-corridor"],
+      "previousShotId": "shot-009",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "All echoes must clearly be the same adult protagonist.",
         "Avoid severe flicker."
@@ -373,6 +403,9 @@
         "digital ocean",
         "phasing circular echoes"
       ],
+      "continuityGroupIds": ["world-global", "liquid-circuit"],
+      "previousShotId": "shot-010",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Must feel organic and musical without showing an instrument.",
         "Avoid generic screensaver appearance."
@@ -407,6 +440,9 @@
         "single amber pulse",
         "cobalt water-space"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "liquid-circuit"],
+      "previousShotId": "shot-011",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Pulse is beautiful but painful, never threatening.",
         "Keep profile consistent with prior shots."
@@ -441,6 +477,9 @@
         "abstract water-glass wings",
         "violet and amber release"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-012",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Maximum scale while retaining sadness.",
         "No literal angel imagery."
@@ -476,6 +515,9 @@
         "bone-house fragments",
         "distant amber glow"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture", "transcendence-failure"],
+      "previousShotId": "shot-013",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Echo earlier motifs clearly.",
         "Connection line must remain temporary and delicate."
@@ -510,6 +552,9 @@
         "dissolving digital ocean",
         "faint violet outline"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-014",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Dissolution should be graceful and gradual.",
         "Preserve a clean silhouette until late in the clip."
@@ -544,6 +589,9 @@
         "black reflective brink",
         "fine violet pixel fragments"
       ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-015",
+      "continuationMode": "prompt-anchors",
       "reviewNotes": [
         "Transformation remains poetic, not graphic.",
         "Final eye should be stable enough for a held ending frame."

@@ -43,6 +43,10 @@ def test_video_plan_api_uses_mission_control_persistence_and_authorization_gate(
             assert body["providerNetworkContacted"] is False
             assert body["analyses"][0]["analysisJobId"] == analysis_id
             assert body["packages"][0]["profiles"][0]["id"] == "fast-1080p"
+            four_k = next(
+                profile for profile in body["packages"][0]["profiles"] if profile["id"] == "quality-4k"
+            )
+            assert four_k["available"] is False
 
             planned = client.post(
                 "/api/mission-control/video/plans",
@@ -60,6 +64,11 @@ def test_video_plan_api_uses_mission_control_persistence_and_authorization_gate(
             assert plan["state"] == "planned"
             assert plan["totalShotCount"] == 16
             assert plan["cost"]["maxSpendUsd"] == 24
+            assert plan["continuity"]["masterSeed"] == 18_031_000
+            requests = client.get(f"/api/mission-control/video/plans/{plan['jobId']}/requests").json()[
+                "requests"
+            ]
+            assert "task" not in requests[0]["parameters"]
 
             blocked = client.post(f"/api/mission-control/video/jobs/{plan['jobId']}/start")
             assert blocked.status_code == 409

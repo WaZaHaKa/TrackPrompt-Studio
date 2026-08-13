@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
+import urllib.error
 import wave
 import xml.etree.ElementTree as ET
 from dataclasses import replace
@@ -28,6 +30,7 @@ from app.video_generation.authorization import (
     BatchAuthorization,
     authorization_phrase,
 )
+from app.video_generation.continuity import derive_shot_seed
 from app.video_generation.contracts import (
     ContractError,
     GenerationProfile,
@@ -44,6 +47,8 @@ from app.video_generation.davinci import (
 from app.video_generation.exporter import export_davinci_package
 from app.video_generation.gcp_veo import (
     ProviderError,
+    ProviderRequestContext,
+    VeoRestClient,
     build_request_payload,
     doctor,
     response_output_uris,
@@ -54,8 +59,15 @@ from app.video_generation.media import MediaProbe, probe
 from app.video_generation.mission_controller import VideoGenerationController
 from app.video_generation.mission_models import (
     VideoAuthorizationRequest,
+    VideoChainReferenceRequest,
+    VideoError,
     VideoJobState,
     VideoPlanCreateRequest,
+    VideoRetryRequest,
+    VideoReviewState,
+    VideoShotAttempt,
+    VideoShotState,
+    utc_now,
 )
 from app.video_generation.operations import OperationRecord, save_operation
 from app.video_generation.planning import compile_project_plan
@@ -100,18 +112,23 @@ def test_project_and_shot_contracts_are_complete() -> None:
     assert set(config.required_shot_ids) == {shot.shot_id for shot in shots}
 
 
-def test_fast_4k_is_rejected() -> None:
-    with pytest.raises(ContractError, match="Fast model profile"):
-        GenerationProfile.from_dict(
-            {
-                "profileId": "bad-fast-4k",
-                "modelId": "veo-3.1-fast-generate-001",
-                "resolution": "4k",
-                "durationSeconds": 8,
-                "sampleCount": 1,
-                "generateAudio": False,
-            }
-        )
+def test_fast_4k_is_rejected(tmp_path: Path) -> None:
+    profile = GenerationProfile.from_dict(
+        {
+            "profileId": "bad-fast-4k",
+            "modelId": "veo-3.1-fast-generate-001",
+            "resolution": "4k",
+            "durationSeconds": 8,
+            "sampleCount": 1,
+            "generateAudio": False,
+        }
+    )
+    shot = replace(_compile(tmp_path).shots[0], model_id=profile.model_id, resolution="4k")
+    with pytest.raises(ContractError, match="supports 720p/1080p"):
+        build_request_payload(shot)
+
+    with pytest.raises(ContractError, match="currently supports 720p/1080p"):
+        _compile(tmp_path, "project-config.4k-optional.json")
 
 
 def test_cost_profiles_match_reviewed_snapshot() -> None:
@@ -162,16 +179,133 @@ def test_request_payload_matches_veo_async_contract(tmp_path: Path) -> None:
     assert parameters["resolution"] == "1080p"
     assert parameters["aspectRatio"] == "16:9"
     assert parameters["generateAudio"] is False
-    assert parameters["task"] == "textToVideo"
+    assert "task" not in parameters
     assert "negativePrompt" in parameters
     assert response_output_uris({"response": {"videos": [{"gcsUri": "gs://bucket/a.mp4"}]}}) == (
         "gs://bucket/a.mp4",
     )
 
 
+@pytest.mark.parametrize(
+    ("body", "content_type", "expected_format"),
+    [
+        (
+            json.dumps(
+                {
+                    "error": {
+                        "code": 400,
+                        "status": "INVALID_ARGUMENT",
+                        "message": 'Unknown name "task" at parameters',
+                        "accessToken": "must-not-survive",
+                    }
+                }
+            ).encode(),
+            "application/json",
+            "json",
+        ),
+        (b"bad gateway Bearer must-not-survive", "text/plain", "text"),
+    ],
+)
+def test_http_400_writes_redacted_diagnostic(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    body: bytes,
+    content_type: str,
+    expected_format: str,
+) -> None:
+    shot = _compile(tmp_path).shots[0]
+
+    def reject(request, *, timeout):  # type: ignore[no-untyped-def]
+        raise urllib.error.HTTPError(
+            request.full_url,
+            400,
+            "Bad Request",
+            {"Content-Type": content_type, "Set-Cookie": "must-not-survive"},
+            io.BytesIO(body),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", reject)
+    diagnostics = tmp_path / "provider-errors"
+    client = VeoRestClient(
+        project_id="test-project",
+        token_provider=lambda: "must-not-survive",
+        diagnostics_root=diagnostics,
+    )
+    with pytest.raises(ProviderError) as raised:
+        client.submit(
+            shot,
+            context=ProviderRequestContext(
+                phase="submit",
+                job_id="job-1",
+                shot_id=shot.shot_id,
+                attempt_id="attempt-1",
+            ),
+        )
+    assert raised.value.http_status == 400
+    assert raised.value.diagnostic_id
+    receipt_path = next(diagnostics.glob("*.json"))
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["jobId"] == "job-1"
+    assert receipt["response"]["bodyFormat"] == expected_format
+    assert receipt["response"]["headers"] == {"content-type": content_type}
+    serialized = json.dumps(receipt)
+    assert "must-not-survive" not in serialized
+    assert "authorization" in serialized.lower()
+    assert shot.prompt not in serialized
+
+
+def test_seed_derivation_and_reference_hash_are_digest_bound(tmp_path: Path) -> None:
+    groups = ("world-global", "quantum-siren-identity")
+    first = derive_shot_seed(
+        master_seed=42,
+        project_id="project",
+        continuity_group_ids=groups,
+        shot_id="shot-001",
+        variation_index=0,
+    )
+    assert first == derive_shot_seed(
+        master_seed=42,
+        project_id="project",
+        continuity_group_ids=groups,
+        shot_id="shot-001",
+        variation_index=0,
+    )
+    assert first != derive_shot_seed(
+        master_seed=42,
+        project_id="project",
+        continuity_group_ids=groups,
+        shot_id="shot-001",
+        variation_index=1,
+    )
+    reference = tmp_path / "character.png"
+    reference.write_bytes(b"\x89PNG\r\n\x1a\nfirst approved image")
+    plan = compile_project_plan(
+        project_config_path=PROJECT / "project-config.json",
+        creative_bible_path=PROJECT / "creative-bible.json",
+        shot_bank_path=PROJECT / "shot-bank.json",
+        continuity_profile_path=PROJECT / "continuity-profile.json",
+        gcs_bucket="gs://example-trackprompt-video",
+        reference_image_path=reference,
+    )
+    reference.write_bytes(b"\x89PNG\r\n\x1a\nchanged approved image")
+    changed = compile_project_plan(
+        project_config_path=PROJECT / "project-config.json",
+        creative_bible_path=PROJECT / "creative-bible.json",
+        shot_bank_path=PROJECT / "shot-bank.json",
+        continuity_profile_path=PROJECT / "continuity-profile.json",
+        gcs_bucket="gs://example-trackprompt-video",
+        reference_image_path=reference,
+    )
+    assert plan.plan_digest != changed.plan_digest
+    assert plan.shots[0].first_frame_reference is not None
+    request = build_request_payload(plan.shots[0])
+    assert request["instances"][0]["image"]["gcsUri"].startswith("gs://")
+    assert "referenceImages" not in request["instances"][0]
+
+
 def test_one_authorization_binds_exact_plan_and_cap(tmp_path: Path) -> None:
     plan = _compile(tmp_path)
-    phrase = authorization_phrase(plan.project_id, plan.max_spend_usd)
+    phrase = authorization_phrase(plan.project_id, plan.plan_digest, plan.max_spend_usd)
     authorization = BatchAuthorization.create(
         project_id=plan.project_id,
         plan_digest=plan.plan_digest,
@@ -502,6 +636,189 @@ def test_first_download_candidate_gets_canonical_filename(
 
 
 @pytest.mark.asyncio
+async def test_retry_modes_preserve_setup_or_invalidate_authorization(tmp_path: Path) -> None:
+    state_root = tmp_path / "state" / "mission-control"
+    analysis_id = str(uuid4())
+    (state_root.parent / "jobs" / analysis_id).mkdir(parents=True)
+    store = MissionControlStore(state_root / "mission-control.sqlite3")
+    blocker = asyncio.Event()
+
+    class BlockingProvider:
+        async def submit(self, shot, *, context):  # type: ignore[no-untyped-def]
+            await blocker.wait()
+            return {"name": "never"}
+
+        async def fetch(self, *, model_id, operation_name, context):  # type: ignore[no-untyped-def]
+            raise AssertionError("poll should not run")
+
+        async def download(self, uri: str, destination: Path) -> None:
+            raise AssertionError("download should not run")
+
+        async def upload_reference(self, source: Path, destination_uri: str, expected_sha256: str) -> None:
+            raise AssertionError("reference upload should not run")
+
+    async def notify(_: int) -> None:
+        return None
+
+    controller = VideoGenerationController(
+        repository_root=PACKAGE_ROOT,
+        state_root=state_root,
+        store=store,
+        notify_event=notify,
+        provider_factory=lambda _project, _region: BlockingProvider(),
+        poll_interval_seconds=0.01,
+    )
+    try:
+        planned = await controller.create_plan(
+            VideoPlanCreateRequest(
+                analysis_job_id=analysis_id,
+                gcp_project_id="test-project",
+                gcs_bucket="example-trackprompt-video",
+            )
+        )
+        authorized = await controller.authorize(
+            planned.job_id,
+            VideoAuthorizationRequest(confirmation=planned.authorization_phrase),
+        )
+        stored = store.get_video_job(planned.job_id)
+        assert stored is not None
+        shot = stored.shots[0]
+        failed = VideoShotAttempt(
+            id="shot-001-attempt-01-test",
+            attempt=1,
+            idempotency_key="a" * 64,
+            state=VideoShotState.FAILED,
+            reserved_cost_usd=shot.estimated_cost_usd,
+            error=VideoError(code="provider_request_failed", summary="HTTP 400"),
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+        failed_job = stored.model_copy(
+            update={
+                "state": VideoJobState.FAILED,
+                "shots": (
+                    shot.model_copy(update={"attempts": (failed,)}),
+                    *stored.shots[1:],
+                ),
+                "reserved_cost_usd": shot.estimated_cost_usd,
+            }
+        )
+        store.put_video_job(failed_job)
+        same = await controller.retry(
+            authorized.job_id,
+            "shot-001",
+            VideoRetryRequest(mode="same_setup"),
+        )
+        assert same.plan_digest == planned.plan_digest
+        assert same.shots[0].seed == planned.shots[0].seed
+        assert same.shots[0].variation_index == 0
+        await controller.cancel(same.job_id)
+
+        store.put_video_job(failed_job)
+        variation = await controller.retry(
+            planned.job_id,
+            "shot-001",
+            VideoRetryRequest(mode="new_variation"),
+        )
+        assert variation.state is VideoJobState.PLANNED
+        assert variation.plan_digest != planned.plan_digest
+        assert variation.shots[0].seed != planned.shots[0].seed
+        assert variation.shots[0].variation_index == 1
+        assert variation.authorization_expires_at is None
+        history = (
+            state_root.parent
+            / "video-generation"
+            / "the-glitch-is-me"
+            / planned.job_id
+            / "authorization-history"
+            / f"{planned.plan_digest}.json"
+        )
+        assert history.is_file()
+    finally:
+        controller.close()
+        store.close()
+
+
+@pytest.mark.asyncio
+async def test_accepted_previous_shot_frame_changes_digest_and_requires_fresh_authorization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state_root = tmp_path / "state" / "mission-control"
+    analysis_id = str(uuid4())
+    (state_root.parent / "jobs" / analysis_id).mkdir(parents=True)
+    store = MissionControlStore(state_root / "mission-control.sqlite3")
+
+    async def notify(_: int) -> None:
+        return None
+
+    def fake_ffmpeg(arguments, **kwargs):  # type: ignore[no-untyped-def]
+        Path(arguments[-1]).write_bytes(b"\x89PNG\r\n\x1a\naccepted final frame")
+        return subprocess.CompletedProcess(arguments, 0, "", "")
+
+    monkeypatch.setattr("app.video_generation.mission_controller.subprocess.run", fake_ffmpeg)
+    controller = VideoGenerationController(
+        repository_root=PACKAGE_ROOT,
+        state_root=state_root,
+        store=store,
+        notify_event=notify,
+        ffmpeg_path=lambda: Path("ffmpeg.exe"),
+    )
+    try:
+        planned = await controller.create_plan(
+            VideoPlanCreateRequest(
+                analysis_job_id=analysis_id,
+                gcp_project_id="test-project",
+                gcs_bucket="example-trackprompt-video",
+            )
+        )
+        await controller.authorize(
+            planned.job_id,
+            VideoAuthorizationRequest(confirmation=planned.authorization_phrase),
+        )
+        stored = store.get_video_job(planned.job_id)
+        assert stored is not None
+        source_clip = tmp_path / "source.mp4"
+        source_clip.write_bytes(b"verified source clip")
+        accepted = VideoShotAttempt(
+            id="shot-001-attempt-01-accepted",
+            attempt=1,
+            idempotency_key="b" * 64,
+            state=VideoShotState.VERIFIED,
+            reserved_cost_usd=stored.shots[0].estimated_cost_usd,
+            local_clip_path=str(source_clip),
+            clip_sha256="c" * 64,
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+        source = stored.shots[0].model_copy(
+            update={
+                "attempts": (accepted,),
+                "review_state": VideoReviewState.ACCEPTED,
+                "accepted_attempt_id": accepted.id,
+            }
+        )
+        store.put_video_job(stored.model_copy(update={"shots": (source, *stored.shots[1:])}))
+        chained = await controller.chain_reference(
+            planned.job_id,
+            "shot-002",
+            VideoChainReferenceRequest(source_shot_id="shot-001"),
+        )
+        assert chained.state is VideoJobState.PLANNED
+        assert chained.plan_digest != planned.plan_digest
+        assert chained.authorization_expires_at is None
+        assert chained.shots[1].continuation_mode == "accepted-previous-shot-end-frame"
+        assert chained.shots[1].reference_asset_id
+        preview = controller.request_preview(chained.job_id)
+        assert preview.requests[1]["instances"][0]["image"]["mimeType"] == "image/png"
+        serialized_plan = json.dumps(store.get_video_job(chained.job_id).plan)
+        assert str(source_clip) not in serialized_plan
+    finally:
+        controller.close()
+        store.close()
+
+
+@pytest.mark.asyncio
 async def test_mission_control_owns_exact_batch_smoke_first_and_persists_events(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -513,11 +830,11 @@ async def test_mission_control_owns_exact_batch_smoke_first_and_persists_events(
     submitted: list[str] = []
 
     class FakeProvider:
-        async def submit(self, shot):  # type: ignore[no-untyped-def]
+        async def submit(self, shot, *, context):  # type: ignore[no-untyped-def]
             submitted.append(shot.shot_id)
             return {"name": f"operations/{shot.shot_id}"}
 
-        async def fetch(self, *, model_id: str, operation_name: str) -> dict[str, object]:
+        async def fetch(self, *, model_id: str, operation_name: str, context) -> dict[str, object]:  # type: ignore[no-untyped-def]
             shot_id = operation_name.rsplit("/", 1)[-1]
             job = store.list_video_jobs(limit=1)[0]
             shot = next(item for item in job.plan["shots"] if item["shotId"] == shot_id)
@@ -526,6 +843,9 @@ async def test_mission_control_owns_exact_batch_smoke_first_and_persists_events(
         async def download(self, uri: str, destination: Path) -> None:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(b"fake-video")
+
+        async def upload_reference(self, source: Path, destination_uri: str, expected_sha256: str) -> None:
+            raise AssertionError("no reference upload was planned")
 
     def fake_verify(path: Path, **_: object) -> MediaProbe:
         return MediaProbe(

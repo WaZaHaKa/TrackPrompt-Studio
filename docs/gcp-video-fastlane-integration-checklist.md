@@ -30,3 +30,13 @@
 - Browser E2E: 2 Chromium flows passed. The deployed fast-lane screen rendered successfully, and its HAR contained only `127.0.0.1` requests.
 - Local deployment: healthy and loopback-only at `http://127.0.0.1:8765/?section=video`.
 - GCP capability check: stopped safely because `gcloud` was unavailable; `networkContacted=false` and `generationSubmitted=false`.
+
+## Veo 400 and continuity follow-up verified on 2026-08-13
+
+- Historical evidence preserved truthfully: HTTP 400 and the rejected request keys were retained, but the old adapter had discarded the response body, so no exact provider message was reconstructed.
+- Windows verifier: 24 focused backend tests, 21 JSON documents, both 1080p profiles, the expected GA 4K fail-closed check, focused React tests, and strict TypeScript passed without a generation request.
+- Complete backend suite: 467 tests passed with Python 3.12.13; Ruff and mypy passed across 115 application source files.
+- Complete frontend suite: 12 files and 79 tests passed; lint, typecheck, and production build passed.
+- GCP capability doctor: all seven read-only checks passed, including the configured project, Vertex AI API, bucket, and region; `generationSubmitted=false`.
+- Local deployment refresh: blocked because Windows denied stopping the existing elevated Mission Control PID. The instance was confirmed idle, preserved, and not duplicated. Browser E2E was therefore not rerun against the new backend.
+- Paid generation: not attempted. A fresh digest-specific authorization is required for a new 1080p plan.

@@ -20,6 +20,10 @@ export interface VideoError {
   code: string
   summary: string
   retryable: boolean
+  httpStatus: number | null
+  providerStatus: string | null
+  providerErrorCode: string | null
+  diagnosticId: string | null
 }
 
 export interface VideoAnalysisSource {
@@ -43,6 +47,8 @@ export interface VideoProfile {
   baseEstimatedUsd: number
   conservativeEstimatedUsd: number
   maxSpendUsd: number
+  available: boolean
+  availabilityNote: string | null
 }
 
 export interface VideoPackage {
@@ -74,6 +80,11 @@ export interface VideoShot {
   reservedCostUsd: number
   error: VideoError | null
   clipUrl: string | null
+  variationIndex: number
+  continuityGroupIds: string[]
+  previousShotId: string | null
+  continuationMode: string
+  referenceAssetId: string | null
 }
 
 export interface VideoArtifacts {
@@ -115,6 +126,14 @@ export interface VideoJob {
   remainingAuthorizedUsd: number
   requestPreviewUrl: string
   consistencyNotice: string
+  continuity: {
+    masterSeed?: number
+    seedLocked?: boolean
+    seedDerivation?: string
+    characterProfiles?: Array<Record<string, unknown>>
+    visualAnchors?: Record<string, unknown>
+    groups?: Array<Record<string, unknown>>
+  }
   artifacts: VideoArtifacts
   error: VideoError | null
   createdAt: string
@@ -181,6 +200,10 @@ function parseError(value: unknown, label: string): VideoError | null {
     code: text(item.code, `${label}.code`),
     summary: text(item.summary, `${label}.summary`),
     retryable: booleanValue(item.retryable, `${label}.retryable`),
+    httpStatus: item.httpStatus === null ? null : numberValue(item.httpStatus, `${label}.httpStatus`),
+    providerStatus: nullableText(item.providerStatus, `${label}.providerStatus`),
+    providerErrorCode: nullableText(item.providerErrorCode, `${label}.providerErrorCode`),
+    diagnosticId: nullableText(item.diagnosticId, `${label}.diagnosticId`),
   }
 }
 
@@ -229,6 +252,8 @@ export function parseVideoCatalog(value: unknown): VideoCatalog {
             baseEstimatedUsd: numberValue(profile.baseEstimatedUsd, 'profile baseEstimatedUsd'),
             conservativeEstimatedUsd: numberValue(profile.conservativeEstimatedUsd, 'profile conservativeEstimatedUsd'),
             maxSpendUsd: numberValue(profile.maxSpendUsd, 'profile maxSpendUsd'),
+            available: booleanValue(profile.available, 'profile available'),
+            availabilityNote: nullableText(profile.availabilityNote, 'profile availabilityNote'),
           }
         }),
       }
@@ -279,6 +304,11 @@ export function parseVideoJob(value: unknown): VideoJob {
         reservedCostUsd: numberValue(shot.reservedCostUsd, 'reserved cost'),
         error: parseError(shot.error, 'shot error'),
         clipUrl: nullableText(shot.clipUrl, 'clip URL'),
+        variationIndex: numberValue(shot.variationIndex, 'variation index'),
+        continuityGroupIds: array(shot.continuityGroupIds, 'continuity group IDs').map((entry) => text(entry, 'continuity group ID')),
+        previousShotId: nullableText(shot.previousShotId, 'previous shot ID'),
+        continuationMode: text(shot.continuationMode, 'continuation mode'),
+        referenceAssetId: nullableText(shot.referenceAssetId, 'reference asset ID'),
       }
     }),
     progressPercent: numberValue(item.progressPercent, 'progressPercent'),
@@ -288,6 +318,7 @@ export function parseVideoJob(value: unknown): VideoJob {
     remainingAuthorizedUsd: numberValue(item.remainingAuthorizedUsd, 'remainingAuthorizedUsd'),
     requestPreviewUrl: text(item.requestPreviewUrl, 'requestPreviewUrl'),
     consistencyNotice: text(item.consistencyNotice, 'consistencyNotice'),
+    continuity: record(item.continuity, 'continuity'),
     artifacts: {
       timelineReady: booleanValue(artifacts.timelineReady, 'timelineReady'),
       davinciPackageReady: booleanValue(artifacts.davinciPackageReady, 'davinciPackageReady'),
@@ -340,6 +371,14 @@ export const videoGenerationClient = {
     const selected = booleanValue(item.selected, 'audio selected')
     return selected ? text(item.path, 'audio path') : null
   },
+  async selectReferenceImage(initialDirectory: string | null = null): Promise<string | null> {
+    const item = record(await post('/system/select-file', {
+      initialDirectory,
+      title: 'Select a private JPEG or PNG continuity reference',
+    }), 'reference image selection')
+    const selected = booleanValue(item.selected, 'reference image selected')
+    return selected ? text(item.path, 'reference image path') : null
+  },
   async catalog(): Promise<VideoCatalog> {
     return parseVideoCatalog(await request('/video/catalog'))
   },
@@ -356,6 +395,9 @@ export const videoGenerationClient = {
     gcpProjectId: string
     gcsBucket: string
     audioPath: string | null
+    masterSeed: number
+    seedLocked: boolean
+    referenceImagePath: string | null
   }): Promise<VideoJob> {
     return parseVideoJob(await post('/video/plans', input))
   },
@@ -373,8 +415,11 @@ export const videoGenerationClient = {
   async action(jobId: string, action: 'start' | 'resume' | 'cancel' | 'resolve' | 'export' | 'assemble'): Promise<VideoJob> {
     return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/${action}`))
   },
-  async retry(jobId: string, shotId: string): Promise<VideoJob> {
-    return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/shots/${encodeURIComponent(shotId)}/retry`))
+  async retry(jobId: string, shotId: string, mode: 'same_setup' | 'new_variation'): Promise<VideoJob> {
+    return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/shots/${encodeURIComponent(shotId)}/retry`, { mode }))
+  },
+  async chainReference(jobId: string, shotId: string, sourceShotId: string): Promise<VideoJob> {
+    return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/shots/${encodeURIComponent(shotId)}/chain-reference`, { sourceShotId }))
   },
   async review(jobId: string, shotId: string, decision: 'accepted' | 'rejected'): Promise<VideoJob> {
     return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/shots/${encodeURIComponent(shotId)}/review`, { decision }))

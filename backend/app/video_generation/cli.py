@@ -14,9 +14,10 @@ from .authorization import (
     load_authorization,
     save_authorization,
 )
-from .contracts import CompiledShot, ContractError
+from .contracts import CompiledReferenceImage, CompiledShot, ContractError
 from .exporter import export_davinci_package
 from .gcp_veo import (
+    ProviderRequestContext,
     VeoRestClient,
     build_request_payload,
     copy_gcs_uri,
@@ -47,6 +48,18 @@ def _load_object(path: Path) -> dict[str, Any]:
 
 
 def _compiled_shot(value: dict[str, Any]) -> CompiledShot:
+    reference_value = value.get("firstFrameReference")
+    reference = (
+        CompiledReferenceImage(
+            asset_id=str(reference_value["assetId"]),
+            gcs_uri=str(reference_value["gcsUri"]),
+            mime_type=str(reference_value["mimeType"]),
+            sha256=str(reference_value["sha256"]),
+            source_kind=str(reference_value["sourceKind"]),
+        )
+        if isinstance(reference_value, dict)
+        else None
+    )
     return CompiledShot(
         shot_id=str(value["shotId"]),
         chapter_id=str(value["chapterId"]),
@@ -69,6 +82,11 @@ def _compiled_shot(value: dict[str, Any]) -> CompiledShot:
         estimated_cost_usd=float(value["estimatedCostUsd"]),
         source_section_hints=tuple(value.get("sourceSectionHints", [])),
         review_notes=tuple(value.get("reviewNotes", [])),
+        variation_index=int(value.get("variationIndex", 0)),
+        continuity_group_ids=tuple(value.get("continuityGroupIds", [])),
+        previous_shot_id=value.get("previousShotId"),
+        continuation_mode=str(value.get("continuationMode", "prompt-anchors")),
+        first_frame_reference=reference,
     )
 
 
@@ -112,7 +130,11 @@ def command_compile(arguments: argparse.Namespace) -> None:
 
 def command_show_authorization_phrase(arguments: argparse.Namespace) -> None:
     plan = _load_object(Path(arguments.plan))
-    phrase = authorization_phrase(str(plan["projectId"]), float(plan["cost"]["maxSpendUsd"]))
+    phrase = authorization_phrase(
+        str(plan["projectId"]),
+        str(plan["planDigest"]),
+        float(plan["cost"]["maxSpendUsd"]),
+    )
     _emit({"phrase": phrase, "planDigest": plan["planDigest"]})
 
 
@@ -120,7 +142,7 @@ def command_authorize(arguments: argparse.Namespace) -> None:
     plan = _load_object(Path(arguments.plan))
     project_id = str(plan["projectId"])
     max_spend = float(plan["cost"]["maxSpendUsd"])
-    expected = authorization_phrase(project_id, max_spend)
+    expected = authorization_phrase(project_id, str(plan["planDigest"]), max_spend)
     confirmation = arguments.confirm
     if confirmation is None:
         print(expected)
@@ -183,7 +205,11 @@ def command_submit_batch(arguments: argparse.Namespace) -> None:
         if record.plan_digest == plan["planDigest"]
         and record.status in {"submitted", "running", "succeeded", "downloaded", "verified"}
     }
-    client = VeoRestClient(project_id=arguments.project_id, region=arguments.region)
+    client = VeoRestClient(
+        project_id=arguments.project_id,
+        region=arguments.region,
+        diagnostics_root=Path(arguments.runtime_root) / "provider-errors",
+    )
     submitted = []
     skipped = []
     selected_shot_ids = set(arguments.only_shot or [])
@@ -199,7 +225,13 @@ def command_submit_batch(arguments: argparse.Namespace) -> None:
             skipped.append(shot.shot_id)
             continue
         _validate_authorized_request(plan, root, shot)
-        response = client.submit(shot)
+        response = client.submit(
+            shot,
+            context=ProviderRequestContext(
+                phase="cli-submit",
+                shot_id=shot.shot_id,
+            ),
+        )
         operation_name = str(response["name"])
         operation_id = str(uuid.uuid4())
         raw_path = root / "provider-responses" / f"{operation_id}-submit.json"
@@ -250,7 +282,15 @@ def _poll_once(plan: dict[str, Any], root: Path, client: VeoRestClient) -> dict[
             save_operation(root, updated)
             counts["failed"] = counts.get("failed", 0) + 1
             continue
-        response = client.fetch(model_id=record.model_id, operation_name=record.operation_name)
+        response = client.fetch(
+            model_id=record.model_id,
+            operation_name=record.operation_name,
+            context=ProviderRequestContext(
+                phase="cli-poll",
+                shot_id=record.shot_id,
+                attempt_id=record.operation_id,
+            ),
+        )
         raw_path = root / "provider-responses" / f"{record.operation_id}-poll.json"
         atomic_write_json(raw_path, response)
         if not response.get("done"):
@@ -287,7 +327,11 @@ def command_poll(arguments: argparse.Namespace) -> None:
     plan = _load_object(Path(arguments.plan))
     project_id = str(plan["projectId"])
     root = _runtime_root(arguments, project_id)
-    client = VeoRestClient(project_id=arguments.project_id, region=arguments.region)
+    client = VeoRestClient(
+        project_id=arguments.project_id,
+        region=arguments.region,
+        diagnostics_root=Path(arguments.runtime_root) / "provider-errors",
+    )
     while True:
         counts = _poll_once(plan, root, client)
         _emit({"status": "poll", "counts": counts})

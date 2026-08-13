@@ -60,7 +60,7 @@ try {
     & $python -c "import json,pathlib; root=pathlib.Path(r'$RepositoryRoot'); files=list(root.glob('video-projects/the-glitch-is-me/*.json'))+list(root.glob('schemas/*.json'))+list(root.glob('config/*.json')); [json.loads(p.read_text(encoding='utf-8')) for p in files]; print(f'Parsed {len(files)} JSON files')"
     if ($LASTEXITCODE -ne 0) { throw 'JSON parsing failed.' }
 
-    foreach ($config in @('project-config.json', 'project-config.quality-1080p.json', 'project-config.4k-optional.json')) {
+    foreach ($config in @('project-config.json', 'project-config.quality-1080p.json')) {
         $output = Join-Path $temporary ($config + '.plan.json')
         & $python -m app.video_generation.cli compile `
             --project-config (Join-Path $RepositoryRoot "video-projects\the-glitch-is-me\$config") `
@@ -70,6 +70,15 @@ try {
             --output $output
         if ($LASTEXITCODE -ne 0) { throw "Plan compilation failed for $config" }
     }
+
+    Write-Host 'Confirming the dormant GA 4K profile fails closed before authorization...'
+    & $python -m app.video_generation.cli compile `
+        --project-config (Join-Path $RepositoryRoot 'video-projects\the-glitch-is-me\project-config.4k-optional.json') `
+        --creative-bible (Join-Path $RepositoryRoot 'video-projects\the-glitch-is-me\creative-bible.json') `
+        --shot-bank (Join-Path $RepositoryRoot 'video-projects\the-glitch-is-me\shot-bank.json') `
+        --gcs-bucket 'gs://example-trackprompt-video' `
+        --output (Join-Path $temporary 'unexpected-4k.plan.json')
+    if ($LASTEXITCODE -eq 0) { throw 'The unsupported GA 4K plan unexpectedly compiled.' }
 
     Write-Host 'Running the focused React workflow test and strict TypeScript compiler...'
     Push-Location (Join-Path $RepositoryRoot 'frontend')

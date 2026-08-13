@@ -19,7 +19,7 @@
 - [x] Run focused and complete backend/frontend/launcher/Compose validation.
 - [x] Update architecture, privacy, Mission Control, and operator runbooks to match implementation.
 - [x] Confirm `.gitignore` covers provider responses, authorization, GCS downloads, media, and timelines with local paths.
-- [ ] Commit only source files for this task, push feature branch, and open PR when available.
+- [x] Commit only source files for this task, push feature branch, and open PR when available.
 - [x] Pause only at the one exact plan-level live spending phrase.
 
 ## Verified on 2026-08-13

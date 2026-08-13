@@ -1,0 +1,14 @@
+SHOT shot-009 — Cold Hand and Broken Microphone
+
+NARRATIVE INTENT
+Strip the image down for the urgent spoken bridge.
+
+SHOT PROMPT
+Near-total darkness. A pale adult hand belonging to the Quantum Siren reaches slowly across a wet black floor toward a broken vintage microphone with no logo. A thin cable disappears into darkness and emits one faint violet pulse. The camera is low and close, gliding beside the hand; reflected droplets tremble with each pulse.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, severed hand, injury, blood, branded microphone, concert stage, singer performance
+
+REVIEW NOTES
+- Hand is attached/implied attached and never graphic.
+- Microphone must have no visible trademark.

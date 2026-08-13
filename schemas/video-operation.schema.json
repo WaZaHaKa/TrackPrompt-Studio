@@ -1,0 +1,93 @@
+{
+  "$id": "https://wzhk.local/schemas/video-operation.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "modelId": {
+      "type": "string"
+    },
+    "operationId": {
+      "type": "string"
+    },
+    "operationName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outputUris": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "planDigest": {
+      "type": "string"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "rawResponsePath": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reservedCostUsd": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "shotId": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "submitted",
+        "running",
+        "succeeded",
+        "filtered",
+        "failed",
+        "downloaded",
+        "verified",
+        "rejected",
+        "cancelled-before-submit"
+      ]
+    },
+    "storageUri": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "submittedAt": {
+      "type": "string"
+    },
+    "updatedAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "projectId",
+    "planDigest",
+    "shotId",
+    "modelId",
+    "status",
+    "submittedAt",
+    "updatedAt",
+    "reservedCostUsd",
+    "outputUris"
+  ],
+  "title": "TrackPrompt Veo long-running operation record",
+  "type": "object"
+}

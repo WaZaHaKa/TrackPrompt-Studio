@@ -1,0 +1,14 @@
+SHOT shot-011 — Liquid Guitar Filaments
+
+NARRATIVE INTENT
+Translate the psychedelic delayed guitar solo into physical light and fluid motion.
+
+SHOT PROMPT
+No literal musician. Long liquid filaments of silver, cobalt and violet light bend through a black volume like delayed guitar notes made visible. Each filament leaves a soft phasing echo, crosses another strand, then blooms into circular interference patterns above the digital ocean. The camera flies slowly between the strands in a graceful continuous arc.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, literal guitar, musician, music visualizer bars, equalizer, laser show, festival stage
+
+REVIEW NOTES
+- Must feel organic and musical without showing an instrument.
+- Avoid generic screensaver appearance.

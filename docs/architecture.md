@@ -30,6 +30,12 @@ model are documented in [Render operation architecture and SaaS extraction
 boundary](render-operation-architecture.md). Project-specific safe commands are
 in the [Andromeda V2 production runbook](andromeda-v2-production-runbook.md).
 
+## GCP video generation boundary
+
+The optional Veo fast lane consumes completed analysis, StoryPlan, and ShotPlan artifacts; it never reruns music analysis. Its controller lives inside the existing Mission Control service, persists jobs and globally sequenced events in the existing Mission Control SQLite database, and reuses the existing SSE route and React shell. Provider long-running operations are resumed by their durable operation name. No browser refresh can submit work.
+
+Offline plan compilation hash-binds every exact generation parameter, source artifact, pricing snapshot, and maximum spend. A separate exact phrase authorizes that one plan. Only the subsequent explicit start transition may submit the smoke shot; the remaining same-plan batch continues automatically after local media verification. Original audio never leaves the host and is muxed only during local assembly. See [GCP video fast-lane architecture](gcp-video-fastlane-architecture.md) and the [operator runbook](gcp-video-fastlane-runbook.md).
+
 ## Catalogue and long-form boundary
 
 The professional catalogue is an additive subsystem sharing the private data
@@ -103,6 +109,7 @@ There is deliberately no normal-analysis arrow to an external service.
 | `backend/app/analysis/` | Pure or isolated signal analyzers and versioned result assembly. |
 | `backend/app/visualizer/` | Private continuous-feature schema/DSP, deterministic frame conversion, public cue compilation, simplification, and privacy validation. |
 | `backend/app/mission_control/` | Persistent final-render jobs, output-variant routing, robust ETA/stage progress, real-frame publication, resume, encoding, and safe operator actions. |
+| `backend/app/video_generation/` | Deterministic Veo plan/cost contracts, exact-batch authorization, provider LRO resume, clip verification, audio-clock timeline resolution, Resolve exports, and local assembly. |
 | `backend/app/tagging/`, `backend/app/lyrics/` | Optional local model adapters imported from concrete leaf modules. |
 | `backend/app/diagnostics/` | Safe executable import, GPU, model, provisioning, and capability diagnostics. |
 | `backend/app/prompting/` | Reviewed evidence filtering, deterministic Reliable composition, private sampled candidate writing, validation/repair, and provenance. |

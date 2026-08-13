@@ -24,6 +24,8 @@ from ..cinematic.schemas import (
     StoryPlan,
 )
 from ..cinematic.validation import validate_cinematic_privacy, validate_plan_pair
+from ..video_generation.mission_controller import VideoGenerationController
+from ..video_generation.mission_models import VideoGenerationEvent
 from .config import MissionControlConfig
 from .discovery import (
     MissionDiscovery,
@@ -243,6 +245,14 @@ class MissionControlService:
         self._encode_tasks: dict[str, asyncio.Task[None]] = {}
         self._orphan_monitor_task: asyncio.Task[None] | None = None
         self._closed = False
+        self.video_generation = VideoGenerationController(
+            repository_root=config.repository_root,
+            state_root=config.state_root,
+            store=self.store,
+            notify_event=self._notify_event,
+            ffmpeg_path=self._ffmpeg_path,
+            ffprobe_path=self._video_ffprobe_path,
+        )
         self._recover_jobs()
         self._event_generation = self.store.latest_event_sequence()
         self.start_background_tasks()
@@ -252,6 +262,7 @@ class MissionControlService:
         if self._orphan_monitor_task is not None:
             self._orphan_monitor_task.cancel()
             self._orphan_monitor_task = None
+        self.video_generation.close()
         self.store.close()
 
     def start_background_tasks(self) -> None:
@@ -268,6 +279,7 @@ class MissionControlService:
             self._monitor_orphaned_jobs(),
             name="mission-control-orphan-monitor",
         )
+        self.video_generation.start_background_tasks()
 
     def _recover_jobs(self) -> None:
         for job in self.store.list_jobs(limit=1_000):
@@ -463,6 +475,10 @@ class MissionControlService:
             if resolved.is_file():
                 return resolved
         return None
+
+    def _video_ffprobe_path(self) -> Path | None:
+        ffmpeg = self._ffmpeg_path()
+        return self._ffprobe_path(ffmpeg) if ffmpeg is not None else None
 
     def _default_output_root(self) -> Path:
         stored = self.store.get_setting("default_output_root")
@@ -2438,7 +2454,7 @@ class MissionControlService:
         *,
         job_id: str | None = None,
         limit: int = 1_000,
-    ) -> list[RenderEvent]:
+    ) -> list[RenderEvent | VideoGenerationEvent]:
         return self.store.events_after(after_sequence, job_id=job_id, limit=limit)
 
     async def wait_for_events(

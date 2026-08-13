@@ -1,0 +1,258 @@
+{
+  "$id": "https://wzhk.local/schemas/compiled-video-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cost": {
+      "additionalProperties": false,
+      "properties": {
+        "baseEstimatedUsd": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "conservativeEstimatedUsd": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "maxSpendUsd": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "baseEstimatedUsd",
+        "conservativeEstimatedUsd",
+        "maxSpendUsd"
+      ],
+      "type": "object"
+    },
+    "planDigest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "profile": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "modelId": {
+                "const": "veo-3.1-fast-generate-001"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resolution": {
+                "enum": [
+                  "720p",
+                  "1080p"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "aspectRatio": {
+          "enum": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "compressionQuality": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "enum": [
+            4,
+            6,
+            8
+          ]
+        },
+        "enhancePrompt": {
+          "type": "boolean"
+        },
+        "fps": {
+          "const": 24
+        },
+        "generateAudio": {
+          "const": false
+        },
+        "modelId": {
+          "enum": [
+            "veo-3.1-fast-generate-001",
+            "veo-3.1-generate-001"
+          ]
+        },
+        "personGeneration": {
+          "enum": [
+            "allow_adult",
+            "dont_allow"
+          ]
+        },
+        "profileId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "720p",
+            "1080p",
+            "4k"
+          ]
+        },
+        "sampleCount": {
+          "maximum": 4,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "profileId",
+        "modelId",
+        "resolution",
+        "aspectRatio",
+        "fps",
+        "durationSeconds",
+        "sampleCount",
+        "generateAudio"
+      ],
+      "type": "object"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "shots": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "aspectRatio": {
+            "enum": [
+              "16:9",
+              "9:16"
+            ]
+          },
+          "chapterId": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "enum": [
+              4,
+              6,
+              8
+            ]
+          },
+          "estimatedCostUsd": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "generateAudio": {
+            "const": false
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "negativePrompt": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "resolution": {
+            "enum": [
+              "720p",
+              "1080p",
+              "4k"
+            ]
+          },
+          "reviewNotes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "sampleCount": {
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "shotId": {
+            "type": "string"
+          },
+          "sourceSectionHints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "storageUri": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "shotId",
+          "chapterId",
+          "order",
+          "title",
+          "durationSeconds",
+          "prompt",
+          "negativePrompt",
+          "seed",
+          "modelId",
+          "resolution",
+          "aspectRatio",
+          "sampleCount",
+          "generateAudio",
+          "required",
+          "estimatedCostUsd",
+          "sourceSectionHints",
+          "reviewNotes"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "sourceArtifacts": {
+      "additionalProperties": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "profile",
+    "shots",
+    "cost",
+    "sourceArtifacts",
+    "planDigest"
+  ],
+  "title": "Compiled provider-neutral TrackPrompt video plan",
+  "type": "object"
+}

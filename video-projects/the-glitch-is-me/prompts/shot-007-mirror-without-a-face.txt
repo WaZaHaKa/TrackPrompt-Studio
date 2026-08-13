@@ -1,0 +1,14 @@
+SHOT shot-007 — Mirror Without a Face
+
+NARRATIVE INTENT
+Make the loss of self literal while preserving a refined dream-pop image.
+
+SHOT PROMPT
+The Quantum Siren stands before a tall sheet of wet black glass in an empty violet chamber. Her body is reflected accurately, but where her reflected face should be there is only deep moving water and faint static. She slowly raises one hand; the reflection responds a fraction of a second late. The camera slides from profile toward the mirror without crossing the axis.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, horror face, eyeless monster, broken mirror shards, aggressive jump scare
+
+REVIEW NOTES
+- Delay in the reflection should be readable but subtle.
+- Real face must remain consistent.

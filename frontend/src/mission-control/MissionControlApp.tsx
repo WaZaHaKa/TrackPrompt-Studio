@@ -14,6 +14,7 @@ import {
   Settings,
   SlidersHorizontal,
   Sun,
+  Video,
   Wifi,
   WifiOff,
   X,
@@ -33,6 +34,7 @@ import { JobsScreen } from './screens/JobsScreen'
 import { ProfilesScreen } from './screens/ProfilesScreen'
 import { RenderWorkspace } from './screens/RenderWorkspace'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { VideoGenerationScreen } from './screens/VideoGenerationScreen'
 import type {
   ConnectionState,
   DashboardSnapshot,
@@ -57,6 +59,7 @@ const navItems: Array<{ id: MissionSection; label: string; icon: typeof Home }> 
   { id: 'jobs', label: 'Jobs', icon: History },
   { id: 'director', label: 'Director', icon: Clapperboard },
   { id: 'encode', label: 'Encode', icon: Film },
+  { id: 'video', label: 'Video', icon: Video },
   { id: 'cloud', label: 'Cloud', icon: Cloud },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
@@ -503,6 +506,8 @@ export function MissionControlApp({
         return <DirectorScreen client={client} connection={connection} />
       case 'encode':
         return <EncodeScreen candidates={data.encodeCandidates} capabilityAvailable={data.system.capabilities.encode} activeEncode={activeEncode} busyJobId={busyAction?.startsWith('encode:') ? busyAction.slice(7) : null} onStartEncode={startEncode} onOpenOutput={openPath} />
+      case 'video':
+        return <VideoGenerationScreen />
       case 'cloud':
         return <CloudScreen readiness={data.cloud} preparationAvailable={data.system.capabilities.cloudPreparation} busy={busyAction === 'cloud-package'} onRefresh={() => { void loadDashboard() }} onPreparePackage={prepareCloud} />
       case 'settings':

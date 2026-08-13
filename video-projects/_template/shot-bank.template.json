@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "new-track-project",
+  "shotCount": 2,
+  "shots": [
+    {
+      "shotId": "shot-001",
+      "chapterId": "opening",
+      "order": 1,
+      "title": "Opening Establishing Shot",
+      "narrativeIntent": "Establish the visual world at the beginning of the track.",
+      "prompt": "Replace with a self-contained continuous cinematic shot description including subject, action, environment, camera, light, atmosphere and motion.",
+      "negativePrompt": "visible text, logos, unsafe likeness, malformed anatomy, abrupt internal cut, camera shake",
+      "sourceSectionHints": ["intro"],
+      "energyRange": [0.0, 0.4],
+      "seed": 1001,
+      "required": true,
+      "reuseModes": ["forward", "alternate-inpoint"],
+      "continuityTokens": ["replace continuity anchor"],
+      "reviewNotes": ["Replace with concrete acceptance notes."]
+    },
+    {
+      "shotId": "shot-002",
+      "chapterId": "release",
+      "order": 2,
+      "title": "Primary Release Shot",
+      "narrativeIntent": "Provide the strongest visual release for the high-energy section.",
+      "prompt": "Replace with a different self-contained continuous cinematic shot that resolves or transforms the opening world while preserving continuity.",
+      "negativePrompt": "visible text, logos, unsafe likeness, malformed anatomy, abrupt internal cut, camera shake",
+      "sourceSectionHints": ["chorus", "drop", "climax"],
+      "energyRange": [0.5, 1.0],
+      "seed": 1002,
+      "required": true,
+      "reuseModes": ["forward", "alternate-inpoint"],
+      "continuityTokens": ["replace continuity anchor"],
+      "reviewNotes": ["Replace with concrete acceptance notes."]
+    }
+  ]
+}

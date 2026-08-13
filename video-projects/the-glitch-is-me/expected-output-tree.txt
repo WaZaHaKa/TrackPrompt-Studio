@@ -1,0 +1,39 @@
+.trackprompt-data/video-generation/the-glitch-is-me/
+├── authorization.json                         (ignored runtime state)
+├── plans/
+│   └── fast-1080p.plan.json
+├── request-preview/
+│   └── fast-1080p/
+│       ├── shot-001.request.json
+│       ├── ...
+│       └── shot-016.request.json
+├── operations/
+│   └── <operation-id>.json
+├── provider-responses/
+│   └── <operation-id>-submit-or-poll.json
+├── clips/
+│   └── fast-1080p/
+│       ├── shot-001.mp4
+│       ├── ...
+│       └── shot-016.mp4
+├── clip-verification.json
+├── resolved-timeline-fast-1080p.json
+└── davinci/
+    └── fast-1080p/
+        ├── resolved-timeline.json
+        ├── trackprompt-timeline.fcpxml
+        ├── trackprompt-timeline.xml
+        ├── trackprompt-timeline.edl
+        ├── edit-sheet.csv
+        ├── davinci-markers.csv
+        ├── assembly-plan.json
+        ├── ASSEMBLE-PREVIEW.ps1
+        ├── autonomous-preview-1080p.mp4
+        ├── README-DAVINCI.txt
+        └── assembly-work/
+            ├── normalized-segments/
+            ├── segments.ffconcat
+            └── assembled-video-only.mp4
+
+For the optional quality-4k profile, the profile directory is `quality-4k`
+and the autonomous preview is named `autonomous-preview-4k.mp4`.

@@ -1,0 +1,14 @@
+SHOT shot-006 — House Made of Bone
+
+NARRATIVE INTENT
+Create the chorus's strongest recurring architectural symbol.
+
+SHOT PROMPT
+A surreal cathedral-like house built from smooth bone-white arches floats above the digital ocean. The Quantum Siren walks through its open center as the structure slowly fractures into weightless ivory dust, exposing a starless void. The camera begins at human height and pulls back into a monumental wide shot while pieces drift in elegant slow motion.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, gore, skeleton bodies, skull pile, haunted-house cliché, violent collapse
+
+REVIEW NOTES
+- Bone architecture must feel sculptural, not graphic or gory.
+- Capture a clean wide ending frame for reuse.

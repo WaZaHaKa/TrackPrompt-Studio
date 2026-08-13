@@ -1,0 +1,78 @@
+{
+  "$id": "https://wzhk.local/schemas/creative-bible.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cameraLanguage": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "globalNegativePrompt": {
+      "minLength": 20,
+      "type": "string"
+    },
+    "lightingLanguage": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "palette": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "privacyRules": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "protagonist": {
+      "minLength": 20,
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "textureLanguage": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "title": {
+      "type": "string"
+    },
+    "visualIdentity": {
+      "minLength": 40,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "visualIdentity",
+    "protagonist",
+    "palette",
+    "cameraLanguage",
+    "lightingLanguage",
+    "textureLanguage",
+    "globalNegativePrompt",
+    "privacyRules"
+  ],
+  "title": "TrackPrompt project creative bible",
+  "type": "object"
+}

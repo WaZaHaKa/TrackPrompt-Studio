@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from ..video_generation.mission_models import VideoGenerationEvent, VideoJobRecord
 from .eta import EtaPersistentState
 from .models import JobRecord, LogEntry, RenderEvent
 from .render_contracts import MediaRenderJob
@@ -80,7 +81,54 @@ class MissionControlStore:
                     updated_at TEXT NOT NULL,
                     payload_json TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS mission_control_video_generation_jobs (
+                    id TEXT PRIMARY KEY,
+                    state TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS mission_control_video_generation_jobs_updated
+                ON mission_control_video_generation_jobs(updated_at DESC);
+
+                CREATE TABLE IF NOT EXISTS mission_control_video_generation_events (
+                    sequence INTEGER PRIMARY KEY,
+                    job_id TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    FOREIGN KEY(job_id) REFERENCES mission_control_video_generation_jobs(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS mission_control_video_generation_events_job_sequence
+                ON mission_control_video_generation_events(job_id, sequence);
+
+                CREATE TABLE IF NOT EXISTS mission_control_event_sequence (
+                    singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+                    next_sequence INTEGER NOT NULL
+                );
                 """
+            )
+            highest = self._connection.execute(
+                """
+                SELECT MAX(sequence) AS sequence FROM (
+                    SELECT COALESCE(MAX(sequence), 0) AS sequence FROM mission_control_events
+                    UNION ALL
+                    SELECT COALESCE(MAX(sequence), 0) AS sequence
+                    FROM mission_control_video_generation_events
+                )
+                """
+            ).fetchone()
+            next_sequence = (int(highest["sequence"]) if highest is not None else 0) + 1
+            self._connection.execute(
+                """
+                INSERT INTO mission_control_event_sequence(singleton, next_sequence)
+                VALUES (1, ?)
+                ON CONFLICT(singleton) DO UPDATE SET
+                    next_sequence = MAX(next_sequence, excluded.next_sequence)
+                """,
+                (next_sequence,),
             )
 
     def close(self) -> None:
@@ -193,25 +241,102 @@ class MissionControlStore:
             return None
         return EtaPersistentState.model_validate_json(str(row["payload_json"]))
 
+    def put_video_job(self, job: VideoJobRecord) -> None:
+        with self._lock, self._connection:
+            self._connection.execute(
+                """
+                INSERT INTO mission_control_video_generation_jobs(
+                    id, state, created_at, updated_at, payload_json
+                ) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    state = excluded.state,
+                    updated_at = excluded.updated_at,
+                    payload_json = excluded.payload_json
+                """,
+                (
+                    job.id,
+                    job.state.value,
+                    job.created_at.isoformat(),
+                    job.updated_at.isoformat(),
+                    job.model_dump_json(by_alias=False),
+                ),
+            )
+
+    def get_video_job(self, job_id: str) -> VideoJobRecord | None:
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT payload_json FROM mission_control_video_generation_jobs WHERE id = ?",
+                (job_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return VideoJobRecord.model_validate_json(str(row["payload_json"]))
+
+    def list_video_jobs(self, *, limit: int = 100) -> list[VideoJobRecord]:
+        with self._lock:
+            rows = self._connection.execute(
+                """
+                SELECT payload_json FROM mission_control_video_generation_jobs
+                ORDER BY updated_at DESC LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [VideoJobRecord.model_validate_json(str(row["payload_json"])) for row in rows]
+
+    def _allocate_event_sequence_locked(self) -> int:
+        row = self._connection.execute(
+            "SELECT next_sequence FROM mission_control_event_sequence WHERE singleton = 1"
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("Mission Control event sequence is unavailable")
+        sequence = int(row["next_sequence"])
+        self._connection.execute(
+            "UPDATE mission_control_event_sequence SET next_sequence = ? WHERE singleton = 1",
+            (sequence + 1,),
+        )
+        return sequence
+
     def append_event(self, event: RenderEvent) -> RenderEvent:
         timestamp = event.timestamp.isoformat()
         with self._lock, self._connection:
-            cursor = self._connection.execute(
-                "INSERT INTO mission_control_events(job_id, timestamp, payload_json) VALUES (?, ?, ?)",
-                (event.job_id, timestamp, "{}"),
-            )
-            if cursor.lastrowid is None:
-                raise RuntimeError("SQLite did not return an event sequence")
-            sequence = int(cursor.lastrowid)
+            sequence = self._allocate_event_sequence_locked()
             stored = event.model_copy(update={"sequence": sequence})
             self._connection.execute(
-                "UPDATE mission_control_events SET payload_json = ? WHERE sequence = ?",
-                (stored.model_dump_json(by_alias=False), sequence),
+                """
+                INSERT INTO mission_control_events(sequence, job_id, timestamp, payload_json)
+                VALUES (?, ?, ?, ?)
+                """,
+                (sequence, event.job_id, timestamp, stored.model_dump_json(by_alias=False)),
             )
             cutoff = sequence - self.event_retention
             if cutoff > 0:
                 self._connection.execute(
                     "DELETE FROM mission_control_events WHERE sequence <= ?",
+                    (cutoff,),
+                )
+        return stored
+
+    def append_video_event(self, event: VideoGenerationEvent) -> VideoGenerationEvent:
+        with self._lock, self._connection:
+            sequence = self._allocate_event_sequence_locked()
+            stored = event.model_copy(update={"sequence": sequence})
+            self._connection.execute(
+                """
+                INSERT INTO mission_control_video_generation_events(
+                    sequence, job_id, timestamp, payload_json
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (
+                    sequence,
+                    event.job_id,
+                    event.timestamp.isoformat(),
+                    stored.model_dump_json(by_alias=False),
+                ),
+            )
+            cutoff = sequence - self.event_retention
+            if cutoff > 0:
+                self._connection.execute(
+                    "DELETE FROM mission_control_video_generation_events WHERE sequence <= ?",
                     (cutoff,),
                 )
         return stored
@@ -222,27 +347,35 @@ class MissionControlStore:
         *,
         job_id: str | None = None,
         limit: int = 1_000,
-    ) -> list[RenderEvent]:
+    ) -> list[RenderEvent | VideoGenerationEvent]:
+        job_filter = "" if job_id is None else "AND job_id = ?"
+        query = f"""
+            SELECT payload_json, event_kind FROM (
+                SELECT sequence, job_id, payload_json, 'render' AS event_kind
+                FROM mission_control_events WHERE sequence > ? {job_filter}
+                UNION ALL
+                SELECT sequence, job_id, payload_json, 'video_generation' AS event_kind
+                FROM mission_control_video_generation_events WHERE sequence > ? {job_filter}
+            ) ORDER BY sequence LIMIT ?
+        """
+        parameters: tuple[object, ...]
         if job_id is None:
-            query = (
-                "SELECT payload_json FROM mission_control_events "
-                "WHERE sequence > ? ORDER BY sequence LIMIT ?"
-            )
-            parameters: tuple[object, ...] = (after_sequence, limit)
+            parameters = (after_sequence, after_sequence, limit)
         else:
-            query = (
-                "SELECT payload_json FROM mission_control_events "
-                "WHERE sequence > ? AND job_id = ? ORDER BY sequence LIMIT ?"
-            )
-            parameters = (after_sequence, job_id, limit)
+            parameters = (after_sequence, job_id, after_sequence, job_id, limit)
         with self._lock:
             rows = self._connection.execute(query, parameters).fetchall()
-        return [RenderEvent.model_validate_json(str(row["payload_json"])) for row in rows]
+        return [
+            VideoGenerationEvent.model_validate_json(str(row["payload_json"]))
+            if str(row["event_kind"]) == "video_generation"
+            else RenderEvent.model_validate_json(str(row["payload_json"]))
+            for row in rows
+        ]
 
     def latest_event_sequence(self) -> int:
         with self._lock:
             row = self._connection.execute(
-                "SELECT COALESCE(MAX(sequence), 0) AS sequence FROM mission_control_events"
+                "SELECT next_sequence - 1 AS sequence FROM mission_control_event_sequence WHERE singleton = 1"
             ).fetchone()
         return int(row["sequence"]) if row is not None else 0
 

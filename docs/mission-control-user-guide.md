@@ -128,6 +128,18 @@ uses High (never Realtime) Blender priority. Review AC power and temperature.
 Mission Control records and restores the previous state afterward; **Restore
 now** is available when manual recovery is needed.
 
+## Video generation
+
+The **Video** page turns one completed TrackPrompt analysis into a complete provider-generated music video without creating a second dashboard or job system.
+
+Select the analysis, content package, and delivery profile. Fast 1080p is the default final target; standard 1080p and 4K are optional higher-cost rerenders. Enter the GCP project and private bucket, then select the original local audio master when the analysis job does not retain it.
+
+**Compile exact video plan** is local and nonbillable. Review every prompt, the exact provider request list, dated price rate, base/conservative estimates, hard maximum, and digest. The authorization button remains disabled until the displayed one-time phrase is entered exactly. **Start smoke shot and complete batch** is a separate action and the first one permitted to submit a paid request.
+
+Mission Control runs shot 001 first using the same exact profile and plan. When that clip downloads and passes local resolution/FPS/duration/no-audio verification, it continues the remaining shots automatically. Per-shot cards show attempts, safe failures and filters, previews, accept/reject, and bounded retry. **Cancel batch safely** stops continuation without deleting evidence or valid clips.
+
+When generation is technically complete, Mission Control resolves the full-song timeline against the original local audio, exports FCPXML/XML/EDL/edit-sheet/marker files, and assembles a complete preview. Open the output in DaVinci Resolve for final artistic touches. Refreshing the browser only reconnects to backend-owned SSE state; it never restarts or duplicates a provider attempt.
+
 ## Cloud rendering
 
 The Cloud page is inspection-only until its local package registry and a live

@@ -6,6 +6,7 @@ export type MissionSection =
   | 'jobs'
   | 'director'
   | 'encode'
+  | 'video'
   | 'cloud'
   | 'settings'
 

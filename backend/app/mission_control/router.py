@@ -13,6 +13,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 from ..cinematic.schemas import ArtDirectionReview
+from ..video_generation.mission_models import (
+    VideoAuthorizationRequest,
+    VideoCatalog,
+    VideoDoctorRequest,
+    VideoDoctorView,
+    VideoJobView,
+    VideoPlanCreateRequest,
+    VideoRequestPreview,
+    VideoReviewRequest,
+)
 from .config import MissionControlConfig
 from .errors import MissionControlError
 from .models import (
@@ -449,6 +459,119 @@ async def resume_render(
     return await _service(request).resume(job_id, payload)
 
 
+@router.get("/video/catalog", response_model=VideoCatalog)
+async def video_catalog(request: Request) -> VideoCatalog:
+    return _service(request).video_generation.catalog()
+
+
+@router.get("/video/jobs", response_model=list[VideoJobView])
+async def video_jobs(request: Request) -> list[VideoJobView]:
+    return _service(request).video_generation.jobs()
+
+
+@router.post("/video/plans", response_model=VideoJobView)
+async def create_video_plan(
+    payload: VideoPlanCreateRequest,
+    request: Request,
+) -> VideoJobView:
+    return await _service(request).video_generation.create_plan(payload)
+
+
+@router.get("/video/plans/{job_id}", response_model=VideoJobView)
+async def get_video_plan(job_id: str, request: Request) -> VideoJobView:
+    return _service(request).video_generation.get(job_id)
+
+
+@router.get("/video/plans/{job_id}/requests", response_model=VideoRequestPreview)
+async def get_video_requests(job_id: str, request: Request) -> VideoRequestPreview:
+    return _service(request).video_generation.request_preview(job_id)
+
+
+@router.post("/video/plans/{job_id}/authorize", response_model=VideoJobView)
+async def authorize_video_plan(
+    job_id: str,
+    payload: VideoAuthorizationRequest,
+    request: Request,
+) -> VideoJobView:
+    return await _service(request).video_generation.authorize(job_id, payload)
+
+
+@router.post("/video/jobs/{job_id}/start", response_model=VideoJobView)
+async def start_video_job(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.start(job_id)
+
+
+@router.post("/video/jobs/{job_id}/resume", response_model=VideoJobView)
+async def resume_video_job(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.resume(job_id)
+
+
+@router.post("/video/jobs/{job_id}/cancel", response_model=VideoJobView)
+async def cancel_video_job(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.cancel(job_id)
+
+
+@router.post("/video/jobs/{job_id}/shots/{shot_id}/retry", response_model=VideoJobView)
+async def retry_video_shot(job_id: str, shot_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.retry(job_id, shot_id)
+
+
+@router.post("/video/jobs/{job_id}/shots/{shot_id}/review", response_model=VideoJobView)
+async def review_video_shot(
+    job_id: str,
+    shot_id: str,
+    payload: VideoReviewRequest,
+    request: Request,
+) -> VideoJobView:
+    return await _service(request).video_generation.review(job_id, shot_id, payload)
+
+
+@router.post("/video/jobs/{job_id}/resolve", response_model=VideoJobView)
+async def resolve_video_timeline(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.resolve(job_id)
+
+
+@router.post("/video/jobs/{job_id}/export", response_model=VideoJobView)
+async def export_video_timeline(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.export(job_id)
+
+
+@router.post("/video/jobs/{job_id}/assemble", response_model=VideoJobView)
+async def assemble_video_preview(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.assemble(job_id)
+
+
+@router.post("/video/doctor", response_model=VideoDoctorView)
+async def video_doctor(payload: VideoDoctorRequest, request: Request) -> VideoDoctorView:
+    return await _service(request).video_generation.doctor(payload)
+
+
+@router.post("/video/jobs/{job_id}/open", response_model=OpenPathResult)
+async def open_video_output(job_id: str, request: Request) -> OpenPathResult:
+    target = await _service(request).video_generation.open_output(job_id)
+    return OpenPathResult(opened=True, path=str(target))
+
+
+@router.get("/video/jobs/{job_id}/shots/{shot_id}/clip")
+async def video_clip(job_id: str, shot_id: str, request: Request) -> FileResponse:
+    path = _service(request).video_generation.artifact_path(job_id, "clip", shot_id=shot_id)
+    return FileResponse(path, media_type="video/mp4", filename=f"{shot_id}.mp4")
+
+
+@router.get("/video/jobs/{job_id}/artifacts/{artifact}")
+async def video_artifact(job_id: str, artifact: str, request: Request) -> FileResponse:
+    path = _service(request).video_generation.artifact_path(job_id, artifact)
+    media_types = {
+        "fcpxml": "application/xml",
+        "fcp7": "application/xml",
+        "edl": "text/plain",
+        "edit-sheet": "text/csv",
+        "markers": "text/csv",
+        "preview": "video/mp4",
+    }
+    return FileResponse(path, media_type=media_types.get(artifact, "application/octet-stream"))
+
+
 @router.get("/events")
 async def events(
     request: Request,
@@ -477,7 +600,12 @@ async def events(
                         event.model_dump(mode="json", by_alias=True),
                         separators=(",", ":"),
                     )
-                    yield f"id: {event.sequence}\nevent: render\ndata: {data}\n\n"
+                    event_name = (
+                        "video_generation"
+                        if getattr(event, "event_kind", None) == "video_generation"
+                        else "render"
+                    )
+                    yield f"id: {event.sequence}\nevent: {event_name}\ndata: {data}\n\n"
                 continue
             yield ": heartbeat\n\n"
             await service.wait_for_events(observed_generation)

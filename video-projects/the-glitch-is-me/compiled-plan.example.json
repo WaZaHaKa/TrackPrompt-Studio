@@ -1,0 +1,464 @@
+{
+  "cost": {
+    "baseEstimatedUsd": 12.8,
+    "conservativeEstimatedUsd": 19.2,
+    "maxSpendUsd": 24.0
+  },
+  "planDigest": "45eb57209615b899504e6b316ad09c3e5067d04c00c77d83676fe788756e1db9",
+  "profile": {
+    "aspectRatio": "16:9",
+    "compressionQuality": "optimized",
+    "durationSeconds": 8,
+    "enhancePrompt": true,
+    "fps": 24,
+    "generateAudio": false,
+    "modelId": "veo-3.1-fast-generate-001",
+    "personGeneration": "allow_adult",
+    "profileId": "final-fast-1080p",
+    "resolution": "1080p",
+    "sampleCount": 1
+  },
+  "projectId": "the-glitch-is-me",
+  "schemaVersion": "1.0.0",
+  "shots": [
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "digital-ocean",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, person, face, city skyline, literal circuit board",
+      "order": 1,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Open the film with a quiet impossible world that feels halfway between water and computation.. Shot action and environment: Extreme macro view of one heavy water droplet falling in near darkness, then slowing until it hangs motionless above a black reflective ocean. Inside the droplet, tiny violet signal patterns drift like plankton. The camera makes an almost imperceptible push forward while concentric ripples move below without an obvious source. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: wet black ocean, violet signal plankton, restrained amber glint.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Droplet must remain coherent.",
+        "No text-like symbols inside the droplet.",
+        "Reserve empty space for the opening title added later in Resolve if desired."
+      ],
+      "sampleCount": 1,
+      "seed": 18031001,
+      "shotId": "shot-001",
+      "sourceSectionHints": [
+        "intro",
+        "ambient opening",
+        "low energy"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-001/",
+      "title": "Suspended Droplet in the Digital Ocean"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "digital-ocean",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, robot joints, metal body, superhero pose, dramatic mouth movement",
+      "order": 2,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Introduce the recurring protagonist as a signal becoming human rather than a robot.. Shot action and environment: Wide underwater-like chamber with no visible walls. The Quantum Siren gradually assembles from silver mist, fine static and transparent ribbons of water, first as a distant silhouette and then as a fully coherent adult woman. Her long black hair and charcoal fabric float gently. She opens her eyes near the end while the camera performs a slow half orbit. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, charcoal floating fabric, translucent signal fractures.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Adult appearance must be unambiguous.",
+        "Face and costume become continuity reference for all later Siren shots."
+      ],
+      "sampleCount": 1,
+      "seed": 18031002,
+      "shotId": "shot-002",
+      "sourceSectionHints": [
+        "intro",
+        "vocal entrance",
+        "awakening"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-002/",
+      "title": "The Siren Materializes"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-flicker",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, cozy bedroom, furniture clutter, horror asylum, violent strobe",
+      "order": 3,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Show physical isolation inside an unstable digital frame.. Shot action and environment: A sparse cold room made from wet concrete and smoked glass flickers between solid reality and a precise wireframe absence. The Quantum Siren sits alone at the far edge of a narrow bed, almost motionless, while the light above her fails in slow irregular pulses. The camera tracks laterally behind translucent foreground glass, producing deep parallax and emotional distance. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, wet concrete room, single failing practical light.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Flicker must be slow enough for comfortable viewing.",
+        "Keep face readable when visible."
+      ],
+      "sampleCount": 1,
+      "seed": 18031003,
+      "shotId": "shot-003",
+      "sourceSectionHints": [
+        "verse 1",
+        "flicker",
+        "intimate vocal"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-003/",
+      "title": "Cold Flickering Room"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-flicker",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable numbers, complete second face, floating emoji, literal hologram interface",
+      "order": 4,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Visualize an emotionally remembered person without creating a second identifiable character.. Shot action and environment: In a black void, a graceful curve resembling a remembered smile forms from thousands of tiny luminous points and soft numerical geometry, but never becomes a complete human face. The Quantum Siren reaches toward it from the edge of frame; the shape ripples away before contact. Slow macro-to-medium rack focus, shallow depth of field, melancholy restraint. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: violet point constellation, Siren hand, wet silver refraction.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "The smile remains abstract and non-identifying.",
+        "Hand anatomy must be clean."
+      ],
+      "sampleCount": 1,
+      "seed": 18031004,
+      "shotId": "shot-004",
+      "sourceSectionHints": [
+        "verse 1",
+        "memory",
+        "touch"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-004/",
+      "title": "Impossible Smile Reconstruction"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "unsolvable-distance",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable formulas, romantic embrace, detailed second person, sci-fi control room",
+      "order": 5,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Turn emotional distance into impossible spatial mathematics during the first chorus.. Shot action and environment: An immense dark chamber is divided by floating translucent planes that fold into an impossible geometric distance. The Quantum Siren stands on one side while a warm human-shaped glow, intentionally faceless and abstract, remains unreachable on the other. Every step she takes causes the space between them to expand. The camera cranes upward to reveal the repeating geometry. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, translucent impossible planes, distant amber glow.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Keep the warm figure abstract.",
+        "Geometry should expand clearly without becoming frenetic."
+      ],
+      "sampleCount": 1,
+      "seed": 18031005,
+      "shotId": "shot-005",
+      "sourceSectionHints": [
+        "chorus 1",
+        "distance",
+        "emotional lift"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-005/",
+      "title": "The Distance Equation"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "unsolvable-distance",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, gore, skeleton bodies, skull pile, haunted-house cliché, violent collapse",
+      "order": 6,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Create the chorus's strongest recurring architectural symbol.. Shot action and environment: A surreal cathedral-like house built from smooth bone-white arches floats above the digital ocean. The Quantum Siren walks through its open center as the structure slowly fractures into weightless ivory dust, exposing a starless void. The camera begins at human height and pulls back into a monumental wide shot while pieces drift in elegant slow motion. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: bone-white arches, Quantum Siren, black digital ocean.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Bone architecture must feel sculptural, not graphic or gory.",
+        "Capture a clean wide ending frame for reuse."
+      ],
+      "sampleCount": 1,
+      "seed": 18031006,
+      "shotId": "shot-006",
+      "sourceSectionHints": [
+        "chorus 1",
+        "house of bone",
+        "release"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-006/",
+      "title": "House Made of Bone"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-mirror",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, horror face, eyeless monster, broken mirror shards, aggressive jump scare",
+      "order": 7,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Make the loss of self literal while preserving a refined dream-pop image.. Shot action and environment: The Quantum Siren stands before a tall sheet of wet black glass in an empty violet chamber. Her body is reflected accurately, but where her reflected face should be there is only deep moving water and faint static. She slowly raises one hand; the reflection responds a fraction of a second late. The camera slides from profile toward the mirror without crossing the axis. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, wet black mirror, violet chamber.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Delay in the reflection should be readable but subtle.",
+        "Real face must remain consistent."
+      ],
+      "sampleCount": 1,
+      "seed": 18031007,
+      "shotId": "shot-007",
+      "sourceSectionHints": [
+        "verse 2",
+        "mirror",
+        "identity"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-007/",
+      "title": "Mirror Without a Face"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-mirror",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, recognizable faces, branded storefronts, readable signs, busy tourist footage, upbeat mood",
+      "order": 8,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Contrast the protagonist's stillness with a life continuing far away.. Shot action and environment: Viewed through thick rain-covered cobalt glass, a distant crowd flows through an unfamiliar town square as soft anonymous silhouettes. The Quantum Siren remains on the near side, perfectly still and separated from them by the glass. The camera slowly dollies backward, making her reflection merge with the moving crowd while none of the background people become individually identifiable. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, rain-covered cobalt glass, anonymous soft crowd.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "No readable signage.",
+        "Background crowd must stay anonymous and non-distracting."
+      ],
+      "sampleCount": 1,
+      "seed": 18031008,
+      "shotId": "shot-008",
+      "sourceSectionHints": [
+        "verse 2",
+        "distant town",
+        "crowd"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-008/",
+      "title": "Distant Crowd Through Blue Glass"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-split",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, severed hand, injury, blood, branded microphone, concert stage, singer performance",
+      "order": 9,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Strip the image down for the urgent spoken bridge.. Shot action and environment: Near-total darkness. A pale adult hand belonging to the Quantum Siren reaches slowly across a wet black floor toward a broken vintage microphone with no logo. A thin cable disappears into darkness and emits one faint violet pulse. The camera is low and close, gliding beside the hand; reflected droplets tremble with each pulse. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Siren hand, unbranded broken microphone, single violet pulse.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Hand is attached/implied attached and never graphic.",
+        "Microphone must have no visible trademark."
+      ],
+      "sampleCount": 1,
+      "seed": 18031009,
+      "shotId": "shot-009",
+      "sourceSectionHints": [
+        "bridge",
+        "spoken word",
+        "broken mic"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-009/",
+      "title": "Cold Hand and Broken Microphone"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "the-split",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, rapid glitch cuts, teleportation flash, multiple different women, clone army, strobing",
+      "order": 10,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Represent the bridge's temporal fracture without a conventional glitch montage.. Shot action and environment: The Quantum Siren walks through a narrow dark corridor while three translucent temporal echoes of her body separate by a few inches, each moving at a slightly different phase. The corridor itself remains stable, but droplets, fabric and her shadow fall out of synchronization. One slow forward tracking shot; the layers nearly reunite at the end and then miss. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, three temporal echoes, stable black corridor.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "All echoes must clearly be the same adult protagonist.",
+        "Avoid severe flicker."
+      ],
+      "sampleCount": 1,
+      "seed": 18031010,
+      "shotId": "shot-010",
+      "sourceSectionHints": [
+        "bridge",
+        "time splitting",
+        "pulse wrong"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-010/",
+      "title": "Time Splits Out of Sync"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "liquid-circuit",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, literal guitar, musician, music visualizer bars, equalizer, laser show, festival stage",
+      "order": 11,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Translate the psychedelic delayed guitar solo into physical light and fluid motion.. Shot action and environment: No literal musician. Long liquid filaments of silver, cobalt and violet light bend through a black volume like delayed guitar notes made visible. Each filament leaves a soft phasing echo, crosses another strand, then blooms into circular interference patterns above the digital ocean. The camera flies slowly between the strands in a graceful continuous arc. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: liquid luminous filaments, digital ocean, phasing circular echoes.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Must feel organic and musical without showing an instrument.",
+        "Avoid generic screensaver appearance."
+      ],
+      "sampleCount": 1,
+      "seed": 18031011,
+      "shotId": "shot-011",
+      "sourceSectionHints": [
+        "guitar solo",
+        "psychedelic",
+        "instrumental"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-011/",
+      "title": "Liquid Guitar Filaments"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "liquid-circuit",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, medical brain scan, literal satellite hardware, exposed skull, science diagram, readable UI",
+      "order": 12,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Introduce the satellite-pulse motif that can bridge the solo into the final chorus.. Shot action and environment: A translucent side silhouette of the Quantum Siren floats in a dark celestial-water space. Behind and within the back of her head, one small amber satellite-like pulse travels along a delicate orbit, sending slow concentric waves through her hair and the surrounding water. The camera orbits in the opposite direction, creating hypnotic counter-motion. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren profile, single amber pulse, cobalt water-space.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Pulse is beautiful but painful, never threatening.",
+        "Keep profile consistent with prior shots."
+      ],
+      "sampleCount": 1,
+      "seed": 18031012,
+      "shotId": "shot-012",
+      "sourceSectionHints": [
+        "guitar solo",
+        "satellite pulse",
+        "transition"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-012/",
+      "title": "Satellite Pulse Behind the Mind"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "transcendence",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, angel wings, superhero costume, religious iconography, screaming mouth, concert performance",
+      "order": 13,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Deliver the final chorus's operatic visual expansion.. Shot action and environment: The Quantum Siren rises from the black digital ocean as enormous translucent sheets of water and glass unfold behind her like abstract wings, never literal feathers. Her charcoal fabric expands in slow motion; controlled violet and amber light breaks through the darkness. The camera cranes from a close low angle into a vast heroic wide shot while she remains emotionally vulnerable, not triumphant. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, abstract water-glass wings, violet and amber release.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Maximum scale while retaining sadness.",
+        "No literal angel imagery."
+      ],
+      "sampleCount": 1,
+      "seed": 18031013,
+      "shotId": "shot-013",
+      "sourceSectionHints": [
+        "final chorus",
+        "operatic power",
+        "transcendence"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-013/",
+      "title": "Siren Breaks Through the Machine"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "transcendence",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable equations, romantic reunion, explosive destruction, space battle, planet Earth",
+      "order": 14,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Resolve the distance geometry into a beautiful but unresolved cosmic release.. Shot action and environment: The impossible translucent planes from the earlier distance chamber fold inward around the Quantum Siren, then dissolve into a field of slow silver particles that resemble distant stars. The warm faceless glow remains far away, but one narrow amber line briefly connects them before fading. A smooth 360-degree orbit reveals the bone-white house fragments suspended around the scene. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, distance planes, bone-house fragments, distant amber glow.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Echo earlier motifs clearly.",
+        "Connection line must remain temporary and delicate."
+      ],
+      "sampleCount": 1,
+      "seed": 18031014,
+      "shotId": "shot-014",
+      "sourceSectionHints": [
+        "final chorus",
+        "distance returns",
+        "maximum release"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-014/",
+      "title": "The Equation Dissolves into Stars"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "system-failure",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, explosion, apocalypse, debris impact, horror void creature, sudden blackout",
+      "order": 15,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Let the arrangement and world fall away together in the outro.. Shot action and environment: The digital ocean, bone fragments and translucent geometry gradually lose structure and dissolve upward into soft mist and long trails of static. The Quantum Siren stands alone on a narrow reflective surface as the environment disappears around her. The camera slowly retreats, exposure gently falls, and only a faint violet outline remains. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, dissolving digital ocean, faint violet outline.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Dissolution should be graceful and gradual.",
+        "Preserve a clean silhouette until late in the clip."
+      ],
+      "sampleCount": 1,
+      "seed": 18031015,
+      "shotId": "shot-015",
+      "sourceSectionHints": [
+        "outro",
+        "system failure",
+        "dissolve"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-015/",
+      "title": "World Dissolves into Reverb"
+    },
+    {
+      "aspectRatio": "16:9",
+      "chapterId": "system-failure",
+      "durationSeconds": 8,
+      "estimatedCostUsd": 0.8,
+      "generateAudio": false,
+      "modelId": "veo-3.1-fast-generate-001",
+      "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, body horror, dismemberment, death scene, dramatic scream, direct lip sync, complete face melting",
+      "order": 16,
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: End with the revelation that the glitch belongs to the protagonist herself.. Shot action and environment: Close rear three-quarter view of the Quantum Siren standing at the edge of a black reflective plane that ends in infinite darkness. Fine square fragments begin at her fingertips and travel slowly inward through her body, revealing that the signal failure originates within her. Just before she disappears, she turns her head slightly toward camera; one human eye remains clear as the final violet fragment fades. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, black reflective brink, fine violet pixel fragments.",
+      "required": true,
+      "resolution": "1080p",
+      "reviewNotes": [
+        "Transformation remains poetic, not graphic.",
+        "Final eye should be stable enough for a held ending frame."
+      ],
+      "sampleCount": 1,
+      "seed": 18031016,
+      "shotId": "shot-016",
+      "sourceSectionHints": [
+        "outro",
+        "final whisper",
+        "the glitch is me"
+      ],
+      "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-016/",
+      "title": "The Pixelated Brink"
+    }
+  ],
+  "sourceArtifacts": {
+    "creativeBibleSha256": "1bd7db889702d1d414e72e52bd99b9e7c6c5d9a88c192c7ef4cabbc10156d1d3",
+    "projectConfigSha256": "baa62c3c0b835cb5b8cacef5cc3c39ccc519a8a328ccd1c14ec891a9ab03bd76",
+    "shotBankSha256": "ab0623ed25b859c7f276cac7130a3c2cea734067e2ffe2a6be754787d1310f59"
+  },
+  "title": "The Glitch Is Me"
+}

@@ -1,0 +1,159 @@
+{
+  "$id": "https://wzhk.local/schemas/video-project.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "generationProfiles": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "modelId": {
+                  "const": "veo-3.1-fast-generate-001"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "resolution": {
+                  "enum": [
+                    "720p",
+                    "1080p"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "aspectRatio": {
+            "enum": [
+              "16:9",
+              "9:16"
+            ]
+          },
+          "compressionQuality": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "enum": [
+              4,
+              6,
+              8
+            ]
+          },
+          "enhancePrompt": {
+            "type": "boolean"
+          },
+          "fps": {
+            "const": 24
+          },
+          "generateAudio": {
+            "const": false
+          },
+          "modelId": {
+            "enum": [
+              "veo-3.1-fast-generate-001",
+              "veo-3.1-generate-001"
+            ]
+          },
+          "personGeneration": {
+            "enum": [
+              "allow_adult",
+              "dont_allow"
+            ]
+          },
+          "profileId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "resolution": {
+            "enum": [
+              "720p",
+              "1080p",
+              "4k"
+            ]
+          },
+          "sampleCount": {
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profileId",
+          "modelId",
+          "resolution",
+          "aspectRatio",
+          "fps",
+          "durationSeconds",
+          "sampleCount",
+          "generateAudio"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "localOutputRoot": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "maxSpendUsd": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "projectId": {
+      "pattern": "^[a-z0-9][a-z0-9-]+$",
+      "type": "string"
+    },
+    "requiredShotIds": {
+      "items": {
+        "pattern": "^shot-[0-9]{3}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "retryReserveFactor": {
+      "minimum": 1,
+      "type": "number"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "selectedProfileId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "storagePrefix": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "timeline": {
+      "type": "object"
+    },
+    "title": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "selectedProfileId",
+    "generationProfiles",
+    "maxSpendUsd",
+    "retryReserveFactor",
+    "requiredShotIds",
+    "storagePrefix",
+    "localOutputRoot",
+    "timeline"
+  ],
+  "title": "TrackPrompt video project configuration",
+  "type": "object"
+}

@@ -1,0 +1,136 @@
+{
+  "$id": "https://wzhk.local/schemas/shot-bank.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "projectId": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "shotCount": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "shots": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "chapterId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "continuityTokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "continuityGroupIds": {
+            "items": { "type": "string" },
+            "minItems": 1,
+            "type": "array"
+          },
+          "continuationMode": {
+            "enum": ["prompt-anchors", "first-frame-reference", "accepted-previous-shot-end-frame"]
+          },
+          "energyRange": {
+            "items": {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "narrativeIntent": {
+            "minLength": 10,
+            "type": "string"
+          },
+          "negativePrompt": {
+            "minLength": 10,
+            "type": "string"
+          },
+          "order": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "previousShotId": {
+            "type": ["string", "null"]
+          },
+          "prompt": {
+            "minLength": 40,
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "reuseModes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "reviewNotes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "seed": {
+            "maximum": 4294967295,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "shotId": {
+            "pattern": "^shot-[0-9]{3}$",
+            "type": "string"
+          },
+          "sourceSectionHints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "shotId",
+          "chapterId",
+          "order",
+          "title",
+          "narrativeIntent",
+          "prompt",
+          "negativePrompt",
+          "sourceSectionHints",
+          "energyRange",
+          "seed",
+          "required",
+          "reuseModes",
+          "continuityTokens",
+          "continuityGroupIds",
+          "previousShotId",
+          "continuationMode",
+          "reviewNotes"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "shots",
+    "shotCount"
+  ],
+  "title": "TrackPrompt video shot bank",
+  "type": "object"
+}

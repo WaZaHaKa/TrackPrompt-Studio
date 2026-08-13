@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "editorialPrinciples": [
+    "The original audio file is the only master clock.",
+    "Prefer deliberate cuts on percussion/transient boundaries discovered by TrackPrompt; do not manufacture constant rapid cutting.",
+    "Reuse generated clips with alternate in-points, restrained crops, overlays and occasional reverse motion, but never place the exact same framing back-to-back.",
+    "Use dissolves primarily at chapter boundaries; the bridge may use two-frame glitch cuts.",
+    "Add titles, artist text and credits only in DaVinci Resolve, never in generated footage."
+  ],
+  "gradeTarget": {
+    "workingColorSpace": "DaVinci Wide Gamut / Intermediate or project default",
+    "delivery": "Rec.709 Gamma 2.4",
+    "notes": "Protect cobalt shadow separation, keep amber highlights rare, unify blacks without crushing wet-glass detail."
+  },
+  "finishingOptions": [
+    "Subtle 35mm grain applied once at timeline level.",
+    "Very restrained chromatic separation only at declared glitch cuts.",
+    "Optional letterbox added at final timeline level, not burned into generated clips.",
+    "Use optical flow only after visual review; generated clips already target 24 FPS."
+  ]
+}

@@ -15,6 +15,8 @@ those are not part of TrackPrompt Studio.
 The UI and `/api/capabilities` expose `networkFeaturesEnabled`; it is `false` in
 this release.
 
+The optional operator-authorized GCP video path is a distinct exception to the normal-analysis network boundary. Planning, audio analysis, StoryPlan/ShotPlan compilation, timeline work, exports, and assembly remain local. Only sanitized visual prompts, exact video-generation parameters, and a private GCS output prefix are sent after the local operator reviews an immutable plan and enters its exact maximum-spend phrase. The song, lyrics, stems, source filename, local paths, and bearer credentials are never included. `generateAudio` is always false; the original local master is muxed only by FFmpeg after verified clips return.
+
 The local API validates the `Host` of every `/api/` request against
 `ALLOWED_HOSTS` plus configured origin hosts. It rejects browser requests marked
 cross-site and requires a configured `CORS_ORIGINS` match when a mutating request

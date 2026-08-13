@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "new-track-project",
+  "bindingMode": "normalized ranges snapped to nearest existing TrackPrompt ShotPlan boundary within 3 seconds",
+  "chapters": [
+    {
+      "chapterId": "opening",
+      "title": "01 — Opening",
+      "startFraction": 0.0,
+      "endFraction": 0.5,
+      "shotIds": ["shot-001"],
+      "transitionIn": "fade-from-black",
+      "transitionOut": "dissolve-8f"
+    },
+    {
+      "chapterId": "release",
+      "title": "02 — Release",
+      "startFraction": 0.5,
+      "endFraction": 1.0,
+      "shotIds": ["shot-002"],
+      "transitionIn": "dissolve-8f",
+      "transitionOut": "fade-to-black"
+    }
+  ]
+}

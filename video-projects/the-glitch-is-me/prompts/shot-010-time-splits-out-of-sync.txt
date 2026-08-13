@@ -1,0 +1,14 @@
+SHOT shot-010 — Time Splits Out of Sync
+
+NARRATIVE INTENT
+Represent the bridge's temporal fracture without a conventional glitch montage.
+
+SHOT PROMPT
+The Quantum Siren walks through a narrow dark corridor while three translucent temporal echoes of her body separate by a few inches, each moving at a slightly different phase. The corridor itself remains stable, but droplets, fabric and her shadow fall out of synchronization. One slow forward tracking shot; the layers nearly reunite at the end and then miss.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, rapid glitch cuts, teleportation flash, multiple different women, clone army, strobing
+
+REVIEW NOTES
+- All echoes must clearly be the same adult protagonist.
+- Avoid severe flicker.

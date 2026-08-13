@@ -1,0 +1,14 @@
+SHOT shot-005 — The Distance Equation
+
+NARRATIVE INTENT
+Turn emotional distance into impossible spatial mathematics during the first chorus.
+
+SHOT PROMPT
+An immense dark chamber is divided by floating translucent planes that fold into an impossible geometric distance. The Quantum Siren stands on one side while a warm human-shaped glow, intentionally faceless and abstract, remains unreachable on the other. Every step she takes causes the space between them to expand. The camera cranes upward to reveal the repeating geometry.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable formulas, romantic embrace, detailed second person, sci-fi control room
+
+REVIEW NOTES
+- Keep the warm figure abstract.
+- Geometry should expand clearly without becoming frenetic.

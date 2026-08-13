@@ -128,6 +128,20 @@ uses High (never Realtime) Blender priority. Review AC power and temperature.
 Mission Control records and restores the previous state afterward; **Restore
 now** is available when manual recovery is needed.
 
+## Video generation
+
+The **Video** page turns one completed TrackPrompt analysis into a complete provider-generated music video without creating a second dashboard or job system.
+
+Select the analysis, content package, and delivery profile. Fast 1080p is the default final target and standard 1080p is the optional higher-quality rerender. The 4K profile remains visible but unavailable because the current GA Veo endpoints accept only 720p/1080p; enabling 4K requires a newly reviewed supported model contract. Enter the GCP project and private bucket, then select the original local audio master when the analysis job does not retain it.
+
+The Video screen also exposes the provider-neutral continuity profile, a master seed lock/new-seed control, continuity groups, and an optional private JPEG/PNG first-frame reference. Same-setup retry preserves seed and references. New-variation retry changes the seed and plan digest and therefore returns to plan review for a new authorization phrase. After accepting a verified shot, its final frame can be chained to its declared next shot; that reference change also requires fresh authorization.
+
+**Compile exact video plan** is local and nonbillable. Review every prompt, the exact provider request list, dated price rate, base/conservative estimates, hard maximum, and digest. The authorization button remains disabled until the displayed one-time phrase is entered exactly. **Start smoke shot and complete batch** is a separate action and the first one permitted to submit a paid request.
+
+Mission Control runs shot 001 first using the same exact profile and plan. When that clip downloads and passes local resolution/FPS/duration/no-audio verification, it continues the remaining shots automatically. Per-shot cards show attempts, safe failures and filters, previews, accept/reject, and bounded retry. **Cancel batch safely** stops continuation without deleting evidence or valid clips.
+
+When generation is technically complete, Mission Control resolves the full-song timeline against the original local audio, exports FCPXML/XML/EDL/edit-sheet/marker files, and assembles a complete preview. Open the output in DaVinci Resolve for final artistic touches. Refreshing the browser only reconnects to backend-owned SSE state; it never restarts or duplicates a provider attempt.
+
 ## Cloud rendering
 
 The Cloud page is inspection-only until its local package registry and a live

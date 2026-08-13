@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "title": "The Glitch Is Me",
+  "visualIdentity": "A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human.",
+  "protagonist": "The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot.",
+  "palette": [
+    "midnight black",
+    "cold cobalt blue",
+    "deep violet",
+    "wet silver",
+    "rare restrained amber highlights"
+  ],
+  "cameraLanguage": [
+    "slow deliberate dolly or orbital movement",
+    "macro detail alternating with wide negative space",
+    "deep parallax",
+    "24 FPS cinematic motion",
+    "stable horizon unless the narrative explicitly fractures"
+  ],
+  "lightingLanguage": [
+    "soft volumetric shafts",
+    "underwater caustics",
+    "flickering practical light",
+    "rim light around translucent edges",
+    "controlled highlights with rich shadow detail"
+  ],
+  "textureLanguage": [
+    "wet glass",
+    "fine film grain",
+    "subtle analog static",
+    "liquid diffraction",
+    "bone-white organic architecture",
+    "precise but sparse pixel fragmentation"
+  ],
+  "globalNegativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon",
+  "privacyRules": [
+    "Never insert source lyrics, transcript text, filenames, local paths, account identifiers or credentials into provider requests.",
+    "Only the compiled visual prompt and optional approved reference images may leave the local machine.",
+    "The original song remains local and is muxed after video generation."
+  ]
+}

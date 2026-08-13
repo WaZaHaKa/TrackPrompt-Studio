@@ -921,7 +921,48 @@
 .mc-director-editor__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .mc-muted { color: var(--mc-text-muted); }
 
+.mc-video-page > .mc-notice { margin-bottom: 18px; }
+.mc-video-setup,
+.mc-video-plan,
+.mc-video-delivery { margin-bottom: 18px; }
+.mc-video-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 18px; }
+.mc-video-form-grid .mc-field { max-width: none; }
+.mc-field input { min-height: 40px; min-width: 0; padding: 8px 10px; border: 1px solid var(--mc-border-strong); border-radius: 9px; background: var(--mc-surface); color: var(--mc-text); }
+.mc-video-audio { grid-column: span 2; }
+.mc-video-audio > span { display: flex; gap: 8px; }
+.mc-video-audio input { flex: 1 1 auto; }
+.mc-video-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 4px 0 18px; overflow: hidden; border: 1px solid var(--mc-border); border-radius: 11px; background: var(--mc-border); }
+.mc-video-metrics .mc-metric { min-width: 0; padding: 14px; background: var(--mc-surface-soft); }
+.mc-video-plan > .mc-progress { margin: 12px 0; }
+.mc-video-doctor { display: grid; gap: 7px; margin-top: 16px; }
+.mc-video-doctor > div { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--mc-surface-soft); }
+.mc-video-doctor span { display: grid; }
+.mc-video-doctor small { color: var(--mc-text-soft); }
+.mc-video-job-picker { max-width: 620px; }
+.mc-video-authorization { display: grid; gap: 11px; margin-top: 18px; padding: 18px; border: 1px solid var(--mc-warning); border-radius: 12px; background: var(--mc-warning-soft); }
+.mc-video-authorization .mc-field { max-width: 720px; margin: 0; }
+.mc-video-authorization code { overflow-wrap: anywhere; font-size: 11px; }
+.mc-video-shot-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.mc-video-shot { min-width: 0; }
+.mc-video-shot > header,
+.mc-video-shot > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mc-video-shot h2 { margin: 12px 0; font-size: 18px; }
+.mc-video-shot > p { color: var(--mc-text-soft); font-size: 12px; line-height: 1.65; }
+.mc-video-shot video,
+.mc-video-preview { width: 100%; border-radius: 10px; background: #05070a; aspect-ratio: 16 / 9; }
+.mc-video-shot__placeholder { display: grid; min-height: 180px; place-content: center; justify-items: center; gap: 8px; border-radius: 10px; background: linear-gradient(145deg, #101923, #192938); color: #80bfcb; }
+.mc-video-shot__placeholder svg { width: 28px; height: 28px; }
+.mc-video-shot footer > span { color: var(--mc-text-faint); font-size: 10px; }
+.mc-video-shot__error { display: block; margin-top: 8px; color: var(--mc-error); }
+.mc-video-delivery .mc-notice,
+.mc-video-delivery .mc-button-row,
+.mc-video-preview { margin-bottom: 16px; }
+.mc-video-artifacts { display: flex; flex-wrap: wrap; gap: 8px; }
+.mc-video-artifacts a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--mc-border); border-radius: 8px; color: var(--mc-accent); font-size: 11px; font-weight: 700; text-decoration: none; }
+.mc-video-artifacts svg { width: 14px; height: 14px; }
+
 @media (max-width: 1180px) {
+  .mc-video-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mc-root { grid-template-columns: 210px minmax(0, 1fr); }
   .mc-profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mc-hero-card { grid-template-columns: minmax(0, 1.5fr) minmax(210px, .6fr); }
@@ -970,6 +1011,11 @@
   .mc-hero-card__metrics .mc-metric:last-child { border-bottom: 0; }
   .mc-profile-grid,
   .mc-encode-grid { grid-template-columns: 1fr; }
+  .mc-video-form-grid,
+  .mc-video-shot-grid,
+  .mc-video-metrics { grid-template-columns: 1fr; }
+  .mc-video-audio { grid-column: auto; }
+  .mc-video-audio > span { align-items: stretch; flex-direction: column; }
   .mc-encode-telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mc-card { padding: 18px; }
   .mc-job-card { grid-template-columns: 1fr; gap: 16px; }

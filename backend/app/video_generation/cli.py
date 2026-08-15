@@ -438,6 +438,9 @@ def command_resolve_timeline(arguments: argparse.Namespace) -> None:
         audio_path=Path(arguments.audio),
         chapter_map_path=Path(arguments.chapter_map),
         clips_root=Path(arguments.clips_root),
+        edit_blueprint_path=(
+            Path(arguments.edit_blueprint) if arguments.edit_blueprint else None
+        ),
         output_width=arguments.width,
         output_height=arguments.height,
         fps=24,
@@ -543,6 +546,7 @@ def build_parser() -> argparse.ArgumentParser:
     timeline_parser.add_argument("--title", required=True)
     timeline_parser.add_argument("--audio", required=True)
     timeline_parser.add_argument("--chapter-map", required=True)
+    timeline_parser.add_argument("--edit-blueprint")
     timeline_parser.add_argument("--clips-root", required=True)
     timeline_parser.add_argument("--analysis-shot-plan")
     timeline_parser.add_argument("--generated-clip-duration-seconds", type=int, default=8)

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "projectId": "the-glitch-is-me",
   "editorialPrinciples": [
     "The original audio file is the only master clock.",
@@ -8,6 +8,68 @@
     "Use dissolves primarily at chapter boundaries; the bridge may use two-frame glitch cuts.",
     "Add titles, artist text and credits only in DaVinci Resolve, never in generated footage."
   ],
+  "timelineTreatment": {
+    "version": "the-glitch-is-me-rough-cut-1.0.0",
+    "targetEditSeconds": 4.5,
+    "default": {
+      "playbackRates": [0.92, 1.0, 1.06],
+      "playbackRateIndex": "timeline",
+      "cropScales": [1.02, 1.045, 1.07, 1.095],
+      "cropScaleIndex": "timeline",
+      "cropScaleIndexOffset": 1
+    },
+    "chapters": {
+      "unsolvable-distance": {
+        "shotSequence": ["shot-005", "shot-005", "shot-006", "shot-005", "shot-006"],
+        "playbackRates": [0.75, 0.88, 1.0],
+        "playbackRateIndex": "chapter",
+        "cropScales": [1.0, 1.025],
+        "cropScaleIndex": "chapter",
+        "cropScaleIndexOffset": 0
+      },
+      "transcendence": {
+        "shotSequence": ["shot-013", "shot-005", "shot-014", "shot-006", "shot-013", "shot-014", "shot-005", "shot-006"],
+        "playbackRates": [1.0, 1.18, 1.35, 1.5],
+        "playbackRateIndex": "chapter",
+        "cropScales": [1.08, 1.115, 1.15, 1.185],
+        "cropScaleIndex": "chapter",
+        "cropScaleIndexOffset": 0,
+        "reverse": {"shotIds": ["shot-006", "shot-014"], "index": "chapter", "modulo": 2, "remainders": [1]},
+        "pingPong": {"shotIds": ["shot-014"], "index": "chapter", "modulo": 4, "remainders": [2]},
+        "freeze": {"shotIds": ["shot-013", "shot-014"], "index": "chapter", "modulo": 3, "remainders": [0], "frames": 10},
+        "overlay": {"index": "chapter", "modulo": 4, "remainders": [1, 3], "preferredShotId": "shot-014", "fallbackShotId": "shot-006", "opacities": [0.16, 0.21, 0.26]}
+      },
+      "system-failure": {
+        "shotSequence": ["shot-015", "shot-016", "shot-001", "shot-002", "shot-016"],
+        "reverse": {"shotIds": ["shot-001", "shot-015"]},
+        "freeze": {"shotIds": ["shot-001", "shot-015"], "frames": 12},
+        "closingShotId": "shot-016",
+        "finalFadeOutFrames": 18
+      }
+    }
+  },
+  "exports": {
+    "fcpxml": "the-glitch-is-me-rough-cut.fcpxml",
+    "fcp7": "the-glitch-is-me-rough-cut-fcp7.xml",
+    "edl": "the-glitch-is-me-rough-cut.edl",
+    "preview1080p": "the-glitch-is-me-rough-cut-1080p.mp4",
+    "preview4k": "the-glitch-is-me-rough-cut-4k.mp4"
+  },
+  "coverage": {
+    "requiredShotIds": ["shot-001", "shot-002", "shot-003", "shot-004", "shot-005", "shot-006", "shot-007", "shot-008", "shot-009", "shot-010", "shot-011", "shot-012", "shot-013", "shot-014", "shot-015", "shot-016"],
+    "eventCountRange": [55, 80],
+    "openingShotId": "shot-001",
+    "closingShotId": "shot-016",
+    "chapterRequirements": [
+      {"id": "first-chorus-anchor", "chapterId": "unsolvable-distance", "requiredShotIds": ["shot-005", "shot-006"]},
+      {"id": "final-chorus-recurrence", "chapterId": "transcendence", "requiredShotIds": ["shot-005", "shot-006", "shot-013", "shot-014"]},
+      {"id": "closing-loop", "chapterId": "system-failure", "requiredShotIds": ["shot-001", "shot-002", "shot-015", "shot-016"], "endsWithShotId": "shot-016"}
+    ]
+  },
+  "handoff": {
+    "title": "The Glitch Is Me",
+    "summary": "The established deterministic rough cut preserves its chorus escalation, closing visual loop, alternate in-points and local-only treatments."
+  },
   "gradeTarget": {
     "workingColorSpace": "DaVinci Wide Gamut / Intermediate or project default",
     "delivery": "Rec.709 Gamma 2.4",

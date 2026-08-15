@@ -30,6 +30,15 @@ def _frames(value: int, fps: int) -> str:
     return f"{value}/{fps}s"
 
 
+def _media_path(item: dict[str, Any]) -> str:
+    derived = item.get("derivedMediaPath")
+    return str(derived) if isinstance(derived, str) else str(item["clipPath"])
+
+
+def _media_in_frames(item: dict[str, Any]) -> int:
+    return 0 if isinstance(item.get("derivedMediaPath"), str) else int(item["sourceInFrames"])
+
+
 def _require_timeline(
     value: dict[str, Any],
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -66,7 +75,7 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
     )
 
     asset_by_path: dict[str, str] = {}
-    for index, path in enumerate(dict.fromkeys(str(item["clipPath"]) for item in segments), start=1):
+    for index, path in enumerate(dict.fromkeys(_media_path(item) for item in segments), start=1):
         asset_id = f"r-video-{index:03d}"
         asset_by_path[path] = asset_id
         asset = ET.SubElement(
@@ -76,7 +85,10 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
                 "id": asset_id,
                 "name": Path(path).name,
                 "start": "0s",
-                "duration": _frames(int(timeline["generatedClipDurationSeconds"]) * fps, fps),
+                "duration": _frames(
+                    next(int(item["durationFrames"]) for item in segments if _media_path(item) == path),
+                    fps,
+                ),
                 "hasVideo": "1",
                 "hasAudio": "0",
                 "format": format_id,
@@ -157,10 +169,10 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
             "asset-clip",
             {
                 "name": f"{item['segmentId']} {item['shotId']}",
-                "ref": asset_by_path[str(item["clipPath"])],
+                "ref": asset_by_path[_media_path(item)],
                 "lane": "1",
                 "offset": _frames(int(item["timelineStartFrames"]), fps),
-                "start": _frames(int(item["sourceInFrames"]), fps),
+                "start": _frames(_media_in_frames(item), fps),
                 "duration": _frames(int(item["durationFrames"]), fps),
             },
         )
@@ -226,11 +238,11 @@ def export_fcp7_xml(value: dict[str, Any], output_path: Path) -> None:
 
     file_ids: dict[str, str] = {}
     for index, item in enumerate(segments, start=1):
-        path = str(item["clipPath"])
+        path = _media_path(item)
         file_id = file_ids.setdefault(path, f"file-video-{len(file_ids) + 1:03d}")
         clipitem = ET.SubElement(track, "clipitem", {"id": f"clipitem-{index:04d}"})
         ET.SubElement(clipitem, "name").text = f"{item['segmentId']} {item['shotId']}"
-        ET.SubElement(clipitem, "duration").text = str(int(timeline["generatedClipDurationSeconds"]) * fps)
+        ET.SubElement(clipitem, "duration").text = str(int(item["durationFrames"]))
         clip_rate = ET.SubElement(clipitem, "rate")
         ET.SubElement(clip_rate, "timebase").text = str(fps)
         ET.SubElement(clip_rate, "ntsc").text = "FALSE"
@@ -238,12 +250,13 @@ def export_fcp7_xml(value: dict[str, Any], output_path: Path) -> None:
         ET.SubElement(clipitem, "end").text = str(
             int(item["timelineStartFrames"]) + int(item["durationFrames"])
         )
-        ET.SubElement(clipitem, "in").text = str(item["sourceInFrames"])
-        ET.SubElement(clipitem, "out").text = str(int(item["sourceInFrames"]) + int(item["durationFrames"]))
+        media_in = _media_in_frames(item)
+        ET.SubElement(clipitem, "in").text = str(media_in)
+        ET.SubElement(clipitem, "out").text = str(media_in + int(item["durationFrames"]))
         file_element = ET.SubElement(clipitem, "file", {"id": file_id})
         if (
             list(file_ids.values()).index(file_id) == len(file_ids) - 1
-            and sum(1 for existing in segments[:index] if str(existing["clipPath"]) == path) == 1
+            and sum(1 for existing in segments[:index] if _media_path(existing) == path) == 1
         ):
             ET.SubElement(file_element, "name").text = Path(path).name
             ET.SubElement(file_element, "pathurl").text = _file_uri(path)
@@ -251,7 +264,7 @@ def export_fcp7_xml(value: dict[str, Any], output_path: Path) -> None:
             ET.SubElement(file_rate, "timebase").text = str(fps)
             ET.SubElement(file_rate, "ntsc").text = "FALSE"
             ET.SubElement(file_element, "duration").text = str(
-                int(timeline["generatedClipDurationSeconds"]) * fps
+                int(item["durationFrames"])
             )
             file_media = ET.SubElement(file_element, "media")
             ET.SubElement(file_media, "video")
@@ -308,7 +321,7 @@ def export_edl(value: dict[str, Any], output_path: Path) -> None:
 
     lines = [f"TITLE: {value.get('title', 'TrackPrompt Video')}", "FCM: NON-DROP FRAME", ""]
     for index, item in enumerate(segments, start=1):
-        source_in = int(item["sourceInFrames"])
+        source_in = _media_in_frames(item)
         source_out = source_in + int(item["durationFrames"])
         record_in = int(item["timelineStartFrames"])
         record_out = record_in + int(item["durationFrames"])
@@ -318,7 +331,7 @@ def export_edl(value: dict[str, Any], output_path: Path) -> None:
             f"{timecode(source_in)} {timecode(source_out)} "
             f"{timecode(record_in)} {timecode(record_out)}"
         )
-        lines.append(f"* FROM CLIP NAME: {Path(str(item['clipPath'])).name}")
+        lines.append(f"* FROM CLIP NAME: {Path(_media_path(item)).name}")
         lines.append(f"* CHAPTER: {item['chapterId']}")
         lines.append("")
     atomic_write_text(output_path, "\n".join(lines) + "\n")
@@ -350,7 +363,7 @@ def export_edit_sheet_csv(value: dict[str, Any], output_path: Path) -> None:
                     item["segmentId"],
                     item["chapterId"],
                     item["shotId"],
-                    item["clipPath"],
+                    _media_path(item),
                     round(int(item["timelineStartFrames"]) / fps, 3),
                     round(int(item["durationFrames"]) / fps, 3),
                     round(int(item["sourceInFrames"]) / fps, 3),

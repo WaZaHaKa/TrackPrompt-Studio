@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "title": "Static Into Signal",
+  "selectedProfileId": "final-quality-4k",
+  "generationProfiles": [
+    {"profileId": "final-quality-4k", "modelId": "veo-3.1-generate-001", "resolution": "4k", "aspectRatio": "16:9", "fps": 24, "durationSeconds": 8, "sampleCount": 1, "generateAudio": false, "enhancePrompt": true, "compressionQuality": "optimized", "personGeneration": "allow_adult"}
+  ],
+  "maxSpendUsd": 18.0,
+  "retryReserveFactor": 1.5,
+  "requiredShotIds": ["shot-007", "shot-012", "shot-016"],
+  "storagePrefix": "trackprompt-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation",
+  "timeline": {"clockSource": "original-audio", "fps": 24, "width": 3840, "height": 2160, "generatedClipDurationSeconds": 8, "autoAssembly": false, "availability": "fail-closed until a supported model contract is configured and live-proven"}
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "title": "Static Into Signal",
+  "selectedProfileId": "final-quality-1080p",
+  "generationProfiles": [
+    {"profileId": "final-quality-1080p", "modelId": "veo-3.1-generate-001", "resolution": "1080p", "aspectRatio": "16:9", "fps": 24, "durationSeconds": 8, "sampleCount": 1, "generateAudio": false, "enhancePrompt": true, "compressionQuality": "optimized", "personGeneration": "allow_adult"}
+  ],
+  "maxSpendUsd": 9.0,
+  "retryReserveFactor": 1.5,
+  "requiredShotIds": ["shot-007", "shot-012", "shot-016"],
+  "storagePrefix": "trackprompt-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation",
+  "timeline": {
+    "clockSource": "original-audio",
+    "analysisBinding": "existing TrackPrompt StoryPlan/ShotPlan when available",
+    "fps": 24,
+    "width": 1920,
+    "height": 1080,
+    "targetEditSeconds": 4.5,
+    "generatedClipDurationSeconds": 8,
+    "autoAssembly": false,
+    "upgradePolicy": "Only rejected hero shots 007, 012, and 016 after separate plan review and authorization."
+  }
+}

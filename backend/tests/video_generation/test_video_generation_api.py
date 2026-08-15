@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -19,6 +20,7 @@ from app.mission_control.service import MissionControlService
 
 def test_video_plan_api_uses_mission_control_persistence_and_authorization_gate(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     state_root = tmp_path / "state" / "mission-control"
     analysis_id = str(uuid4())
@@ -65,6 +67,41 @@ def test_video_plan_api_uses_mission_control_persistence_and_authorization_gate(
             assert plan["totalShotCount"] == 16
             assert plan["cost"]["maxSpendUsd"] == 24
             assert plan["continuity"]["masterSeed"] == 18_031_000
+            audio = client.get(f"/api/mission-control/video/jobs/{plan['jobId']}/audio")
+            assert audio.status_code == 200
+            assert audio.json()["selected"] is False
+            assert audio.json()["verified"] is False
+            monkeypatch.setenv("TRACKPROMPT_MC_PICKER_RESULT", "")
+            cancelled = client.post(
+                f"/api/mission-control/video/jobs/{plan['jobId']}/audio/select",
+                json={"initialDirectory": None},
+            )
+            assert cancelled.status_code == 200
+            assert cancelled.json() == {
+                "selected": False,
+                "verified": False,
+                "source": None,
+                "audioArtifactId": None,
+                "displayName": None,
+                "durationSeconds": None,
+                "sampleRateHz": None,
+                "channels": None,
+                "container": None,
+                "audioCodec": None,
+                "sha256": None,
+                "finishingSha256": None,
+                "analysisJobId": None,
+                "boundVideoJobId": None,
+                "selectedAt": None,
+                "error": None,
+            }
+            retained = client.post(
+                f"/api/mission-control/video/jobs/{plan['jobId']}/audio/retained"
+            )
+            assert retained.status_code == 422
+            assert retained.json()["selected"] is False
+            assert retained.json()["verified"] is False
+            assert retained.json()["error"]["code"] == "retained_analysis_audio_missing"
             requests = client.get(f"/api/mission-control/video/plans/{plan['jobId']}/requests").json()[
                 "requests"
             ]

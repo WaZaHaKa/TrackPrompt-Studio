@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "shots": [
+    {
+      "shotId": "shot-001", "chapterId": "chapter-01", "order": 1, "title": "Dead Air",
+      "narrativeIntent": "Opening image and paid smoke shot establishing the grounded palette, realism and signal motif without difficult face or hand generation.",
+      "prompt": "Begin in near-total black. A single pale cyan-white static filament flickers across rain-covered concrete. A slow macro tracking movement follows it along the ground and vertically up the outside of a dark brutalist apartment block. Nearly every window is unlit. One distant window softly illuminates when the filament reaches it. Restrained, photoreal and mysterious. No people and no text. End with the light stable in the window and the filament continuing out of frame.",
+      "negativePrompt": "person, face, hands, readable signage, text-like static, excessive neon, fantasy skyline, abrupt camera move, internal cut",
+      "sourceSectionHints": ["chapter-01", "opening", "near silence"], "energyRange": [0.0, 0.2], "seed": 314159266, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "slow macro crop"],
+      "continuityTokens": ["pale cyan-white filament", "rain-covered concrete", "dark brutalist apartment block", "one softly lit window"],
+      "continuityGroupIds": ["world-global", "cluster-a"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Paid smoke shot.", "The filament must read clearly against believable wet concrete.", "Opening and closing frames must both be editorially usable."]
+    },
+    {
+      "shotId": "shot-002", "chapterId": "chapter-01", "order": 2, "title": "Unseen Hands",
+      "narrativeIntent": "Reveal private careful work and the first controlled pulse without exposing identity.",
+      "prompt": "Seen through a condensation-covered apartment window, an anonymous adult silhouette quietly assembles a modest homemade signal device on a small table. Only two natural adult hands, simple wires, an old speaker and a small unlabelled metal housing are visible. Blue street light falls through the glass. The pale filament briefly responds to the final connection. Slow inward camera movement. No readable screens or text. End on the first controlled pulse.",
+      "negativePrompt": "extra hands, malformed fingers, child, readable diagrams, labels, brand marks, weapon-like device, glossy science-fiction laboratory, abrupt cut",
+      "sourceSectionHints": ["chapter-01", "first pulse", "low energy"], "energyRange": [0.05, 0.3], "seed": 314159267, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "restrained punch-in"],
+      "continuityTokens": ["condensation-covered window", "modest homemade device", "cold blue street light", "controlled pale pulse"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-a"], "previousShotId": "shot-001", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Exactly two natural adult hands.", "No readable writing or branded equipment.", "End on a clean controlled pulse."]
+    },
+    {
+      "shotId": "shot-003", "chapterId": "chapter-02", "order": 3, "title": "Four A.M.",
+      "narrativeIntent": "Establish isolation, exhaustion and persistence through the recurring adult figure.",
+      "prompt": "The recurring adult Signal Bearer sits alone at a cramped desk before dawn, face mostly hidden, charcoal hooded coat still on. Cold blue light cuts through damaged blinds. Rain moves across the window and the room is otherwise silent. The camera makes a slow sideward dolly while the figure remains focused despite visible exhaustion. The wrist filament is dim but alive. Grounded social realism with subtle surreal tension.",
+      "negativePrompt": "visible face close-up, identity change, child, fashion pose, luxury interior, readable screens, dialogue, lip movement, melodramatic acting, fast camera",
+      "sourceSectionHints": ["chapter-02", "blue room", "solitary work"], "energyRange": [0.1, 0.35], "seed": 314159268, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "sideward crop"],
+      "continuityTokens": ["same adult Signal Bearer", "charcoal hooded coat", "cold blue damaged blinds", "dim wrist filament"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-a"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Wardrobe and left-wrist filament must match the profile.", "Keep performance restrained and clearly adult."]
+    },
+    {
+      "shotId": "shot-004", "chapterId": "chapter-02", "order": 4, "title": "Little Worlds",
+      "narrativeIntent": "Turn discarded workbench parts into a quietly living miniature city.",
+      "prompt": "A cinematic macro journey across a desk covered with plain circuit boards, folded sketches without readable writing, cables, tools and small architectural fragments. Together they resemble a miniature city being built from discarded parts. The pale signal filament travels between the objects, briefly turning each unfinished structure alive. Realistic materials and shallow depth of field. End on the miniature city casting light onto the real dark room.",
+      "negativePrompt": "readable writing, circuit-board labels, fantasy metropolis, excessive neon, toy-commercial look, miniature people, chaotic camera, internal montage",
+      "sourceSectionHints": ["chapter-02", "building", "rising signal"], "energyRange": [0.15, 0.4], "seed": 314159269, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "macro punch-in"],
+      "continuityTokens": ["plain discarded components", "miniature city", "pale signal filament", "cold blue real room"],
+      "continuityGroupIds": ["world-global", "cluster-a"], "previousShotId": "shot-003", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["No generated letters or component labels.", "The final miniature-city glow should remain natural and restrained."]
+    },
+    {
+      "shotId": "shot-005", "chapterId": "chapter-03", "order": 5, "title": "Red Line",
+      "narrativeIntent": "Show repeated failure becoming useful structural information rather than literal code.",
+      "prompt": "A restrained red fault line moves across a sheet of black glass inside an industrial corridor. It repeatedly breaks, stops and restarts. Instead of disappearing, each failed segment transforms into a pale cyan-white thread. The threads weave themselves into a stable geometric support running through the concrete wall. Slow precise camera motion. The visual meaning is failure becoming useful information, not computer code. No readable symbols or text.",
+      "negativePrompt": "computer code, readable symbols, warning labels, excessive red, cyberpunk interface, body imagery, violent fracture, frantic glitch, rapid camera",
+      "sourceSectionHints": ["chapter-03", "failure", "red warning"], "energyRange": [0.25, 0.55], "seed": 314159270, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "geometric crop"],
+      "continuityTokens": ["restrained red fault line", "black glass", "industrial concrete", "cyan-white structural thread"],
+      "continuityGroupIds": ["world-global", "cluster-b"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Red stays controlled.", "The transformation must read as physical structure, never UI or code."]
+    },
+    {
+      "shotId": "shot-006", "chapterId": "chapter-03", "order": 6, "title": "Winter Watch",
+      "narrativeIntent": "Express respectful inheritance between two adults without military or literal exposition.",
+      "prompt": "Under distant industrial floodlights during quiet snowfall, an older adult watchman in a plain heavy coat stands alone protecting an unidentified place through the winter night. No uniform, weapon, insignia or military symbol. The younger recurring Signal Bearer appears only as a reflection in nearby dark glass. The older figure gently touches the pale filament, and its light continues toward the younger reflection. Respectful, restrained and emotionally inherited rather than literal.",
+      "negativePrompt": "uniform, weapon, insignia, military base, police, confrontation, salute, visible text, child, celebrity likeness, sentimental embrace, identity flicker",
+      "sourceSectionHints": ["chapter-03", "inheritance", "winter night"], "energyRange": [0.2, 0.5], "seed": 314159271, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "reflection crop"],
+      "continuityTokens": ["quiet snowfall", "industrial floodlights", "older adult watchman", "younger Signal Bearer reflection", "pale filament handoff"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-b"], "previousShotId": "shot-005", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Both people must be clearly adult.", "No uniform or weapon-like object.", "Touch and reflection anatomy must remain natural."]
+    },
+    {
+      "shotId": "shot-007", "chapterId": "chapter-04", "order": 7, "title": "Staircase from Static",
+      "narrativeIntent": "Primary chorus hero image: a grounded first step forming out of controlled static.",
+      "prompt": "In the centre of a rain-dark brutalist courtyard, controlled television-like static gathers in the air and forms a physically believable staircase one step at a time. The recurring Signal Bearer approaches without spectacle and places one foot on the first completed step. Each step becomes solid dark material edged by pale light. Slow rising camera movement, powerful but grounded. This is the primary chorus hero shot. End with the unfinished staircase continuing upward into darkness.",
+      "negativePrompt": "floating superhero, impossible acrobatics, malformed feet, extra limbs, fantasy castle stairs, excessive strobe, chaotic static, neon cyberpunk, rapid rise, triumph pose",
+      "sourceSectionHints": ["chapter-04", "primary chorus", "hero anchor"], "energyRange": [0.55, 0.85], "seed": 314159272, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "10–15 percent punch-in"],
+      "continuityTokens": ["rain-dark brutalist courtyard", "same Signal Bearer", "static becoming solid staircase", "pale stair edges"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-b"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Primary chorus anchor and priority Quality fallback only if rejected.", "Foot placement and staircase physics must be believable.", "Preserve a strong unfinished closing frame."]
+    },
+    {
+      "shotId": "shot-008", "chapterId": "chapter-04", "order": 8, "title": "Wiring in the Smoke",
+      "narrativeIntent": "Reveal the hidden infrastructure connecting private work to the surrounding building.",
+      "prompt": "Inside a damaged concrete room, a thin layer of smoke reveals hidden electrical paths running beneath the walls like infrastructure rather than anatomy. The recurring Signal Bearer connects one plain cable. The concealed lines illuminate outward through the room, ceiling and neighbouring building. The camera slowly pulls back as private work becomes a larger network. Photoreal, restrained and non-cyberpunk. No body horror and no readable interface.",
+      "negativePrompt": "veins, anatomy, body horror, exposed organs, readable interface, cyberpunk implants, sparks explosion, malformed hands, branded cable, frantic smoke, internal cut",
+      "sourceSectionHints": ["chapter-04", "secondary chorus", "network"], "energyRange": [0.5, 0.8], "seed": 314159273, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "restrained pullback crop"],
+      "continuityTokens": ["damaged concrete room", "same Signal Bearer", "plain cable", "smoke-revealed infrastructure", "pale outward network"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-b"], "previousShotId": "shot-007", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Secondary chorus anchor.", "The wiring reads as building infrastructure, never anatomy.", "Cable connection hand must be natural."]
+    },
+    {
+      "shotId": "shot-009", "chapterId": "chapter-05", "order": 9, "title": "Every Window a Life",
+      "narrativeIntent": "Turn anonymous residential rectangles into respectful glimpses of ordinary adult lives sharing one pulse.",
+      "prompt": "A long-lens night view of a large residential block. At first the windows appear as identical anonymous rectangles. During a slow push forward, subtle silhouettes reveal ordinary adult lives inside: someone working, someone resting, two people talking, someone making music, someone looking outside. No voyeuristic detail and no readable screens. The windows begin responding to one shared pale pulse, showing that every apparent number contains a human life.",
+      "negativePrompt": "voyeuristic close-up, child, readable television, readable phone, apartment numbers, celebrity, sexual activity, crisis scene, identical duplicated people, excessive flashing windows",
+      "sourceSectionHints": ["chapter-05", "ordinary lives", "shared pulse"], "energyRange": [0.35, 0.6], "seed": 314159274, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "long-lens crop"],
+      "continuityTokens": ["large residential block", "ordinary adult silhouettes", "respectful distance", "shared pale window pulse"],
+      "continuityGroupIds": ["world-global", "cluster-c"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["All visible people are adults.", "No readable screens, numbers or voyeuristic detail.", "Pulse timing should be calm and shared."]
+    },
+    {
+      "shotId": "shot-010", "chapterId": "chapter-05", "order": 10, "title": "Foundation",
+      "narrativeIntent": "Show practical cooperation among ordinary adults and a shared signal holding modest work together.",
+      "prompt": "Three ordinary adults work together at night beneath an unfinished concrete structure, quietly placing modest metal and timber supports. They are not posing for the camera. The recurring Signal Bearer is one of them, recognised by the coat and wrist filament. Each person briefly holds part of the pale thread as the structure becomes stable. Wet ground, practical light, realistic teamwork and no heroic construction spectacle. End on the completed foundation holding.",
+      "negativePrompt": "unsafe construction, hard hats with logos, child, heroic pose, luxury development, heavy machinery accident, malformed hands, duplicated workers, superhero strength, readable markings",
+      "sourceSectionHints": ["chapter-05", "friendship", "building together"], "energyRange": [0.4, 0.65], "seed": 314159275, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "teamwork crop"],
+      "continuityTokens": ["three ordinary adults", "same Signal Bearer wardrobe", "wet ground practical light", "metal and timber supports", "shared pale thread"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-c"], "previousShotId": "shot-009", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Exactly three clearly adult workers with natural anatomy.", "No unsafe spectacle.", "End on a believable stable structure."]
+    },
+    {
+      "shotId": "shot-011", "chapterId": "chapter-06", "order": 11, "title": "No Metric",
+      "narrativeIntent": "Contrast cold credible measurement with a human cost the machine cannot quantify.",
+      "prompt": "The Signal Bearer stands inside a vast dark industrial measuring room. A large analogue gauge and scanning arm attempt to quantify the figure, but the needle cannot settle and the machine repeatedly returns to zero. Meanwhile a soft pale heartbeat pulse moves from the wrist filament through the coat and into the surrounding room. The machine remains cold and accurate-looking but fundamentally unable to measure the human cost. No medical imagery and no readable numbers.",
+      "negativePrompt": "readable numbers, medical scanner, hospital, x-ray body, weaponized machine, body horror, exposed anatomy, cyberpunk armor, violent restraint, frantic gauge, identity change",
+      "sourceSectionHints": ["chapter-06", "measurement", "human cost"], "energyRange": [0.3, 0.6], "seed": 314159276, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "measuring-room crop"],
+      "continuityTokens": ["same Signal Bearer", "vast dark measuring room", "unsettled analogue gauge", "soft pale heartbeat pulse"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-c"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["No medical interpretation or readable gauge values.", "Movement remains intimate and calm."]
+    },
+    {
+      "shotId": "shot-012", "chapterId": "chapter-06", "order": 12, "title": "Built from Pieces",
+      "narrativeIntent": "Bridge climax and beat-switch transition: vulnerable fragmentation followed by steadier reassembly without pain.",
+      "prompt": "Against a nearly black background, the recurring Signal Bearer appears as a realistic figure whose outer silhouette becomes dark glass. Without pain or body horror, the glass separates into dozens of clean fragments and hangs motionless in space. After a quiet pause, the pale filament moves through them and the pieces reassemble into a steadier version of the same person. The face remains obscured. Slow, intimate and emotionally vulnerable.",
+      "negativePrompt": "pain, gore, wounds, exposed anatomy, body horror, screaming, shattered face, duplicate person, lost limbs, malformed body, superhero transformation, bright fantasy magic",
+      "sourceSectionHints": ["chapter-06", "bridge climax", "beat switch"], "energyRange": [0.45, 0.75], "seed": 314159277, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "slow intimate crop"],
+      "continuityTokens": ["same obscured Signal Bearer", "dark glass silhouette", "clean suspended fragments", "pale filament reassembly", "no pain"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-c"], "previousShotId": "shot-011", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Bridge climax and beat-switch image.", "Priority Quality fallback only if rejected.", "No body horror; the same figure must reassemble coherently."]
+    },
+    {
+      "shotId": "shot-013", "chapterId": "chapter-07", "order": 13, "title": "Glitch Language",
+      "narrativeIntent": "Let structural imperfections organise into abstract architecture and music without forming text.",
+      "prompt": "Cracks, scanline distortions and small structural imperfections move across a brutalist wall. At first they appear random. As the recurring Signal Bearer traces the pale filament nearby, the defects align into an elegant abstract rhythm resembling architecture and music without forming letters or readable notation. The organised pattern spreads from the wall into the street lights. The city begins responding to what had looked like damage.",
+      "negativePrompt": "letters, numbers, readable notation, musical staff, code, graffiti words, excessive glitch, full-frame strobe, collapsing wall, cyberpunk interface, malformed hand",
+      "sourceSectionHints": ["chapter-07", "final chorus", "organised imperfections"], "energyRange": [0.6, 0.85], "seed": 314159278, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "architectural crop"],
+      "continuityTokens": ["same Signal Bearer", "brutalist wall", "abstract non-text rhythm", "pale filament", "responsive street lights"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-d"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["The pattern must never resemble readable writing.", "Keep glitch restrained and city response believable."]
+    },
+    {
+      "shotId": "shot-014", "chapterId": "chapter-07", "order": 14, "title": "One Small Sound",
+      "narrativeIntent": "A single physical pulse awakens rooms in sequence without becoming flashy magic.",
+      "prompt": "A dead, dark room contains an old unlabelled speaker, loose papers and unfinished objects. One small low-frequency pulse makes the speaker surface move. A visible pressure ripple crosses the room, lifting the papers slightly and turning dormant lamps on one after another. The camera follows the ripple through a doorway where more rooms awaken. The effect is emotional and physical, not magical spectacle. End with the signal moving onward.",
+      "negativePrompt": "speaker logo, readable papers, explosive bass, shattered glass, flying debris, fantasy magic, excessive neon, strobe, rapid camera, internal montage, people singing",
+      "sourceSectionHints": ["chapter-07", "one small sound", "rooms awaken"], "energyRange": [0.55, 0.85], "seed": 314159279, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "doorway crop"],
+      "continuityTokens": ["unlabelled old speaker", "unfinished dark room", "physical pressure ripple", "lamps awakening", "signal moving onward"],
+      "continuityGroupIds": ["world-global", "cluster-d"], "previousShotId": "shot-013", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Ripple physics and paper movement must remain restrained.", "No logos or readable pages.", "End frame must carry movement onward."]
+    },
+    {
+      "shotId": "shot-015", "chapterId": "chapter-08", "order": 15, "title": "Relay",
+      "narrativeIntent": "Begin the final post-chorus with the signal released into a diverse adult community and warmer light.",
+      "prompt": "Across several nearby rooftops before dawn, a small diverse group of ordinary adults passes the thin pale filament from one person to the next. Nobody performs for the camera. Each handoff causes a few more windows and street lights to awaken below. The recurring Signal Bearer releases the filament rather than keeping it. The camera cranes gently upward as the signal becomes shared. Muted amber begins entering the cold blue palette.",
+      "negativePrompt": "child, celebrity, crowd spectacle, choreographed performance, malformed hands, duplicate people, superhero team, protest signs, readable skyline signs, excessive amber, rapid crane",
+      "sourceSectionHints": ["chapter-08", "final post-chorus", "relay"], "energyRange": [0.5, 0.75], "seed": 314159280, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "gentle crane crop"],
+      "continuityTokens": ["ordinary diverse adults", "nearby rooftops", "same Signal Bearer releases filament", "awakening windows", "muted amber enters cold blue"],
+      "continuityGroupIds": ["world-global", "signal-bearer", "cluster-d"], "previousShotId": null, "continuationMode": "prompt-anchors",
+      "reviewNotes": ["All people clearly adult with natural handoffs.", "Shot begins the final chapter and warmer palette transition.", "The Signal Bearer releases rather than retains the filament."]
+    },
+    {
+      "shotId": "shot-016", "chapterId": "chapter-08", "order": 16, "title": "Next Step",
+      "narrativeIntent": "Own the sustained outro with restrained first-person hope and only the next step revealed.",
+      "prompt": "First-person point of view at early dawn facing a dark outdoor concrete staircase. Only the nearest step illuminates when the viewer approaches it. Each previous step dims softly while the next one becomes visible, so the entire destination is never revealed at once. The camera reaches a modest rooftop horizon where the pale filament continues forward beyond the frame. Natural dawn light, restrained hope and no triumphant fantasy ending. Finish on one clearly illuminated next step.",
+      "negativePrompt": "visible body, malformed feet, fantasy heaven, triumphant spectacle, excessive sunrise, lens flare commercial, readable signs, impossible staircase, rapid climb, abrupt ending, full destination reveal",
+      "sourceSectionHints": ["chapter-08", "sustained outro", "final image"], "energyRange": [0.15, 0.5], "seed": 314159281, "required": true,
+      "reuseModes": ["forward", "alternate-inpoint", "sustained ending hold"],
+      "continuityTokens": ["first-person view", "dark concrete staircase", "one illuminated next step", "natural dawn", "pale filament beyond frame"],
+      "continuityGroupIds": ["world-global", "cluster-d"], "previousShotId": "shot-015", "continuationMode": "prompt-anchors",
+      "reviewNotes": ["Final sustained image and priority Quality fallback only if rejected.", "Do not reveal the full destination.", "Finish with exactly one clear next step and usable hold."]
+    }
+  ]
+}

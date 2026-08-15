@@ -163,6 +163,18 @@ export function VideoGenerationScreen() {
 
   const selectedPackage = catalog?.packages.find((item) => item.projectId === projectId) ?? catalog?.packages[0]
   const selectedProfile = selectedPackage?.profiles.find((item) => item.id === profileId)
+
+  useEffect(() => {
+    if (!catalog || !job) return
+    setAnalysisId(job.analysisJobId)
+    setProjectId(job.projectId)
+    const jobPackage = catalog.packages.find((item) => item.projectId === job.projectId)
+    const matchingProfile = jobPackage?.profiles.find((item) => (
+      item.modelId === job.profile.modelId && item.resolution === job.profile.resolution
+    ))
+    if (matchingProfile) setProfileId(matchingProfile.id)
+  }, [catalog, job])
+
   const canCompile = Boolean(
     analysisId && projectId && gcpProjectId.trim() && gcsBucket.trim() && selectedProfile?.available,
   )

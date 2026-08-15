@@ -96,12 +96,12 @@ Bind audio on the saved job's finishing card. **Use retained analysis audio** is
 
 ## Optional profiles
 
-Quality 1080p and standard 4K are explicit optional rerender profiles. A full 4K batch is not part of completion. Review the finished 1080p edit before choosing a higher-cost rerender. For `Static Into Signal`, the Quality 1080p package is deliberately limited to rejected hero shots 007, 012 and 016 and requires a separately compiled and authorized plan.
+Quality 1080p and standard 4K are explicit higher-cost profiles. A full 4K batch is not part of completion. For `Static Into Signal`, the operator selected a complete 16-shot Quality 1080p batch. At the 2026-08-13 snapshot rate, its base estimate is $25.60, its 1.5× conservative estimate is $38.40, and its hard authorization ceiling is $45.00. It requires a separately compiled and authorized exact plan.
 
 ## Static Into Signal checkpoint
 
 The package under `video-projects\static-into-signal\` uses the 218-second local master, exactly 16 Fast 1080p requests, `shot-001` as the same-plan paid smoke shot, deterministic cluster seeds, and project-owned editorial recurrence. The resolver returns shots 007 and 008 during chapter 07, ends chapter 06 on shot 012, begins chapter 08 on shot 015, and sustains shot 016 through the outro. It never automatically reverses human movement. Its standard output names are `trackprompt-timeline.fcpxml`, `trackprompt-timeline.xml`, `trackprompt-timeline.edl`, and `autonomous-preview-1080p.mp4`.
 
-Stop after compilation until Mission Control shows the exact plan digest, all 16 sanitized request bodies, snapshot rate, $12.80 base estimate, $19.20 conservative estimate, $24.00 maximum, and its digest-specific authorization phrase. Do not authorize from documentation or reuse a phrase from another plan.
+For the operator-selected Quality 1080p batch, stop after compilation until Mission Control shows the exact plan digest, all 16 sanitized request bodies, the $0.20-per-output-second snapshot rate, $25.60 base estimate, $38.40 conservative estimate, $45.00 maximum, and its digest-specific authorization phrase. Do not authorize from documentation or reuse a phrase from another plan.
 
 Runtime state lives below `.trackprompt-data\video-generation\` and remains ignored by Git.

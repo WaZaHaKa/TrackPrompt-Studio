@@ -84,6 +84,12 @@ const catalog = {
       baseEstimatedUsd: 12.8, conservativeEstimatedUsd: 19.2, maxSpendUsd: 24,
       available: true, availabilityNote: null,
     }, {
+      id: 'quality-1080p', displayName: 'Veo 3.1 Quality · 1080p',
+      modelId: 'veo-3.1-generate-001', resolution: '1080p', durationSeconds: 8,
+      fps: 24, sampleCount: 1, default: false, optional: true,
+      baseEstimatedUsd: 25.6, conservativeEstimatedUsd: 38.4, maxSpendUsd: 45,
+      available: true, availabilityNote: null,
+    }, {
       id: 'quality-4k', displayName: 'Veo 3.1 Quality · 4K (optional)',
       modelId: 'veo-3.1-generate-001', resolution: '4k', durationSeconds: 8,
       fps: 24, sampleCount: 1, default: false, optional: true,
@@ -165,6 +171,29 @@ describe('VideoGenerationScreen', () => {
   it('rejects malformed job payloads instead of silently inventing status', () => {
     expect(() => parseVideoJob({ ...plannedJob, state: 'mystery' })).toThrow(/job state is unsupported/i)
     expect(() => parseVideoJob({ ...plannedJob, cost: { maxSpendUsd: 24 } })).toThrow(/baseEstimatedUsd/i)
+  })
+
+  it('syncs the visible planner profile to a selected saved Quality job', async () => {
+    const qualityJob = {
+      ...plannedJob,
+      jobId: '33333333-3333-4333-8333-333333333333',
+      profile: { profileId: 'final-quality-1080p', modelId: 'veo-3.1-generate-001', resolution: '1080p' },
+      cost: { ...plannedJob.cost, baseEstimatedUsd: 25.6, conservativeEstimatedUsd: 38.4, maxSpendUsd: 45 },
+      authorizationPhrase: 'AUTHORIZE the-glitch-is-me VIDEO PLAN aaaaaaaaaaaa UP TO USD 45.00',
+      remainingAuthorizedUsd: 45,
+    }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const path = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (path.endsWith('/video/catalog')) return Promise.resolve(json(catalog))
+      if (path.endsWith('/video/jobs')) return Promise.resolve(json([qualityJob]))
+      if (path.endsWith('/requests')) return Promise.resolve(json({ schemaVersion: '1.0.0', jobId: qualityJob.jobId, planDigest: qualityJob.planDigest, requests: [] }))
+      throw new Error(`Unexpected request: ${path}`)
+    }))
+
+    render(<VideoGenerationScreen />)
+
+    expect(await screen.findByLabelText('Delivery profile')).toHaveValue('quality-1080p')
+    expect(screen.getAllByText('$45.00').length).toBeGreaterThan(0)
   })
 
   it('binds a browsed master through the typed saved-job contract', async () => {

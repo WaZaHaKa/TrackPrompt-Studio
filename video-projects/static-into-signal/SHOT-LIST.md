@@ -100,6 +100,6 @@ First-person point of view at early dawn facing a dark outdoor concrete staircas
 
 Editorial role: final image; own the sustained outro and hold the ending.
 
-## Quality fallback policy
+## Selected Quality 1080p policy
 
-Fast 1080p outputs are valid finals. A separate exact Quality 1080p plan may contain only rejected hero shots `shot-007`, `shot-012`, and `shot-016`; it requires its own reviewed digest, pricing and one-time authorization. Successful Fast footage is not rerendered merely because Quality exists. 4K remains optional, unavailable by default, and outside completion.
+The operator selected a complete 16-shot Veo 3.1 Quality 1080p batch. At the reviewed 2026-08-13 rate snapshot, 16 clips × 8 seconds × $0.20 per output second produces a $25.60 base estimate. The 1.5× conservative estimate is $38.40 and the immutable authorization ceiling is $45.00. The exact Quality plan requires its own reviewed digest and one-time authorization. Fast 1080p remains a valid lower-cost fallback. 4K remains optional, unavailable by default, and outside completion.

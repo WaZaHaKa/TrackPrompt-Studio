@@ -68,11 +68,19 @@ def test_static_package_configs_and_shots_are_complete() -> None:
         fast.sample_count,
         fast.generate_audio,
     ) == ("veo-3.1-fast-generate-001", "1080p", 8, 24, "16:9", 1, False)
-    assert configs["project-config.quality-1080p.json"].required_shot_ids == (
-        "shot-007",
-        "shot-012",
-        "shot-016",
+    quality_config = configs["project-config.quality-1080p.json"]
+    assert quality_config.required_shot_ids == tuple(
+        f"shot-{index:03d}" for index in range(1, 17)
     )
+    quality = quality_config.selected_profile()
+    assert (
+        quality.model_id,
+        quality.resolution,
+        quality.duration_seconds,
+        quality.fps,
+        quality.sample_count,
+        quality.generate_audio,
+    ) == ("veo-3.1-generate-001", "1080p", 8, 24, 1, False)
     assert configs["project-config.smoke.json"].required_shot_ids == ("shot-001",)
 
 
@@ -108,7 +116,12 @@ def test_static_prompt_and_profile_changes_change_digest(tmp_path: Path) -> None
     quality = _compile(config="project-config.quality-1080p.json")
     assert revised.plan_digest != fast.plan_digest
     assert quality.plan_digest != fast.plan_digest
-    assert [shot.shot_id for shot in quality.shots] == ["shot-007", "shot-012", "shot-016"]
+    assert [shot.shot_id for shot in quality.shots] == [
+        f"shot-{index:03d}" for index in range(1, 17)
+    ]
+    assert quality.base_estimated_cost_usd == 25.6
+    assert quality.conservative_estimated_cost_usd == 38.4
+    assert quality.max_spend_usd == 45.0
 
 
 def test_static_optional_4k_fails_closed() -> None:

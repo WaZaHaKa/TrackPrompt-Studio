@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.1.0",
+  "projectId": "static-into-signal",
+  "editorialPrinciples": [
+    "The original local master is the only timeline clock and begins at zero.",
+    "Use conservative straight cuts, deterministic A/B alternation and alternate source in-points on reuse.",
+    "Return shots 007 and 008 during chapter 07; end chapter 06 on shot 012; begin chapter 08 on shot 015; let shot 016 own the final sustained image.",
+    "Never automatically reverse human or physically directional movement.",
+    "Reserve 10–15 percent punch-ins, alternate crops, approximately 85–115 percent speeds, brief darkness, colour finishing and titles for reviewed local editing."
+  ],
+  "timelineTreatment": {
+    "version": "static-into-signal-rough-cut-1.0.0",
+    "targetEditSeconds": 4.5,
+    "default": {
+      "playbackRates": [1.0, 0.92, 1.08, 0.96],
+      "playbackRateIndex": "timeline",
+      "cropScales": [1.0, 1.06, 1.1, 1.03],
+      "cropScaleIndex": "timeline",
+      "cropScaleIndexOffset": 1
+    },
+    "chapters": {
+      "chapter-06": {"shotSequence": ["shot-011", "shot-012"], "closingShotId": "shot-012"},
+      "chapter-07": {"shotSequence": ["shot-013", "shot-007", "shot-014", "shot-008"]},
+      "chapter-08": {"shotSequence": ["shot-015", "shot-016"], "closingShotId": "shot-016", "finalFadeOutFrames": 18}
+    }
+  },
+  "exports": {
+    "fcpxml": "trackprompt-timeline.fcpxml",
+    "fcp7": "trackprompt-timeline.xml",
+    "edl": "trackprompt-timeline.edl",
+    "preview1080p": "autonomous-preview-1080p.mp4",
+    "preview4k": "autonomous-preview-4k.mp4"
+  },
+  "coverage": {
+    "requiredShotIds": ["shot-001", "shot-002", "shot-003", "shot-004", "shot-005", "shot-006", "shot-007", "shot-008", "shot-009", "shot-010", "shot-011", "shot-012", "shot-013", "shot-014", "shot-015", "shot-016"],
+    "eventCountRange": [45, 64],
+    "openingShotId": "shot-001",
+    "closingShotId": "shot-016",
+    "chapterRequirements": [
+      {"id": "beat-switch-built-from-pieces", "chapterId": "chapter-06", "requiredShotIds": ["shot-011", "shot-012"], "endsWithShotId": "shot-012"},
+      {"id": "chorus-anchor-recurrence", "chapterId": "chapter-07", "requiredShotIds": ["shot-007", "shot-008", "shot-013", "shot-014"]},
+      {"id": "final-relay-and-outro", "chapterId": "chapter-08", "requiredShotIds": ["shot-015", "shot-016"], "endsWithShotId": "shot-016"}
+    ]
+  },
+  "handoff": {
+    "title": "The Signal Bearer",
+    "summary": "A conservative full-length assembly with local master audio, deterministic recurrence and room for restrained Resolve punch-ins, retimes, brief darkness and final colour work."
+  },
+  "gradeTarget": {"delivery": "Rec.709 Gamma 2.4", "notes": "Protect graphite and cold-blue separation; keep warning red rare; introduce muted amber and natural dawn only near the ending."},
+  "finishingOptions": ["10–15 percent digital punch-ins on reviewed reused shots", "alternate crops", "reviewed speed changes between approximately 85 and 115 percent", "brief chapter-transition darkness", "manual colour finishing", "titles and credits added only in DaVinci Resolve"]
+}

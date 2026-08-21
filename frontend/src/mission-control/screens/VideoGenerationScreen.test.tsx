@@ -26,6 +26,13 @@ const plannedJob = {
   authorizationPhrase: phrase,
   authorizationExpiresAt: null,
   audioMasterBound: false,
+  audio: {
+    selected: false, verified: false, source: null, audioArtifactId: null,
+    displayName: null, durationSeconds: null, sampleRateHz: null, channels: null,
+    container: null, audioCodec: null, sha256: null, finishingSha256: null,
+    analysisJobId: null, boundVideoJobId: null, selectedAt: null, error: null,
+  },
+  localEditDigest: null,
   shots: [{
     shotId: 'shot-001', chapterId: 'chapter-01', order: 1, title: 'Signal wakes',
     prompt: 'A precise cinematic prompt for the first abstract signal shot.',
@@ -50,6 +57,8 @@ const plannedJob = {
     timelineReady: false, davinciPackageReady: false, previewReady: false,
     fcpxmlUrl: null, fcp7XmlUrl: null, edlUrl: null, editSheetUrl: null,
     markersUrl: null, previewUrl: null,
+    relinkMapUrl: null, coverageReportUrl: null, renderManifestUrl: null,
+    verificationReportUrl: null,
   },
   error: null,
   createdAt: '2026-08-13T10:00:00Z',
@@ -67,11 +76,18 @@ const catalog = {
   }],
   packages: [{
     projectId: 'the-glitch-is-me', title: 'The Glitch Is Me', shotCount: 16,
+    defaultMasterSeed: 18031000,
     profiles: [{
       id: 'fast-1080p', displayName: 'Veo 3.1 Fast · 1080p',
       modelId: 'veo-3.1-fast-generate-001', resolution: '1080p', durationSeconds: 8,
       fps: 24, sampleCount: 1, default: true, optional: false,
       baseEstimatedUsd: 12.8, conservativeEstimatedUsd: 19.2, maxSpendUsd: 24,
+      available: true, availabilityNote: null,
+    }, {
+      id: 'quality-1080p', displayName: 'Veo 3.1 Quality · 1080p',
+      modelId: 'veo-3.1-generate-001', resolution: '1080p', durationSeconds: 8,
+      fps: 24, sampleCount: 1, default: false, optional: true,
+      baseEstimatedUsd: 25.6, conservativeEstimatedUsd: 38.4, maxSpendUsd: 45,
       available: true, availabilityNote: null,
     }, {
       id: 'quality-4k', displayName: 'Veo 3.1 Quality · 4K (optional)',
@@ -155,6 +171,59 @@ describe('VideoGenerationScreen', () => {
   it('rejects malformed job payloads instead of silently inventing status', () => {
     expect(() => parseVideoJob({ ...plannedJob, state: 'mystery' })).toThrow(/job state is unsupported/i)
     expect(() => parseVideoJob({ ...plannedJob, cost: { maxSpendUsd: 24 } })).toThrow(/baseEstimatedUsd/i)
+  })
+
+  it('syncs the visible planner profile to a selected saved Quality job', async () => {
+    const qualityJob = {
+      ...plannedJob,
+      jobId: '33333333-3333-4333-8333-333333333333',
+      profile: { profileId: 'final-quality-1080p', modelId: 'veo-3.1-generate-001', resolution: '1080p' },
+      cost: { ...plannedJob.cost, baseEstimatedUsd: 25.6, conservativeEstimatedUsd: 38.4, maxSpendUsd: 45 },
+      authorizationPhrase: 'AUTHORIZE the-glitch-is-me VIDEO PLAN aaaaaaaaaaaa UP TO USD 45.00',
+      remainingAuthorizedUsd: 45,
+    }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const path = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (path.endsWith('/video/catalog')) return Promise.resolve(json(catalog))
+      if (path.endsWith('/video/jobs')) return Promise.resolve(json([qualityJob]))
+      if (path.endsWith('/requests')) return Promise.resolve(json({ schemaVersion: '1.0.0', jobId: qualityJob.jobId, planDigest: qualityJob.planDigest, requests: [] }))
+      throw new Error(`Unexpected request: ${path}`)
+    }))
+
+    render(<VideoGenerationScreen />)
+
+    expect(await screen.findByLabelText('Delivery profile')).toHaveValue('quality-1080p')
+    expect(screen.getAllByText('$45.00').length).toBeGreaterThan(0)
+  })
+
+  it('binds a browsed master through the typed saved-job contract', async () => {
+    const bound = {
+      ...plannedJob,
+      audioMasterBound: true,
+      audio: {
+        selected: true, verified: true, source: 'local-selection',
+        audioArtifactId: 'audio-' + 'c'.repeat(20), displayName: 'Glitch master.wav',
+        durationSeconds: 297.68, sampleRateHz: 48000, channels: 2,
+        container: 'wav', audioCodec: 'pcm_s16le', sha256: 'c'.repeat(64),
+        finishingSha256: 'c'.repeat(64), analysisJobId: plannedJob.analysisJobId,
+        boundVideoJobId: plannedJob.jobId, selectedAt: '2026-08-14T00:00:00Z', error: null,
+      },
+    }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const path = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (path.endsWith('/video/catalog')) return Promise.resolve(json(catalog))
+      if (path.endsWith('/video/jobs')) return Promise.resolve(json([plannedJob]))
+      if (path.endsWith('/requests')) return Promise.resolve(json({ schemaVersion: '1.0.0', jobId: plannedJob.jobId, planDigest: plannedJob.planDigest, requests: [] }))
+      if (path.endsWith('/audio/select') && init?.method === 'POST') return Promise.resolve(json(bound.audio))
+      if (path.endsWith(`/video/plans/${plannedJob.jobId}`)) return Promise.resolve(json(bound))
+      throw new Error(`Unexpected request: ${init?.method ?? 'GET'} ${path}`)
+    }))
+
+    const user = userEvent.setup()
+    render(<VideoGenerationScreen />)
+    await user.click(await screen.findByRole('button', { name: 'Browse for audio…' }))
+    expect(await screen.findByText(/Glitch master\.wav · 297\.680 seconds/)).toBeInTheDocument()
+    expect(screen.queryByText(/audio selected must be a boolean/i)).not.toBeInTheDocument()
   })
 
   it('shows safe provider status and diagnostic identity without a raw response body', async () => {

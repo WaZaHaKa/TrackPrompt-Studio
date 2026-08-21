@@ -23,7 +23,7 @@ The compiler hashes every source artifact it actually uses. The compiled plan co
 | Contracts | profiles, shots, costs, operations, QA, timeline, exports | no project names |
 | Planning | hashes, prompt composition, StoryPlan boundary snapping | creative bible, shot bank, chapter map |
 | Orchestration | submit, poll, resume, retry, budget reservation, download | selected shot IDs |
-| Editing | timeline resolution, FCPXML/FCP7/EDL/CSV, FFmpeg assembly | editorial blueprint and chapter transitions |
+| Editing | validated editorial-rule interpretation, timeline resolution, FCPXML/FCP7/EDL/CSV, FFmpeg assembly | treatment version, chapter sequences/recurrence, coverage assertions, export filenames and handoff notes in `edit-blueprint.json` |
 | UI | plan, cost, progress, failures, clips, export buttons | titles and shot artwork |
 
 ## Mission Control integration
@@ -60,6 +60,8 @@ The provider operation name is durable resume state. Browser reconnect must neve
 
 ## Editorial strategy
 
-The original audio duration is authoritative. The chapter map provides normalized ranges so the content package works before exact track timings are known. During timeline resolution, normalized boundaries are snapped to the nearest existing TrackPrompt ShotPlan boundary within three seconds. Inside each chapter, generated shots alternate deterministically with nonzero in-points on reuse.
+The verified private audio binding is authoritative. Its exact ffprobe duration and SHA-256 participate in a local edit digest while the completed provider-generation digest and authorization remain unchanged. The chapter map provides normalized ranges; stored ShotPlan boundaries are used only when their inferred clock matches the newly bound master within five percent.
 
-The autonomous FFmpeg assembly is intentionally conservative: normalized H.264 segments, straight cuts, complete audio coverage, and local audio mux. Resolve remains the finishing environment for artistic transitions, grading, overlays, speed effects, and final titles.
+The deterministic 1080p rough cut expands immutable provider clips into project-validated replaceable derived events. The shared engine knows no song, character, motif, chapter name or output stem. It validates and interprets the selected package's `edit-blueprint.json`, including deterministic shot sequences, alternate trims, bounded retimes/crops, optional reviewed treatments, recurrence checks and artifact names. FCPXML, FCP7 XML, and EDL reference those event files plus one continuous 48 kHz stereo master. Resolve remains the finishing environment for grading, refinements, overlays, and titles.
+
+`The Glitch Is Me` retains its established 55–80 event escalation and legacy filenames through its blueprint. `Static Into Signal` uses a conservative 45–64 event treatment, no automatic reverse, chapter-07 recurrence of shots 007/008 and the standard `trackprompt-timeline.*` / `autonomous-preview-1080p.mp4` names. Adding another track requires a new content package, not a branch in shared Python or React code.

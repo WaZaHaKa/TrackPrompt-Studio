@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "title": "Static Into Signal",
+  "selectedProfileId": "final-quality-1080p",
+  "generationProfiles": [
+    {"profileId": "final-quality-1080p", "modelId": "veo-3.1-generate-001", "resolution": "1080p", "aspectRatio": "16:9", "fps": 24, "durationSeconds": 8, "sampleCount": 1, "generateAudio": false, "enhancePrompt": true, "compressionQuality": "optimized", "personGeneration": "allow_adult"}
+  ],
+  "maxSpendUsd": 45.0,
+  "retryReserveFactor": 1.5,
+  "requiredShotIds": ["shot-001", "shot-002", "shot-003", "shot-004", "shot-005", "shot-006", "shot-007", "shot-008", "shot-009", "shot-010", "shot-011", "shot-012", "shot-013", "shot-014", "shot-015", "shot-016"],
+  "storagePrefix": "trackprompt-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation",
+  "timeline": {
+    "clockSource": "original-audio",
+    "analysisBinding": "existing TrackPrompt StoryPlan/ShotPlan when available",
+    "fps": 24,
+    "width": 1920,
+    "height": 1080,
+    "targetEditSeconds": 4.5,
+    "generatedClipDurationSeconds": 8,
+    "autoAssembly": true,
+    "davinciExports": ["fcpxml-1.11", "fcp7-xml", "cmx3600-edl", "marker-csv", "edit-sheet-csv"],
+    "upgradePolicy": "Complete 16-shot Veo 3.1 Quality 1080p batch selected by the operator; review its exact $25.60 base estimate, $38.40 conservative estimate, and $45.00 hard ceiling before one-time authorization."
+  }
+}

@@ -14,6 +14,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 
 from ..cinematic.schemas import ArtDirectionReview
 from ..video_generation.mission_models import (
+    VideoAudioBrowseRequest,
+    VideoAudioSelection,
     VideoAuthorizationRequest,
     VideoCatalog,
     VideoChainReferenceRequest,
@@ -546,6 +548,57 @@ async def review_video_shot(
     return await _service(request).video_generation.review(job_id, shot_id, payload)
 
 
+def _audio_selection_response(selection: VideoAudioSelection) -> VideoAudioSelection | JSONResponse:
+    if selection.error is None:
+        return selection
+    return JSONResponse(
+        status_code=422,
+        content=selection.model_dump(mode="json", by_alias=True),
+    )
+
+
+@router.get(
+    "/video/jobs/{job_id}/audio",
+    response_model=VideoAudioSelection,
+)
+async def get_video_audio(job_id: str, request: Request) -> VideoAudioSelection:
+    return _service(request).video_generation.audio_selection(job_id)
+
+
+@router.post(
+    "/video/jobs/{job_id}/audio/select",
+    response_model=VideoAudioSelection,
+)
+async def select_video_audio(
+    job_id: str,
+    payload: VideoAudioBrowseRequest,
+    request: Request,
+) -> VideoAudioSelection | JSONResponse:
+    selection = await _service(request).select_video_audio(job_id, payload)
+    return _audio_selection_response(selection)
+
+
+@router.post(
+    "/video/jobs/{job_id}/audio/retained",
+    response_model=VideoAudioSelection,
+)
+async def bind_retained_video_audio(
+    job_id: str,
+    request: Request,
+) -> VideoAudioSelection | JSONResponse:
+    selection = await _service(request).video_generation.bind_retained_audio(job_id)
+    return _audio_selection_response(selection)
+
+
+@router.delete(
+    "/video/jobs/{job_id}/audio",
+    response_model=VideoAudioSelection,
+)
+async def clear_video_audio(job_id: str, request: Request) -> VideoAudioSelection | JSONResponse:
+    selection = await _service(request).video_generation.clear_audio(job_id)
+    return _audio_selection_response(selection)
+
+
 @router.post("/video/jobs/{job_id}/resolve", response_model=VideoJobView)
 async def resolve_video_timeline(job_id: str, request: Request) -> VideoJobView:
     return await _service(request).video_generation.resolve(job_id)
@@ -587,6 +640,10 @@ async def video_artifact(job_id: str, artifact: str, request: Request) -> FileRe
         "edl": "text/plain",
         "edit-sheet": "text/csv",
         "markers": "text/csv",
+        "relink-map": "text/csv",
+        "coverage-report": "application/json",
+        "render-manifest": "application/json",
+        "verification-report": "application/json",
         "preview": "video/mp4",
     }
     return FileResponse(path, media_type=media_types.get(artifact, "application/octet-stream"))

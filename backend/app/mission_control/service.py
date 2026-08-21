@@ -25,7 +25,11 @@ from ..cinematic.schemas import (
 )
 from ..cinematic.validation import validate_cinematic_privacy, validate_plan_pair
 from ..video_generation.mission_controller import VideoGenerationController
-from ..video_generation.mission_models import VideoGenerationEvent
+from ..video_generation.mission_models import (
+    VideoAudioBrowseRequest,
+    VideoAudioSelection,
+    VideoGenerationEvent,
+)
 from .config import MissionControlConfig
 from .discovery import (
     MissionDiscovery,
@@ -590,6 +594,25 @@ class MissionControlService:
             "file",
             initial_directory=request.initial_directory,
             title=request.title,
+        )
+
+    async def select_video_audio(
+        self,
+        job_id: str,
+        request: VideoAudioBrowseRequest,
+    ) -> VideoAudioSelection:
+        selection = await self.native_picker.choose(
+            "file",
+            initial_directory=request.initial_directory,
+            title="Select the original local audio master",
+        )
+        if not selection.selected:
+            return VideoAudioSelection(selected=False, verified=False)
+        assert selection.path is not None
+        return await self.video_generation.bind_audio(
+            job_id,
+            Path(selection.path),
+            source="local-selection",
         )
 
     async def open_path(self, request: OpenPathRequest) -> OpenPathResult:

@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 from ..cinematic.schemas import ArtDirectionReviewCollection, ShotPlan, StoryPlan
@@ -165,8 +165,26 @@ class NativePickerRequest(MissionModel):
 
 
 class NativePickerResponse(MissionModel):
+    selected: bool
     cancelled: bool
     path: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_selected(cls, value: object) -> object:
+        if isinstance(value, dict) and "selected" not in value:
+            cancelled = value.get("cancelled")
+            if isinstance(cancelled, bool):
+                return {**value, "selected": not cancelled}
+        return value
+
+    @model_validator(mode="after")
+    def selection_is_typed_and_consistent(self) -> NativePickerResponse:
+        if self.selected == self.cancelled:
+            raise ValueError("selected must be the boolean inverse of cancelled")
+        if self.selected != (self.path is not None):
+            raise ValueError("path must be present exactly when selected is true")
+        return self
 
 
 class OpenPathRequest(MissionModel):

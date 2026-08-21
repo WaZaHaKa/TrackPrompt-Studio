@@ -11,8 +11,9 @@ from typing import Any, Protocol, cast
 from uuid import UUID, uuid4
 
 from .assembly import execute_assembly
+from .audio import AudioBindingError, StagedAudio, probe_audio, stage_audio_master
 from .authorization import BatchAuthorization, authorization_phrase
-from .continuity import derive_shot_seed
+from .continuity import derive_shot_seed, load_continuity_profile
 from .contracts import CompiledReferenceImage, CompiledShot, ContractError, load_project_config
 from .costs import PRICE_SNAPSHOT_DATE, estimate
 from .exporter import export_davinci_package
@@ -32,6 +33,9 @@ from .media import probe, verify_generated_clip
 from .mission_models import (
     VideoAnalysisSource,
     VideoArtifactSummary,
+    VideoAudioBinding,
+    VideoAudioSelection,
+    VideoAudioSelectionError,
     VideoAuthorizationRequest,
     VideoCatalog,
     VideoChainReferenceRequest,
@@ -57,7 +61,7 @@ from .mission_models import (
     utc_now,
 )
 from .planning import compile_project_plan
-from .timeline import resolve_timeline
+from .timeline import editorial_export_files, load_edit_blueprint, resolve_timeline
 
 _BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 _ACTIVE_STATES = {
@@ -71,6 +75,38 @@ _PROFILE_FILES = {
     "quality-1080p": "project-config.quality-1080p.json",
     "quality-4k": "project-config.4k-optional.json",
 }
+
+
+def _probe_stream_layout(path: Path, *, ffprobe: str) -> dict[str, Any]:
+    result = subprocess.run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name,sample_rate,channels",
+            "-of",
+            "json",
+            "--",
+            str(path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        encoding="utf-8",
+        errors="replace",
+        shell=False,
+    )
+    if result.returncode != 0 or len(result.stdout) > 1_000_000:
+        raise ContractError("ffprobe could not verify the rough-cut stream layout")
+    value = json.loads(result.stdout)
+    if not isinstance(value, dict) or not isinstance(value.get("streams"), list):
+        raise ContractError("ffprobe returned an invalid rough-cut stream layout")
+    streams = cast(list[dict[str, Any]], value["streams"])
+    video = [item for item in streams if item.get("codec_type") == "video"]
+    audio = [item for item in streams if item.get("codec_type") == "audio"]
+    return {"video": video, "audio": audio}
 
 
 class VideoMissionStore(Protocol):
@@ -285,11 +321,13 @@ class VideoGenerationController:
                     )
                 )
             config = load_project_config(project_path)
+            continuity = load_continuity_profile(project_root / "continuity-profile.json")
             packages.append(
                 VideoContentPackage(
                     project_id=config.project_id,
                     title=config.title,
                     shot_count=len(config.required_shot_ids),
+                    default_master_seed=continuity.master_seed,
                     profiles=tuple(profiles),
                 )
             )
@@ -306,13 +344,16 @@ class VideoGenerationController:
         config_path = project_root / _PROFILE_FILES[request.profile_id]
         story_path = analysis_directory / "story-plan.json"
         shot_path = analysis_directory / "shot-plan.json"
-        audio_path: Path | None = None
+        initial_audio_path: Path | None = None
+        initial_audio_source: str | None = None
         reference_image_path: Path | None = None
         if request.audio_path:
-            audio_path = Path(request.audio_path).expanduser().resolve()
+            initial_audio_path = Path(request.audio_path).expanduser().resolve()
+            initial_audio_source = "local-selection"
         elif (analysis_directory / "source.bin").is_file():
-            audio_path = (analysis_directory / "source.bin").resolve()
-        if audio_path is not None and not audio_path.is_file():
+            initial_audio_path = (analysis_directory / "source.bin").resolve()
+            initial_audio_source = "analysis-retained"
+        if initial_audio_path is not None and not initial_audio_path.is_file():
             raise self._error(422, "audio_master_missing", "The selected local audio master is unavailable")
         if request.reference_image_path:
             reference_image_path = Path(request.reference_image_path).expanduser().resolve()
@@ -330,7 +371,9 @@ class VideoGenerationController:
                 shot_bank_path=project_root / "shot-bank.json",
                 gcs_bucket=f"gs://{bucket}",
                 analysis_job_id=request.analysis_job_id,
-                audio_master_path=audio_path,
+                # Audio is a local finishing input. It must never alter the
+                # already-reviewed provider-generation digest.
+                audio_master_path=None,
                 story_plan_path=story_path if story_path.is_file() else None,
                 shot_plan_path=shot_path if shot_path.is_file() else None,
                 continuity_profile_path=project_root / "continuity-profile.json",
@@ -352,7 +395,8 @@ class VideoGenerationController:
             plan=plan.to_dict(),
             gcp_project_id=request.gcp_project_id,
             gcs_bucket=bucket,
-            audio_path=str(audio_path) if audio_path else None,
+            audio_path=None,
+            audio_binding=None,
             reference_assets=(
                 {
                     plan.shots[0].first_frame_reference.asset_id: {
@@ -386,13 +430,262 @@ class VideoGenerationController:
         atomic_write_json(root / "plan.json", record.plan)
         for shot in plan.shots:
             atomic_write_json(root / "request-preview" / f"{shot.shot_id}.json", build_request_payload(shot))
-        return self._view(await self._save(record))
+        await self._save(record)
+        if initial_audio_path is not None and initial_audio_source is not None:
+            selection = await self.bind_audio(
+                record.id,
+                initial_audio_path,
+                source=cast(Any, initial_audio_source),
+            )
+            if not selection.selected:
+                assert selection.error is not None
+                raise self._error(422, selection.error.code, selection.error.message)
+        return self.get(record.id)
 
     def get(self, job_id: str) -> VideoJobView:
         return self._view(self._record(job_id))
 
     def jobs(self) -> list[VideoJobView]:
-        return [self._view(item) for item in self.store.list_video_jobs(limit=100)]
+        return [self._view(self._record(item.id)) for item in self.store.list_video_jobs(limit=100)]
+
+    @staticmethod
+    def _audio_selection(job: VideoJobRecord) -> VideoAudioSelection:
+        binding = job.audio_binding
+        if binding is None:
+            return VideoAudioSelection(selected=False, verified=False)
+        finishing = Path(binding.finishing_path)
+        if not finishing.is_file():
+            return VideoAudioSelection(
+                selected=False,
+                verified=False,
+                error=VideoAudioSelectionError(
+                    code="audio_artifact_missing",
+                    message="The bound private finishing audio is no longer available.",
+                ),
+            )
+        return VideoAudioSelection(
+            selected=True,
+            verified=True,
+            source=binding.source,
+            audio_artifact_id=binding.audio_artifact_id,
+            display_name=binding.display_name,
+            duration_seconds=binding.duration_seconds,
+            sample_rate_hz=binding.sample_rate_hz,
+            channels=binding.channels,
+            container=binding.container,
+            audio_codec=binding.audio_codec,
+            sha256=binding.sha256,
+            finishing_sha256=binding.finishing_sha256,
+            analysis_job_id=binding.analysis_job_id,
+            bound_video_job_id=binding.bound_video_job_id,
+            selected_at=binding.selected_at,
+        )
+
+    @staticmethod
+    def _audio_failure(exc: AudioBindingError) -> VideoAudioSelection:
+        return VideoAudioSelection(
+            selected=False,
+            verified=False,
+            error=VideoAudioSelectionError(code=exc.code, message=exc.safe_message),
+        )
+
+    @staticmethod
+    def _binding_from_staged(
+        job: VideoJobRecord,
+        staged: StagedAudio,
+        *,
+        source: Any,
+    ) -> VideoAudioBinding:
+        return VideoAudioBinding(
+            source=source,
+            audio_artifact_id=f"audio-{staged.source.sha256[:20]}",
+            display_name=staged.display_name,
+            source_runtime_path=str(staged.source.path),
+            artifact_path=str(staged.artifact.path),
+            finishing_path=str(staged.finishing.path),
+            sha256=staged.source.sha256,
+            finishing_sha256=staged.finishing.sha256,
+            container=staged.source.container,
+            audio_codec=staged.source.codec,
+            sample_rate_hz=staged.source.sample_rate_hz,
+            channels=staged.source.channels,
+            duration_seconds=staged.source.duration_seconds,
+            analysis_job_id=job.analysis_job_id,
+            bound_video_job_id=job.id,
+            selected_at=utc_now(),
+        )
+
+    def audio_selection(self, job_id: str) -> VideoAudioSelection:
+        return self._audio_selection(self._record(job_id))
+
+    def _archive_audio_binding(self, job: VideoJobRecord) -> None:
+        current = self._job_root(job) / "audio" / "audio-binding.json"
+        if not current.is_file():
+            return
+        value = read_json(current)
+        if not isinstance(value, dict):
+            return
+        digest = str(value.get("sha256", "unknown"))
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            digest = sha256_json(value)
+        history = current.parent / "binding-history" / f"{digest}-{uuid4().hex[:8]}.json"
+        atomic_write_json(history, value)
+        # The history copy is the recoverable audit record. Removing only the
+        # active receipt prevents a cleared association from being restored on
+        # the next restart; the immutable audio artifacts remain untouched.
+        current.unlink(missing_ok=True)
+
+    def _invalidate_finishing_outputs(self, job: VideoJobRecord) -> VideoJobRecord:
+        root = self._job_root(job)
+        davinci = root / "davinci"
+        if davinci.is_dir():
+            suffix = job.local_edit_digest or "unbound"
+            timestamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
+            archive = root / "finishing-history" / f"{timestamp}-{suffix[:16]}"
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            if archive.exists():
+                archive = archive.with_name(f"{archive.name}-{uuid4().hex[:8]}")
+            os.replace(davinci, archive)
+        state = (
+            VideoJobState.REVIEW_READY
+            if job.state
+            in {
+                VideoJobState.TIMELINE_READY,
+                VideoJobState.EXPORTED,
+                VideoJobState.COMPLETE,
+            }
+            else job.state
+        )
+        return job.model_copy(
+            update={
+                "state": state,
+                "timeline_path": None,
+                "export_root": None,
+                "preview_path": None,
+                "local_edit_digest": None,
+                "error": None,
+            }
+        )
+
+    async def bind_audio(
+        self,
+        job_id: str,
+        source_path: Path,
+        *,
+        source: Any,
+        display_name: str | None = None,
+    ) -> VideoAudioSelection:
+        async with self._lock:
+            job = self._record(job_id)
+            if job.state is VideoJobState.ASSEMBLING:
+                return VideoAudioSelection(
+                    selected=False,
+                    verified=False,
+                    error=VideoAudioSelectionError(
+                        code="audio_binding_busy",
+                        message="Wait for the active local assembly to finish before replacing its audio.",
+                    ),
+                )
+            if source not in {"analysis-retained", "local-selection", "legacy-local-path"}:
+                return VideoAudioSelection(
+                    selected=False,
+                    verified=False,
+                    error=VideoAudioSelectionError(
+                        code="audio_source_invalid",
+                        message="The selected audio source type is unsupported.",
+                    ),
+                )
+            ffmpeg = self.ffmpeg_path()
+            ffprobe = self.ffprobe_path()
+            try:
+                staged = await asyncio.to_thread(
+                    stage_audio_master,
+                    source_path,
+                    artifact_root=self._job_root(job) / "audio" / "artifacts",
+                    display_name=display_name,
+                    ffmpeg=str(ffmpeg) if ffmpeg else None,
+                    ffprobe=str(ffprobe) if ffprobe else None,
+                )
+            except AudioBindingError as exc:
+                return self._audio_failure(exc)
+            binding = self._binding_from_staged(job, staged, source=source)
+            if (
+                job.audio_binding is not None
+                and job.audio_binding.sha256 == binding.sha256
+                and job.audio_binding.duration_seconds == binding.duration_seconds
+                and Path(job.audio_binding.finishing_path).is_file()
+            ):
+                return self._audio_selection(job)
+            previous_plan_digest = job.plan_digest
+            previous_authorization = job.authorization
+            self._archive_audio_binding(job)
+            updated = self._invalidate_finishing_outputs(job).model_copy(
+                update={
+                    "audio_path": binding.finishing_path,
+                    "audio_binding": binding,
+                    "updated_at": utc_now(),
+                }
+            )
+            if updated.plan_digest != previous_plan_digest or updated.authorization != previous_authorization:
+                raise RuntimeError("local audio binding altered provider generation identity")
+            atomic_write_json(
+                self._job_root(updated) / "audio" / "audio-binding.json",
+                binding.model_dump(mode="json", by_alias=True),
+            )
+            atomic_write_json(
+                self._job_root(updated) / "audio" / "audio-selection.json",
+                binding.model_dump(mode="json", by_alias=True),
+            )
+            saved = await self._save(updated)
+            return self._audio_selection(saved)
+
+    async def bind_retained_audio(self, job_id: str) -> VideoAudioSelection:
+        job = self._record(job_id)
+        source = self._analysis_directory(job.analysis_job_id) / "source.bin"
+        if not source.is_file():
+            return VideoAudioSelection(
+                selected=False,
+                verified=False,
+                error=VideoAudioSelectionError(
+                    code="retained_analysis_audio_missing",
+                    message="This analysis no longer retains its original private audio artifact.",
+                ),
+            )
+        return await self.bind_audio(
+            job_id,
+            source,
+            source="analysis-retained",
+            display_name=f"analysis-{job.analysis_job_id[:8]}-retained-audio",
+        )
+
+    async def clear_audio(self, job_id: str) -> VideoAudioSelection:
+        async with self._lock:
+            job = self._record(job_id)
+            if job.state is VideoJobState.ASSEMBLING:
+                return VideoAudioSelection(
+                    selected=False,
+                    verified=False,
+                    error=VideoAudioSelectionError(
+                        code="audio_binding_busy",
+                        message="Wait for the active local assembly to finish before clearing its audio.",
+                    ),
+                )
+            self._archive_audio_binding(job)
+            updated = self._invalidate_finishing_outputs(job).model_copy(
+                update={"audio_path": None, "audio_binding": None, "updated_at": utc_now()}
+            )
+            atomic_write_json(
+                self._job_root(updated) / "audio" / "audio-selection.json",
+                {
+                    "schemaVersion": "1.0.0",
+                    "selected": False,
+                    "verified": False,
+                    "clearedAt": utc_now().isoformat(),
+                    "videoJobId": updated.id,
+                },
+            )
+            await self._save(updated)
+            return VideoAudioSelection(selected=False, verified=False)
 
     def request_preview(self, job_id: str) -> VideoRequestPreview:
         job = self._record(job_id)
@@ -802,15 +1095,23 @@ class VideoGenerationController:
                 raise self._error(
                     404, "video_artifact_not_found", "The requested export has not been created"
                 )
+            timeline_value = read_json(Path(job.timeline_path)) if job.timeline_path else {}
+            if not isinstance(timeline_value, dict):
+                timeline_value = {}
+            export_files = editorial_export_files(timeline_value)
             names = {
-                "fcpxml": "trackprompt-timeline.fcpxml",
-                "fcp7": "trackprompt-timeline.xml",
-                "edl": "trackprompt-timeline.edl",
+                "fcpxml": export_files["fcpxml"],
+                "fcp7": export_files["fcp7"],
+                "edl": export_files["edl"],
                 "edit-sheet": "edit-sheet.csv",
                 "markers": "davinci-markers.csv",
-                "preview": "autonomous-preview-4k.mp4"
-                if job.plan["profile"]["resolution"] == "4k"
-                else "autonomous-preview-1080p.mp4",
+                "relink-map": "relink-map.csv",
+                "coverage-report": "coverage-report.json",
+                "render-manifest": "render-manifest.json",
+                "verification-report": "verification-report.json",
+                "preview": export_files[
+                    "preview4k" if job.plan["profile"]["resolution"] == "4k" else "preview1080p"
+                ],
             }
             if artifact not in names:
                 raise self._error(404, "video_artifact_not_found", "The requested export does not exist")
@@ -1286,19 +1587,42 @@ class VideoGenerationController:
         )
 
     async def _resolve(self, job: VideoJobRecord) -> VideoJobRecord:
-        if not job.audio_path:
+        binding = job.audio_binding
+        if binding is None or not binding.verified:
             raise self._error(
                 409,
                 "audio_master_required",
                 "Select the original local audio master before resolving the timeline",
             )
+        finishing_path = Path(binding.finishing_path)
+        try:
+            audio_evidence = await asyncio.to_thread(
+                probe_audio,
+                finishing_path,
+                ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
+            )
+        except AudioBindingError as exc:
+            raise self._error(422, exc.code, exc.safe_message) from exc
+        if (
+            audio_evidence.sha256 != binding.finishing_sha256
+            or abs(audio_evidence.duration_seconds - binding.duration_seconds) > 0.02
+            or audio_evidence.sample_rate_hz != 48_000
+            or audio_evidence.channels != 2
+        ):
+            raise self._error(
+                422,
+                "audio_binding_stale",
+                "The verified finishing audio no longer matches its persisted binding.",
+            )
         clip_paths: dict[str, Path] = {}
+        clip_sha256: dict[str, str] = {}
+        accepted_attempt_ids: dict[str, str] = {}
         for shot in job.shots:
-            if shot.review_state is VideoReviewState.REJECTED:
+            if shot.review_state is not VideoReviewState.ACCEPTED:
                 raise self._error(
                     409,
-                    "video_clip_rejected",
-                    f"{shot.shot_id} is rejected and must be retried before timeline resolution",
+                    "video_clip_not_accepted",
+                    f"{shot.shot_id} must be accepted before timeline resolution",
                 )
             attempt = (
                 next(
@@ -1322,27 +1646,97 @@ class VideoGenerationController:
                 raise self._error(
                     409, "video_clip_unverified", f"{shot.shot_id} latest attempt is not verified"
                 )
-            clip_paths[shot.shot_id] = Path(attempt.local_clip_path)
+            clip_path = Path(attempt.local_clip_path)
+            actual_sha256 = await asyncio.to_thread(sha256_file, clip_path)
+            if attempt.clip_sha256 and actual_sha256 != attempt.clip_sha256:
+                raise self._error(
+                    422,
+                    "video_clip_hash_mismatch",
+                    f"{shot.shot_id} no longer matches its verified clip hash",
+                )
+            clip_paths[shot.shot_id] = clip_path
+            clip_sha256[shot.shot_id] = actual_sha256
+            accepted_attempt_ids[shot.shot_id] = attempt.id
         project_root = self._project_root(job.project_id)
+        edit_blueprint_path = project_root / "edit-blueprint.json"
+        if not edit_blueprint_path.is_file():
+            raise self._error(
+                422,
+                "video_edit_blueprint_missing",
+                "The selected video package has no editorial blueprint",
+            )
+        try:
+            edit_blueprint = load_edit_blueprint(
+                edit_blueprint_path,
+                project_id=job.project_id,
+                title=job.title,
+            )
+        except (ContractError, OSError, ValueError) as exc:
+            raise self._error(422, "video_edit_blueprint_invalid", str(exc)) from exc
         profile = cast(dict[str, Any], job.plan["profile"])
         width, height = (3840, 2160) if profile["resolution"] == "4k" else (1920, 1080)
         shot_plan = self._analysis_directory(job.analysis_job_id) / "shot-plan.json"
         timeline_path = self._job_root(job) / "davinci" / str(profile["profileId"]) / "resolved-timeline.json"
+        operation_items = sorted(
+            (
+                shot.shot_id,
+                attempt.id,
+                attempt.operation_name,
+            )
+            for shot in job.shots
+            for attempt in shot.attempts
+            if attempt.operation_name
+        )
+        operation_snapshot = {
+            "count": len(operation_items),
+            "digest": sha256_json(operation_items),
+        }
+        local_edit_digest = sha256_json(
+            {
+                "schemaVersion": "1.0.0",
+                "providerPlanDigest": job.plan_digest,
+                "audioSha256": binding.sha256,
+                "finishingSha256": binding.finishing_sha256,
+                "audioDurationSeconds": binding.duration_seconds,
+                "acceptedAttempts": accepted_attempt_ids,
+                "clipSha256": clip_sha256,
+                "editBlueprintSha256": sha256_file(edit_blueprint_path),
+                "timelineTreatmentVersion": edit_blueprint["timelineTreatment"]["version"],
+                "delivery": {"width": width, "height": height, "fps": 24},
+            }
+        )
         value = await asyncio.to_thread(
             resolve_timeline,
             project_id=job.project_id,
             title=job.title,
-            audio_path=Path(job.audio_path),
+            audio_path=finishing_path,
             chapter_map_path=project_root / "chapter-map.json",
+            edit_blueprint_path=edit_blueprint_path,
             clips_root=self._job_root(job) / "clips",
             clip_paths=clip_paths,
             output_width=width,
             output_height=height,
             fps=24,
             generated_clip_duration_seconds=int(profile["durationSeconds"]),
-            target_edit_seconds=6.0,
             analysis_shot_plan_path=shot_plan if shot_plan.is_file() else None,
+            local_edit_digest=local_edit_digest,
             ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
+        )
+        value.update(
+            {
+                "providerPlanDigest": job.plan_digest,
+                "providerOperationSnapshot": operation_snapshot,
+                "sourceClipSha256": clip_sha256,
+                "acceptedAttemptIds": accepted_attempt_ids,
+                "audio": {
+                    "audioArtifactId": binding.audio_artifact_id,
+                    "sha256": binding.sha256,
+                    "finishingSha256": binding.finishing_sha256,
+                    "durationSeconds": binding.duration_seconds,
+                    "sampleRateHz": binding.sample_rate_hz,
+                    "channels": binding.channels,
+                },
+            }
         )
         atomic_write_json(timeline_path, value)
         return await self._save(
@@ -1350,6 +1744,7 @@ class VideoGenerationController:
                 update={
                     "state": VideoJobState.TIMELINE_READY,
                     "timeline_path": str(timeline_path),
+                    "local_edit_digest": local_edit_digest,
                     "error": None,
                 }
             )
@@ -1398,6 +1793,8 @@ class VideoGenerationController:
             concat_list_path=str(plan_value["concatListPath"]),
             video_only_path=str(plan_value["videoOnlyPath"]),
             audio_path=str(plan_value["audioPath"]),
+            total_frames=int(plan_value["totalFrames"]),
+            fps=int(plan_value["fps"]),
         )
         job = await self._save(job.model_copy(update={"state": VideoJobState.ASSEMBLING, "error": None}))
         await asyncio.to_thread(execute_assembly, plan)
@@ -1411,6 +1808,7 @@ class VideoGenerationController:
                 422, "video_preview_audio_missing", "The autonomous preview has no audio stream"
             )
         timeline = cast(dict[str, Any], read_json(timeline_path))
+        export_files = editorial_export_files(timeline)
         expected_duration = float(cast(dict[str, Any], timeline["timeline"])["durationSeconds"])
         if abs(evidence.duration_seconds - expected_duration) > 0.75:
             raise self._error(
@@ -1418,7 +1816,125 @@ class VideoGenerationController:
                 "video_preview_duration_invalid",
                 "The autonomous preview duration does not match the local audio clock",
             )
-        atomic_write_json(export_root / "preview-verification.json", evidence.to_dict())
+        current = self._record(job.id)
+        current_operation_items = sorted(
+            (shot.shot_id, attempt.id, attempt.operation_name)
+            for shot in current.shots
+            for attempt in shot.attempts
+            if attempt.operation_name
+        )
+        operation_snapshot = cast(
+            dict[str, Any],
+            timeline.get("providerOperationSnapshot", {}),
+        )
+        provider_unchanged = (
+            int(operation_snapshot.get("count", -1)) == len(current_operation_items)
+            and str(operation_snapshot.get("digest", "")) == sha256_json(current_operation_items)
+        )
+        frame_tolerance = 1 / plan.fps
+        ffprobe = self.ffprobe_path()
+        if ffprobe is None:
+            raise self._error(
+                503,
+                "ffprobe_unavailable",
+                "ffprobe is required to verify the complete rough cut.",
+            )
+        stream_layout = await asyncio.to_thread(
+            _probe_stream_layout,
+            Path(plan.output_path),
+            ffprobe=str(ffprobe),
+        )
+        audio_streams = cast(list[dict[str, Any]], stream_layout["audio"])
+        video_streams = cast(list[dict[str, Any]], stream_layout["video"])
+        derived_paths = [
+            Path(str(item["derivedMediaPath"]))
+            for item in cast(list[dict[str, Any]], timeline["segments"])
+        ]
+        xml_parseable = True
+        try:
+            import xml.etree.ElementTree as element_tree
+
+            element_tree.parse(export_root / export_files["fcpxml"])
+            element_tree.parse(export_root / export_files["fcp7"])
+        except (OSError, element_tree.ParseError):
+            xml_parseable = False
+        coverage_value = read_json(export_root / "coverage-report.json")
+        coverage = coverage_value if isinstance(coverage_value, dict) else {}
+        verification = {
+            "schemaVersion": "1.0.0",
+            "status": "passed",
+            "localEditDigest": job.local_edit_digest,
+            "preview": evidence.to_dict(),
+            "streamLayout": stream_layout,
+            "checks": {
+                "dimensionsMatchTimeline": (evidence.width, evidence.height)
+                == (
+                    int(cast(dict[str, Any], timeline["timeline"])["width"]),
+                    int(cast(dict[str, Any], timeline["timeline"])["height"]),
+                ),
+                "fps24": abs(evidence.fps - 24.0) <= 0.01,
+                "codecH264": evidence.codec == "h264",
+                "audioPresent": evidence.has_audio,
+                "oneVideoStream": len(video_streams) == 1,
+                "oneAudioStream": len(audio_streams) == 1,
+                "audioAac48kStereo": len(audio_streams) == 1
+                and audio_streams[0].get("codec_name") == "aac"
+                and str(audio_streams[0].get("sample_rate")) == "48000"
+                and int(audio_streams[0].get("channels", 0)) == 2,
+                "durationWithinOneFrame": abs(evidence.duration_seconds - expected_duration)
+                <= frame_tolerance,
+                "providerOperationsUnchanged": provider_unchanged,
+                "allDerivedMediaExists": bool(derived_paths)
+                and all(path.is_file() for path in derived_paths),
+                "xmlParseable": xml_parseable,
+                "timelineContinuous": coverage.get("continuous") is True,
+                "allSixteenShotsUsed": coverage.get("allSixteenShotsUsed") is True,
+                "eventCountInRequiredRange": coverage.get("eventCountInRequiredRange") is True,
+                # Pre-blueprint packages did not persist this generic field.
+                # Their other hash/media checks remain authoritative.
+                "editorialChecksPassed": coverage.get("editorialChecksPassed", True) is True,
+                "noIdenticalSourceTreatmentRepeats": coverage.get(
+                    "noIdenticalSourceTreatmentRepeats"
+                )
+                is True,
+            },
+        }
+        if not all(cast(dict[str, bool], verification["checks"]).values()):
+            raise self._error(
+                422,
+                "video_preview_verification_failed",
+                "The complete rough cut did not pass authoritative media verification.",
+            )
+        atomic_write_json(export_root / "verification-report.json", verification)
+        manifest_value = read_json(export_root / "render-manifest.json")
+        if isinstance(manifest_value, dict):
+            package_files = [
+                export_root / export_files["fcpxml"],
+                export_root / export_files["fcp7"],
+                export_root / export_files["edl"],
+                export_root / "edit-plan.json",
+                export_root / "edit-sheet.csv",
+                export_root / "davinci-markers.csv",
+                export_root / "relink-map.csv",
+                export_root / "coverage-report.json",
+                export_root / "verification-report.json",
+                export_root / "README-DAVINCI.txt",
+                Path(plan.output_path),
+            ]
+            manifest_value.update(
+                {
+                    "status": "complete",
+                    "previewSha256": evidence.sha256,
+                    "previewDurationSeconds": evidence.duration_seconds,
+                    "completedAt": utc_now().isoformat(),
+                    "verificationReport": str(export_root / "verification-report.json"),
+                    "files": {
+                        path.name: {"sha256": sha256_file(path), "sizeBytes": path.stat().st_size}
+                        for path in package_files
+                    },
+                }
+            )
+            atomic_write_json(export_root / "render-manifest.json", manifest_value)
         return await self._save(
             job.model_copy(
                 update={
@@ -1438,7 +1954,80 @@ class VideoGenerationController:
         job = self.store.get_video_job(canonical)
         if job is None:
             raise self._error(404, "video_job_not_found", "The video job does not exist")
-        return job
+        return self._normalize_legacy_audio(job)
+
+    def _normalize_legacy_audio(self, job: VideoJobRecord) -> VideoJobRecord:
+        if job.audio_binding is not None:
+            return job
+        audio_root = self._job_root(job) / "audio"
+        binding_path = audio_root / "audio-binding.json"
+        if binding_path.is_file():
+            value = read_json(binding_path)
+            if isinstance(value, dict):
+                try:
+                    restored = VideoAudioBinding.model_validate(value)
+                except ValueError:
+                    restored = None
+                if restored is not None and Path(restored.finishing_path).is_file():
+                    updated = job.model_copy(
+                        update={"audio_path": restored.finishing_path, "audio_binding": restored}
+                    )
+                    self.store.put_video_job(updated)
+                    return updated
+
+        legacy_path: str | None = job.audio_path if isinstance(job.audio_path, str) else None
+        legacy_selection = audio_root / "audio-selection.json"
+        if legacy_path is None and legacy_selection.is_file():
+            value = read_json(legacy_selection)
+            if isinstance(value, dict):
+                selected = value.get("selected")
+                path = value.get("path")
+                # Only these two historical shapes are understood. Never
+                # coerce arbitrary values with bool(...).
+                if isinstance(selected, str):
+                    legacy_path = selected
+                elif selected is True and isinstance(path, str):
+                    legacy_path = path
+                elif selected is False:
+                    legacy_path = None
+        if legacy_path is None:
+            return job
+
+        try:
+            staged = stage_audio_master(
+                Path(legacy_path),
+                artifact_root=audio_root / "artifacts",
+                ffmpeg=str(self.ffmpeg_path()) if self.ffmpeg_path() else None,
+                ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
+            )
+        except AudioBindingError as exc:
+            updated = job.model_copy(update={"audio_path": None, "audio_binding": None})
+            atomic_write_json(
+                audio_root / "audio-selection.json",
+                {
+                    "schemaVersion": "1.0.0",
+                    "selected": False,
+                    "verified": False,
+                    "error": {"code": exc.code, "message": exc.safe_message},
+                    "migratedAt": utc_now().isoformat(),
+                },
+            )
+            self.store.put_video_job(updated)
+            return updated
+        binding = self._binding_from_staged(job, staged, source="legacy-local-path")
+        updated = self._invalidate_finishing_outputs(job).model_copy(
+            update={"audio_path": binding.finishing_path, "audio_binding": binding}
+        )
+        atomic_write_json(
+            binding_path,
+            binding.model_dump(mode="json", by_alias=True),
+        )
+        atomic_write_json(
+            audio_root / "audio-selection.json",
+            binding.model_dump(mode="json", by_alias=True),
+        )
+        self.store.put_video_job(updated)
+        return updated
 
     @staticmethod
     def _shot(job: VideoJobRecord, shot_id: str) -> VideoShotRecord:
@@ -1632,6 +2221,7 @@ class VideoGenerationController:
                 code="video_plan_request_contract_changed",
                 summary="This saved plan used the previous Veo request contract and cannot be resumed. Compile and authorize a fresh exact 1080p plan.",
             )
+        audio_selection = self._audio_selection(job)
         return VideoJobView(
             job_id=job.id,
             analysis_job_id=job.analysis_job_id,
@@ -1644,7 +2234,9 @@ class VideoGenerationController:
             source_artifacts=cast(dict[str, str], job.plan["sourceArtifacts"]),
             authorization_phrase=authorization_phrase(job.project_id, job.plan_digest, maximum),
             authorization_expires_at=(str(job.authorization["expiresAt"]) if job.authorization else None),
-            audio_master_bound=bool(job.audio_path),
+            audio_master_bound=audio_selection.selected and audio_selection.verified,
+            audio=audio_selection,
+            local_edit_digest=job.local_edit_digest,
             shots=tuple(shots),
             progress_percent=(verified / len(job.shots) * 100) if job.shots else 0,
             verified_shot_count=verified,
@@ -1663,6 +2255,12 @@ class VideoGenerationController:
                 edl_url=f"{base}/edl" if export_ready else None,
                 edit_sheet_url=f"{base}/edit-sheet" if export_ready else None,
                 markers_url=f"{base}/markers" if export_ready else None,
+                relink_map_url=f"{base}/relink-map" if export_ready else None,
+                coverage_report_url=f"{base}/coverage-report" if export_ready else None,
+                render_manifest_url=f"{base}/render-manifest" if export_ready else None,
+                verification_report_url=(
+                    f"{base}/verification-report" if export_ready else None
+                ),
                 preview_url=f"{base}/preview" if preview_ready else None,
             ),
             error=plan_error,

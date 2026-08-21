@@ -60,12 +60,11 @@ export function VideoGenerationScreen() {
   const [requests, setRequests] = useState<VideoRequestPreview | null>(null)
   const [doctor, setDoctor] = useState<VideoDoctorResult | null>(null)
   const [analysisId, setAnalysisId] = useState('')
-  const [projectId, setProjectId] = useState('the-glitch-is-me')
+  const [projectId, setProjectId] = useState('')
   const [profileId, setProfileId] = useState<VideoProfile['id']>('fast-1080p')
   const [gcpProjectId, setGcpProjectId] = useState(() => localStorage.getItem('wzhk.video.gcp-project') ?? '')
   const [gcsBucket, setGcsBucket] = useState(() => localStorage.getItem('wzhk.video.gcs-bucket') ?? '')
-  const [audioPath, setAudioPath] = useState('')
-  const [masterSeed, setMasterSeed] = useState(18_031_000)
+  const [masterSeed, setMasterSeed] = useState<number | null>(null)
   const [seedLocked, setSeedLocked] = useState(true)
   const [referenceImagePath, setReferenceImagePath] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -82,10 +81,12 @@ export function VideoGenerationScreen() {
       setCatalog(nextCatalog)
       setJobs(nextJobs)
       setAnalysisId((current) => current || nextCatalog.analyses[0]?.analysisJobId || '')
-      setProjectId((current) => current || nextCatalog.packages[0]?.projectId || 'the-glitch-is-me')
+      const defaultProjectId = nextCatalog.packages[0]?.projectId || ''
+      setProjectId((current) => current || defaultProjectId)
+      setMasterSeed((current) => current ?? nextCatalog.packages[0]?.defaultMasterSeed ?? 0)
       setJob((current) => current
         ? nextJobs.find((candidate) => candidate.jobId === current.jobId) ?? current
-        : nextJobs[0] ?? null)
+        : nextJobs.find((candidate) => candidate.projectId === defaultProjectId) ?? nextJobs[0] ?? null)
     } catch (caught) {
       setError(errorFromUnknown(caught, 'Video workspace could not load'))
     }
@@ -162,10 +163,30 @@ export function VideoGenerationScreen() {
 
   const selectedPackage = catalog?.packages.find((item) => item.projectId === projectId) ?? catalog?.packages[0]
   const selectedProfile = selectedPackage?.profiles.find((item) => item.id === profileId)
+
+  useEffect(() => {
+    if (!catalog || !job) return
+    setAnalysisId(job.analysisJobId)
+    setProjectId(job.projectId)
+    const jobPackage = catalog.packages.find((item) => item.projectId === job.projectId)
+    const matchingProfile = jobPackage?.profiles.find((item) => (
+      item.modelId === job.profile.modelId && item.resolution === job.profile.resolution
+    ))
+    if (matchingProfile) setProfileId(matchingProfile.id)
+  }, [catalog, job])
+
   const canCompile = Boolean(
     analysisId && projectId && gcpProjectId.trim() && gcsBucket.trim() && selectedProfile?.available,
   )
   const exactConfirmation = job?.authorizationPhrase ?? ''
+
+  const chooseProject = (nextProjectId: string): void => {
+    setProjectId(nextProjectId)
+    const nextPackage = catalog?.packages.find((item) => item.projectId === nextProjectId)
+    setMasterSeed(nextPackage?.defaultMasterSeed ?? 0)
+    const matchingJob = jobs.find((candidate) => candidate.projectId === nextProjectId)
+    if (matchingJob) setJob(matchingJob)
+  }
 
   const run = async (name: string, action: () => Promise<VideoJob>, success?: (value: VideoJob) => void) => {
     setBusy(name)
@@ -186,7 +207,7 @@ export function VideoGenerationScreen() {
     localStorage.setItem('wzhk.video.gcp-project', gcpProjectId.trim())
     localStorage.setItem('wzhk.video.gcs-bucket', gcsBucket.trim())
     const effectiveSeed = seedLocked
-      ? masterSeed
+      ? masterSeed ?? selectedPackage?.defaultMasterSeed ?? 0
       : randomSeed()
     if (!seedLocked) setMasterSeed(effectiveSeed)
     void run('compile', () => videoGenerationClient.createPlan({
@@ -195,7 +216,7 @@ export function VideoGenerationScreen() {
       profileId,
       gcpProjectId: gcpProjectId.trim(),
       gcsBucket: gcsBucket.trim(),
-      audioPath: audioPath.trim() || null,
+      audioPath: null,
       masterSeed: effectiveSeed,
       seedLocked,
       referenceImagePath: referenceImagePath.trim() || null,
@@ -215,12 +236,42 @@ export function VideoGenerationScreen() {
   }
 
   const pickAudio = async (): Promise<void> => {
-    setBusy('audio')
+    if (!job) return
+    setBusy('audio-selecting')
+    setError(null)
     try {
-      const selected = await videoGenerationClient.selectAudio(audioPath || null)
-      if (selected) setAudioPath(selected)
+      const selected = await videoGenerationClient.selectAudio(job.jobId)
+      if (selected.selected) await refreshJob(job.jobId)
     } catch (caught) {
       setError(errorFromUnknown(caught, 'Audio selection failed'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const bindRetainedAudio = async (): Promise<void> => {
+    if (!job) return
+    setBusy('audio-retained')
+    setError(null)
+    try {
+      const selected = await videoGenerationClient.useRetainedAudio(job.jobId)
+      if (selected.selected) await refreshJob(job.jobId)
+    } catch (caught) {
+      setError(errorFromUnknown(caught, 'Retained analysis audio could not be bound'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const clearAudio = async (): Promise<void> => {
+    if (!job) return
+    setBusy('audio-clearing')
+    setError(null)
+    try {
+      await videoGenerationClient.clearAudio(job.jobId)
+      await refreshJob(job.jobId)
+    } catch (caught) {
+      setError(errorFromUnknown(caught, 'Audio binding could not be cleared'))
     } finally {
       setBusy(null)
     }
@@ -229,7 +280,7 @@ export function VideoGenerationScreen() {
   const pickReferenceImage = async (): Promise<void> => {
     setBusy('reference')
     try {
-      const selected = await videoGenerationClient.selectReferenceImage(referenceImagePath || null)
+      const selected = await videoGenerationClient.selectReferenceImage()
       if (selected) setReferenceImagePath(selected)
     } catch (caught) {
       setError(errorFromUnknown(caught, 'Continuity reference selection failed'))
@@ -248,6 +299,10 @@ export function VideoGenerationScreen() {
     ['EDL', job.artifacts.edlUrl],
     ['Edit sheet CSV', job.artifacts.editSheetUrl],
     ['Markers CSV', job.artifacts.markersUrl],
+    ['Relink map', job.artifacts.relinkMapUrl],
+    ['Coverage report', job.artifacts.coverageReportUrl],
+    ['Render manifest', job.artifacts.renderManifestUrl],
+    ['Verification report', job.artifacts.verificationReportUrl],
   ].filter((item): item is [string, string] => item[1] !== null) : [], [job])
 
   return (
@@ -273,7 +328,7 @@ export function VideoGenerationScreen() {
             </select>
           </label>
           <label className="mc-field">Content package
-            <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
+            <select value={projectId} onChange={(event) => chooseProject(event.target.value)}>
               {catalog?.packages.map((pack) => <option key={pack.projectId} value={pack.projectId}>{pack.title} · {pack.shotCount} shots</option>)}
             </select>
           </label>
@@ -285,11 +340,8 @@ export function VideoGenerationScreen() {
           </label>
           <label className="mc-field">GCP project ID<input value={gcpProjectId} onChange={(event) => setGcpProjectId(event.target.value)} autoComplete="off" /></label>
           <label className="mc-field">GCS bucket<input value={gcsBucket} onChange={(event) => setGcsBucket(event.target.value)} placeholder="my-private-video-bucket" autoComplete="off" /></label>
-          <label className="mc-field mc-video-audio">Original local audio master
-            <span><input value={audioPath} onChange={(event) => setAudioPath(event.target.value)} placeholder="Optional until assembly" /><Button type="button" busy={busy === 'audio'} icon={<FolderOpen aria-hidden="true" />} onClick={() => { void pickAudio() }}>Browse</Button></span>
-          </label>
           <label className="mc-field mc-video-seed">Master continuity seed
-            <span><input type="number" min="0" max="4294967295" value={masterSeed} onChange={(event) => setMasterSeed(Number(event.target.value))} /><Button type="button" disabled={seedLocked} onClick={generateMasterSeed}>Generate new seed</Button></span>
+            <span><input type="number" min="0" max="4294967295" value={masterSeed ?? ''} onChange={(event) => setMasterSeed(Number(event.target.value))} /><Button type="button" disabled={seedLocked} onClick={generateMasterSeed}>Generate new seed</Button></span>
             <span><input type="checkbox" checked={seedLocked} onChange={(event) => setSeedLocked(event.target.checked)} /> Lock seed for this plan</span>
           </label>
           <label className="mc-field mc-video-audio">Private character / first-frame reference
@@ -356,11 +408,25 @@ export function VideoGenerationScreen() {
 
         <section className="mc-card mc-video-delivery">
           <div className="mc-card__heading"><div><span className="mc-eyebrow">Step 3 · local finishing package</span><h2>Automatic assembly and Resolve handoff</h2></div><Download aria-hidden="true" /></div>
-          {!job.audioMasterBound ? <Notice tone="warning" title="Audio master not bound"><p>Generation can finish, but timeline resolution and automatic assembly need the original local audio file.</p></Notice> : null}
+          <div className="mc-video-audio-binding" aria-live="polite">
+            <div>
+              <strong>Original master</strong>
+              <span className="mc-eyebrow">{busy?.startsWith('audio-') ? 'Selecting · binding · verifying' : job.audioMasterBound ? 'Audio master bound · verified' : 'No audio selected'}</span>
+              {job.audioMasterBound ? <p>{job.audio.displayName} · {job.audio.durationSeconds?.toFixed(3)} seconds · {job.audio.sampleRateHz?.toLocaleString()} Hz · {job.audio.channels} channels</p> : <p>No verified audio is bound to this saved video job.</p>}
+              {job.audio.source ? <small>Source: {job.audio.source === 'analysis-retained' ? 'retained analysis audio' : 'local selection'} · verified: {job.audio.verified ? 'yes' : 'no'}</small> : null}
+              {job.audio.sha256 ? <small>SHA-256 <code>{job.audio.sha256}</code></small> : null}
+            </div>
+            <div className="mc-button-row">
+              {catalog?.analyses.find((item) => item.analysisJobId === job.analysisJobId)?.retainedAudioAvailable ? <Button busy={busy === 'audio-retained'} onClick={() => { void bindRetainedAudio() }}>Use retained analysis audio</Button> : null}
+              <Button busy={busy === 'audio-selecting'} icon={<FolderOpen aria-hidden="true" />} onClick={() => { void pickAudio() }}>{job.audioMasterBound ? 'Replace audio…' : 'Browse for audio…'}</Button>
+              {job.audioMasterBound ? <Button tone="quiet" busy={busy === 'audio-clearing'} onClick={() => { void clearAudio() }}>Clear binding</Button> : null}
+            </div>
+          </div>
+          {!job.audioMasterBound ? <Notice tone="warning" title="Audio master not bound"><p>Choose the original local master. Mission Control verifies it, stores an immutable private copy, and binds it to this job without changing the provider plan.</p></Notice> : null}
           <div className="mc-button-row">
             <Button disabled={!job.audioMasterBound || job.verifiedShotCount !== job.totalShotCount} onClick={() => { void run('resolve', () => videoGenerationClient.action(job.jobId, 'resolve')) }}>Resolve timeline</Button>
-            <Button disabled={!job.artifacts.timelineReady} onClick={() => { void run('export', () => videoGenerationClient.action(job.jobId, 'export')) }}>Export Resolve package</Button>
-            <Button tone="primary" disabled={!job.artifacts.davinciPackageReady} onClick={() => { void run('assemble', () => videoGenerationClient.action(job.jobId, 'assemble')) }}>Assemble full preview</Button>
+            <Button disabled={!job.audioMasterBound || !job.artifacts.timelineReady} onClick={() => { void run('export', () => videoGenerationClient.action(job.jobId, 'export')) }}>Export Resolve package</Button>
+            <Button tone="primary" disabled={!job.audioMasterBound || !job.artifacts.davinciPackageReady} onClick={() => { void run('assemble', () => videoGenerationClient.action(job.jobId, 'assemble')) }}>Assemble full preview</Button>
             <Button icon={<FolderOpen aria-hidden="true" />} onClick={() => { void videoGenerationClient.openOutput(job.jobId).catch((caught) => setError(errorFromUnknown(caught, 'Output folder could not open'))) }}>Open output</Button>
           </div>
           {job.artifacts.previewUrl ? <video className="mc-video-preview" controls preload="metadata" src={job.artifacts.previewUrl} aria-label="Complete assembled music video" /> : null}

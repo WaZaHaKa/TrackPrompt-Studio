@@ -55,6 +55,7 @@ export interface VideoPackage {
   projectId: string
   title: string
   shotCount: number
+  defaultMasterSeed: number
   profiles: VideoProfile[]
 }
 
@@ -96,7 +97,30 @@ export interface VideoArtifacts {
   edlUrl: string | null
   editSheetUrl: string | null
   markersUrl: string | null
+  relinkMapUrl: string | null
+  coverageReportUrl: string | null
+  renderManifestUrl: string | null
+  verificationReportUrl: string | null
   previewUrl: string | null
+}
+
+export interface VideoAudioSelection {
+  selected: boolean
+  verified: boolean
+  source: 'analysis-retained' | 'local-selection' | 'legacy-local-path' | null
+  audioArtifactId: string | null
+  displayName: string | null
+  durationSeconds: number | null
+  sampleRateHz: number | null
+  channels: number | null
+  container: string | null
+  audioCodec: string | null
+  sha256: string | null
+  finishingSha256: string | null
+  analysisJobId: string | null
+  boundVideoJobId: string | null
+  selectedAt: string | null
+  error: { code: string; message: string } | null
 }
 
 export interface VideoJob {
@@ -118,6 +142,8 @@ export interface VideoJob {
   authorizationPhrase: string
   authorizationExpiresAt: string | null
   audioMasterBound: boolean
+  audio: VideoAudioSelection
+  localEditDigest: string | null
   shots: VideoShot[]
   progressPercent: number
   verifiedShotCount: number
@@ -187,6 +213,43 @@ function nullableText(value: unknown, label: string): string | null {
   return text(value, label)
 }
 
+function nullableNumberValue(value: unknown, label: string): number | null {
+  if (value === null) return null
+  return numberValue(value, label)
+}
+
+export function parseVideoAudioSelection(value: unknown): VideoAudioSelection {
+  const item = record(value, 'audio selection')
+  const selected = booleanValue(item.selected, 'audio selected')
+  const verified = booleanValue(item.verified, 'audio verified')
+  const rawError = item.error
+  const parsedError = rawError === null
+    ? null
+    : (() => {
+        const error = record(rawError, 'audio error')
+        return { code: text(error.code, 'audio error code'), message: text(error.message, 'audio error message') }
+      })()
+  if (selected !== verified) throw new Error('selected audio must also be verified')
+  return {
+    selected,
+    verified,
+    source: item.source === null ? null : enumValue(item.source, ['analysis-retained', 'local-selection', 'legacy-local-path'] as const, 'audio source'),
+    audioArtifactId: nullableText(item.audioArtifactId, 'audio artifact ID'),
+    displayName: nullableText(item.displayName, 'audio display name'),
+    durationSeconds: nullableNumberValue(item.durationSeconds, 'audio duration'),
+    sampleRateHz: nullableNumberValue(item.sampleRateHz, 'audio sample rate'),
+    channels: nullableNumberValue(item.channels, 'audio channels'),
+    container: nullableText(item.container, 'audio container'),
+    audioCodec: nullableText(item.audioCodec, 'audio codec'),
+    sha256: nullableText(item.sha256, 'audio SHA-256'),
+    finishingSha256: nullableText(item.finishingSha256, 'finishing SHA-256'),
+    analysisJobId: nullableText(item.analysisJobId, 'audio analysis job ID'),
+    boundVideoJobId: nullableText(item.boundVideoJobId, 'bound video job ID'),
+    selectedAt: nullableText(item.selectedAt, 'audio selected time'),
+    error: parsedError,
+  }
+}
+
 function enumValue<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
   const candidate = text(value, label)
   if (!allowed.includes(candidate as T)) throw new Error(`${label} is unsupported`)
@@ -237,6 +300,7 @@ export function parseVideoCatalog(value: unknown): VideoCatalog {
         projectId: text(pack.projectId, 'package projectId'),
         title: text(pack.title, 'package title'),
         shotCount: numberValue(pack.shotCount, 'package shotCount'),
+        defaultMasterSeed: numberValue(pack.defaultMasterSeed, 'package defaultMasterSeed'),
         profiles: array(pack.profiles, 'package profiles').map((profileRaw, profileIndex) => {
           const profile = record(profileRaw, `profile ${profileIndex}`)
           return {
@@ -287,6 +351,8 @@ export function parseVideoJob(value: unknown): VideoJob {
     authorizationPhrase: text(item.authorizationPhrase, 'authorizationPhrase'),
     authorizationExpiresAt: nullableText(item.authorizationExpiresAt, 'authorizationExpiresAt'),
     audioMasterBound: booleanValue(item.audioMasterBound, 'audioMasterBound'),
+    audio: parseVideoAudioSelection(item.audio),
+    localEditDigest: nullableText(item.localEditDigest, 'localEditDigest'),
     shots: array(item.shots, 'shots').map((raw, index) => {
       const shot = record(raw, `shot ${index}`)
       return {
@@ -328,6 +394,10 @@ export function parseVideoJob(value: unknown): VideoJob {
       edlUrl: nullableText(artifacts.edlUrl, 'edlUrl'),
       editSheetUrl: nullableText(artifacts.editSheetUrl, 'editSheetUrl'),
       markersUrl: nullableText(artifacts.markersUrl, 'markersUrl'),
+      relinkMapUrl: nullableText(artifacts.relinkMapUrl, 'relinkMapUrl'),
+      coverageReportUrl: nullableText(artifacts.coverageReportUrl, 'coverageReportUrl'),
+      renderManifestUrl: nullableText(artifacts.renderManifestUrl, 'renderManifestUrl'),
+      verificationReportUrl: nullableText(artifacts.verificationReportUrl, 'verificationReportUrl'),
       previewUrl: nullableText(artifacts.previewUrl, 'previewUrl'),
     },
     error: parseError(item.error, 'job error'),
@@ -363,13 +433,16 @@ const post = (path: string, body?: unknown): Promise<unknown> => request(path, {
 })
 
 export const videoGenerationClient = {
-  async selectAudio(initialDirectory: string | null = null): Promise<string | null> {
-    const item = record(await post('/system/select-file', {
+  async selectAudio(jobId: string, initialDirectory: string | null = null): Promise<VideoAudioSelection> {
+    return parseVideoAudioSelection(await post(`/video/jobs/${encodeURIComponent(jobId)}/audio/select`, {
       initialDirectory,
-      title: 'Select the original local audio master',
-    }), 'audio selection')
-    const selected = booleanValue(item.selected, 'audio selected')
-    return selected ? text(item.path, 'audio path') : null
+    }))
+  },
+  async useRetainedAudio(jobId: string): Promise<VideoAudioSelection> {
+    return parseVideoAudioSelection(await post(`/video/jobs/${encodeURIComponent(jobId)}/audio/retained`))
+  },
+  async clearAudio(jobId: string): Promise<VideoAudioSelection> {
+    return parseVideoAudioSelection(await request(`/video/jobs/${encodeURIComponent(jobId)}/audio`, { method: 'DELETE' }))
   },
   async selectReferenceImage(initialDirectory: string | null = null): Promise<string | null> {
     const item = record(await post('/system/select-file', {

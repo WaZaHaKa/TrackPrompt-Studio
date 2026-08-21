@@ -102,6 +102,27 @@ class VideoShotRecord(VideoMissionModel):
         return self.attempts[-1] if self.attempts else None
 
 
+class VideoAudioBinding(VideoMissionModel):
+    selected: Literal[True] = True
+    verified: Literal[True] = True
+    source: Literal["analysis-retained", "local-selection", "legacy-local-path"]
+    audio_artifact_id: str = Field(min_length=1, max_length=160)
+    display_name: str = Field(min_length=1, max_length=160)
+    source_runtime_path: str = Field(min_length=1, max_length=32_000)
+    artifact_path: str = Field(min_length=1, max_length=32_000)
+    finishing_path: str = Field(min_length=1, max_length=32_000)
+    sha256: str = Field(min_length=64, max_length=64)
+    finishing_sha256: str = Field(min_length=64, max_length=64)
+    container: str = Field(min_length=1, max_length=80)
+    audio_codec: str = Field(min_length=1, max_length=80)
+    sample_rate_hz: int = Field(gt=0)
+    channels: int = Field(gt=0, le=32)
+    duration_seconds: float = Field(gt=0)
+    analysis_job_id: str = Field(min_length=36, max_length=36)
+    bound_video_job_id: str = Field(min_length=36, max_length=36)
+    selected_at: datetime
+
+
 class VideoJobRecord(VideoMissionModel):
     schema_version: Literal["1.0.0"] = "1.0.0"
     id: str = Field(min_length=1, max_length=160)
@@ -115,6 +136,8 @@ class VideoJobRecord(VideoMissionModel):
     gcs_bucket: str = Field(min_length=1, max_length=300)
     region: Literal["us-central1"] = "us-central1"
     audio_path: str | None = None
+    audio_binding: VideoAudioBinding | None = None
+    local_edit_digest: str | None = Field(default=None, min_length=64, max_length=64)
     authorization: dict[str, Any] | None = None
     reference_assets: dict[str, dict[str, Any]] = Field(default_factory=dict)
     shots: tuple[VideoShotRecord, ...]
@@ -134,7 +157,7 @@ class VideoJobRecord(VideoMissionModel):
 
 class VideoPlanCreateRequest(VideoMissionModel):
     analysis_job_id: str = Field(min_length=36, max_length=36)
-    project_id: str = Field(default="the-glitch-is-me", min_length=1, max_length=160)
+    project_id: str = Field(min_length=1, max_length=160)
     profile_id: Literal["fast-1080p", "quality-1080p", "quality-4k"] = "fast-1080p"
     gcp_project_id: str = Field(min_length=1, max_length=300)
     gcs_bucket: str = Field(min_length=3, max_length=300)
@@ -176,6 +199,34 @@ class VideoChainReferenceRequest(VideoMissionModel):
     source_shot_id: str = Field(min_length=1, max_length=160)
 
 
+class VideoAudioBrowseRequest(VideoMissionModel):
+    initial_directory: str | None = Field(default=None, max_length=32_000)
+
+
+class VideoAudioSelectionError(VideoMissionModel):
+    code: str = Field(min_length=1, max_length=100)
+    message: str = Field(min_length=1, max_length=1_000)
+
+
+class VideoAudioSelection(VideoMissionModel):
+    selected: bool
+    verified: bool
+    source: Literal["analysis-retained", "local-selection", "legacy-local-path"] | None = None
+    audio_artifact_id: str | None = None
+    display_name: str | None = None
+    duration_seconds: float | None = Field(default=None, gt=0)
+    sample_rate_hz: int | None = Field(default=None, gt=0)
+    channels: int | None = Field(default=None, gt=0, le=32)
+    container: str | None = None
+    audio_codec: str | None = None
+    sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    finishing_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    analysis_job_id: str | None = None
+    bound_video_job_id: str | None = None
+    selected_at: datetime | None = None
+    error: VideoAudioSelectionError | None = None
+
+
 class VideoDoctorRequest(VideoMissionModel):
     gcp_project_id: str = Field(min_length=1, max_length=300)
     gcs_bucket: str = Field(min_length=3, max_length=300)
@@ -211,6 +262,7 @@ class VideoContentPackage(VideoMissionModel):
     project_id: str
     title: str
     shot_count: int
+    default_master_seed: int = Field(ge=0, le=4_294_967_295)
     profiles: tuple[VideoProfileSummary, ...]
 
 
@@ -253,6 +305,10 @@ class VideoArtifactSummary(VideoMissionModel):
     edl_url: str | None = None
     edit_sheet_url: str | None = None
     markers_url: str | None = None
+    relink_map_url: str | None = None
+    coverage_report_url: str | None = None
+    render_manifest_url: str | None = None
+    verification_report_url: str | None = None
     preview_url: str | None = None
 
 
@@ -270,6 +326,8 @@ class VideoJobView(VideoMissionModel):
     authorization_phrase: str
     authorization_expires_at: str | None
     audio_master_bound: bool
+    audio: VideoAudioSelection
+    local_edit_digest: str | None
     shots: tuple[VideoShotView, ...]
     progress_percent: float = Field(ge=0, le=100)
     verified_shot_count: int = Field(ge=0)

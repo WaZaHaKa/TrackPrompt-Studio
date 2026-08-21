@@ -25,6 +25,7 @@ if str(PACKAGE_ROOT / "backend") not in sys.path:
 
 from app.mission_control.store import MissionControlStore
 from app.video_generation import cli as video_cli
+from app.video_generation import timeline as timeline_module
 from app.video_generation.assembly import build_assembly_plan, execute_assembly
 from app.video_generation.authorization import (
     BatchAuthorization,
@@ -382,6 +383,7 @@ def test_timeline_covers_audio_and_exports_parseable_xml(tmp_path: Path) -> None
         title="The Glitch Is Me",
         audio_path=audio,
         chapter_map_path=PROJECT / "chapter-map.json",
+        edit_blueprint_path=PROJECT / "edit-blueprint.json",
         clips_root=clips,
         output_width=1920,
         output_height=1080,
@@ -408,6 +410,45 @@ def test_timeline_covers_audio_and_exports_parseable_xml(tmp_path: Path) -> None
     ET.parse(fcp7)
     assert '<fcpxml version="1.11">' in fcpxml.read_text(encoding="utf-8")
     assert "FCM: NON-DROP FRAME" in edl.read_text(encoding="utf-8")
+
+
+def test_full_song_rough_cut_uses_all_shots_and_escalates_final_chorus(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    audio = tmp_path / "master.wav"
+    _write_silence(audio, seconds=0.1)
+    monkeypatch.setattr(timeline_module, "audio_duration_seconds", lambda *_args, **_kwargs: 297.68)
+    clip_paths = {f"shot-{index:03d}": tmp_path / f"shot-{index:03d}.mp4" for index in range(1, 17)}
+    timeline = resolve_timeline(
+        project_id="the-glitch-is-me",
+        title="The Glitch Is Me",
+        audio_path=audio,
+        chapter_map_path=PROJECT / "chapter-map.json",
+        edit_blueprint_path=PROJECT / "edit-blueprint.json",
+        clips_root=tmp_path,
+        clip_paths=clip_paths,
+        target_edit_seconds=4.5,
+        local_edit_digest="d" * 64,
+    )
+    segments = timeline["segments"]
+    assert 55 <= len(segments) <= 80
+    assert {item["shotId"] for item in segments} == {
+        f"shot-{index:03d}" for index in range(1, 17)
+    }
+    assert len({(item["shotId"], item["sourceInFrames"], item["treatment"]) for item in segments}) == len(segments)
+    first = [item for item in segments if item["chapterId"] == "unsolvable-distance"]
+    final = [item for item in segments if item["chapterId"] == "transcendence"]
+    closing = [item for item in segments if item["chapterId"] == "system-failure"]
+    assert {"shot-005", "shot-006"}.issubset({item["shotId"] for item in first})
+    assert {"shot-005", "shot-006", "shot-013", "shot-014"}.issubset(
+        {item["shotId"] for item in final}
+    )
+    assert max(float(item["cropScale"]) for item in final) > max(
+        float(item["cropScale"]) for item in first
+    )
+    assert {"shot-001", "shot-002"}.issubset({item["shotId"] for item in closing})
+    assert closing[-1]["shotId"] == "shot-016"
 
 
 def test_assembly_plan_is_local_and_audio_mastered(tmp_path: Path) -> None:
@@ -462,6 +503,11 @@ def test_export_package_writes_all_resolve_fallbacks(tmp_path: Path) -> None:
     ):
         assert Path(outputs[key]).is_file(), key
     assert Path(outputs["previewOutput"]).name == "autonomous-preview-1080p.mp4"
+    for key in ("editPlan", "relinkMap", "coverageReport", "renderManifest", "verificationReport"):
+        assert Path(outputs[key]).is_file(), key
+    assert Path(outputs["fcpxml"]).name == "trackprompt-timeline.fcpxml"
+    assert Path(outputs["fcp7Xml"]).name == "trackprompt-timeline.xml"
+    assert Path(outputs["edl"]).name == "trackprompt-timeline.edl"
     ET.parse(outputs["fcpxml"])
     ET.parse(outputs["fcp7Xml"])
 
@@ -670,9 +716,10 @@ async def test_retry_modes_preserve_setup_or_invalidate_authorization(tmp_path: 
     )
     try:
         planned = await controller.create_plan(
-            VideoPlanCreateRequest(
-                analysis_job_id=analysis_id,
-                gcp_project_id="test-project",
+                VideoPlanCreateRequest(
+                    analysis_job_id=analysis_id,
+                    project_id="the-glitch-is-me",
+                    gcp_project_id="test-project",
                 gcs_bucket="example-trackprompt-video",
             )
         )
@@ -766,9 +813,10 @@ async def test_accepted_previous_shot_frame_changes_digest_and_requires_fresh_au
     )
     try:
         planned = await controller.create_plan(
-            VideoPlanCreateRequest(
-                analysis_job_id=analysis_id,
-                gcp_project_id="test-project",
+                VideoPlanCreateRequest(
+                    analysis_job_id=analysis_id,
+                    project_id="the-glitch-is-me",
+                    gcp_project_id="test-project",
                 gcs_bucket="example-trackprompt-video",
             )
         )

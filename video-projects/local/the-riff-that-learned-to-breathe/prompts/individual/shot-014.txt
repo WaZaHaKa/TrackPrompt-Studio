@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-014 — The City Learns the Groove
+Provisional timing: 116.000–125.000 s
+Seed: 24081014
+
+NARRATIVE INTENT
+Deliver the visual climax: the transformed track becomes a shared pulse beyond the two rooms.
+
+KEYFRAME PROMPT
+the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged leads the woven amber-and-indigo ribbon through the quiet night city. Rooftop water tanks, laundry lines, puddles, tram cables, and many unmarked windows lean into one downtempo wave. The city remains hand-painted and intimate rather than futuristic. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+Follow the bird in a broad descending flight as the ribbon passes over rooftops. Window lights, puddle rings, laundry, cables, and distant trees answer in a slow synchronized groove. Use the largest camera move of the film but keep it smooth and readable, ending as the bird flies close across the lens.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+origami-bird-hybrid, night-city, coauthored-ribbons
+
+TRANSITION IN
+woven ribbon luma-and-pigment wipe
+
+TRANSITION OUT
+the bird crosses close to lens and reveals the warm workshop behind its wing
+
+ACCEPTANCE NOTES
+- Primary climax and thumbnail candidate.
+- No billboards, signs, logos, or random crowd faces.

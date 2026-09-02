@@ -35,6 +35,7 @@ ANDROMEDA_V2_FRAME_END = 13029
 ANDROMEDA_V2_FPS = 30
 ANDROMEDA_V2_SHOT_COUNT = 35
 ANDROMEDA_V2_LOOK_PROFILE_ID = "andromeda-r13.1-final-look-v1"
+ANDROMEDA_V2_BUILDER_ID = "andromeda-v2-master-scene-builder-v2"
 ANDROMEDA_V2_SOURCE_AUDIO_SHA256 = (
     "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5"
 )
@@ -76,6 +77,73 @@ _ACT_PALETTES: dict[str, tuple[float, float, float, float]] = {
     "transformation": (0.18, 0.08, 0.22, 1.0),
     "arrival": (0.12, 0.18, 0.30, 1.0),
 }
+_STORY_ACTION_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "fracture-impact",
+        ("physical impact", "visibly damages", "fracture impact", "damaged engine"),
+    ),
+    (
+        "component-release",
+        ("remove only", "removed components", "armor unmake", "damaged armor"),
+    ),
+    (
+        "aperture-rebirth",
+        ("aperture rebirth", "reignite", "aperture stabilizes", "front aperture"),
+    ),
+    (
+        "route-repair",
+        ("bridge the damaged", "completed route", "crystal routing", "repaired route"),
+    ),
+    (
+        "transformed-release",
+        ("rebuilt engine", "transformed release", "release the rebuilt", "under its own power"),
+    ),
+    (
+        "arrival-settle",
+        ("at rest", "held orientation", "decelerates", "quiet arrival", "chosen rest"),
+    ),
+    (
+        "cradle-capture",
+        ("catch the damaged", "arrest motion", "cradle capture", "connected functional arms"),
+    ),
+    (
+        "localized-crossing",
+        ("cross the membrane", "localized compression", "threshold membrane", "crossing"),
+    ),
+    (
+        "mechanical-alignment",
+        ("align", "alignment", "locking", "seal", "mechanically settle"),
+    ),
+    (
+        "directional-sweep",
+        ("sweep", "searches", "directional event", "chosen direction"),
+    ),
+    (
+        "mechanical-opening",
+        ("opens", "open the", "release", "withdraw", "parting"),
+    ),
+    (
+        "signal-pulse",
+        ("signal", "pulse", "ignite", "ignition", "answers the aperture"),
+    ),
+)
+_RING_GEOMETRY_TOKENS = (
+    "aperture",
+    "arc",
+    "horizon",
+    "iris",
+    "membrane",
+    "orbit",
+    "ring",
+)
+_CRYSTAL_GEOMETRY_TOKENS = (
+    "beacon",
+    "core",
+    "crystal",
+    "dust",
+    "moon",
+    "signal",
+)
 
 
 def _canonical_sha256(payload: object) -> str:
@@ -95,6 +163,204 @@ def _file_sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _story_geometry_kind(label: str) -> str:
+    normalized = label.casefold()
+    if any(token in normalized for token in _RING_GEOMETRY_TOKENS):
+        return "ring"
+    if any(token in normalized for token in _CRYSTAL_GEOMETRY_TOKENS):
+        return "crystal"
+    return "connected-structure"
+
+
+def _story_action_family(story_purpose: str, secondary_action: str) -> str:
+    # The authored primary purpose owns the shot's action family. Secondary
+    # action text is a fallback only, so a transition hint cannot override the
+    # principal event (for example route repair leading into aperture rebirth).
+    for narrative in (story_purpose.casefold(), secondary_action.casefold()):
+        for family, tokens in _STORY_ACTION_RULES:
+            if any(token in narrative for token in tokens):
+                return family
+    return "authored-travel"
+
+
+def _controller_story_states(
+    *,
+    frame_start: int,
+    frame_mid: int,
+    frame_end: int,
+    family: str,
+    digest: bytes,
+) -> list[dict[str, Any]]:
+    amplitude = 0.28 + (digest[0] / 255.0) * 0.42
+    direction = -1.0 if digest[1] % 2 else 1.0
+    turn = (0.12 + (digest[2] / 255.0) * 0.30) * direction
+    lift = 0.10 + (digest[3] / 255.0) * 0.34
+    scale_triplets: dict[str, tuple[float, float, float]] = {
+        "signal-pulse": (0.84, 1.14, 1.0),
+        "directional-sweep": (0.92, 1.05, 1.0),
+        "mechanical-opening": (0.76, 1.02, 1.13),
+        "mechanical-alignment": (1.12, 0.88, 1.0),
+        "localized-crossing": (1.0, 0.72, 1.04),
+        "fracture-impact": (1.0, 1.18, 0.86),
+        "cradle-capture": (1.08, 0.82, 0.94),
+        "component-release": (1.0, 0.72, 0.38),
+        "route-repair": (0.52, 0.82, 1.0),
+        "aperture-rebirth": (0.62, 1.22, 1.04),
+        "transformed-release": (0.78, 1.08, 1.0),
+        "arrival-settle": (1.06, 1.0, 0.96),
+        "authored-travel": (0.94, 1.04, 1.0),
+    }
+    start_scale, mid_scale, end_scale = scale_triplets[family]
+    end_travel = (
+        amplitude * 0.35
+        if family
+        in {
+            "mechanical-opening",
+            "transformed-release",
+            "authored-travel",
+        }
+        else 0.0
+    )
+    return [
+        {
+            "frame": frame_start,
+            "locationOffset": (0.0, 0.0, 0.0),
+            "rotationOffset": (0.0, -turn * 0.18, -turn * 0.32),
+            "scaleFactor": start_scale,
+        },
+        {
+            "frame": frame_mid,
+            "locationOffset": (
+                direction * amplitude,
+                amplitude * 0.22,
+                lift,
+            ),
+            "rotationOffset": (turn * 0.62, -turn * 0.38, turn),
+            "scaleFactor": mid_scale,
+        },
+        {
+            "frame": frame_end,
+            "locationOffset": (
+                direction * end_travel,
+                end_travel * 0.65,
+                lift * 0.25,
+            ),
+            "rotationOffset": (turn * 0.12, turn * 0.10, turn * 0.18),
+            "scaleFactor": end_scale,
+        },
+    ]
+
+
+def build_shot_story_action_plan(
+    shots: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compile every authored narrative field into deterministic scene actions."""
+
+    shot_actions: list[dict[str, Any]] = []
+    for shot in shots:
+        shot_id = shot.get("id")
+        act_id = shot.get("actId")
+        story_purpose = shot.get("storyPurpose")
+        secondary_action = shot.get("secondaryNarrativeAction")
+        dominant_shape = shot.get("dominantShape")
+        required_landmarks = shot.get("requiredLandmarks")
+        frame_start = shot.get("frameStart")
+        frame_end = shot.get("frameEnd")
+        if (
+            not isinstance(shot_id, str)
+            or not shot_id
+            or act_id not in _ACT_ORDER
+            or not isinstance(story_purpose, str)
+            or not story_purpose.strip()
+            or not isinstance(secondary_action, str)
+            or not secondary_action.strip()
+            or not isinstance(dominant_shape, str)
+            or not dominant_shape.strip()
+            or not isinstance(required_landmarks, list)
+            or not required_landmarks
+            or any(
+                not isinstance(landmark, str) or not landmark.strip()
+                for landmark in required_landmarks
+            )
+            or not isinstance(frame_start, int)
+            or not isinstance(frame_end, int)
+            or frame_end < frame_start
+        ):
+            raise ValueError(
+                "every shot requires executable story purpose, secondary action, "
+                "dominant shape, landmarks, and frame bounds"
+            )
+        signature_payload = {
+            "shotId": shot_id,
+            "actId": act_id,
+            "storyPurpose": story_purpose,
+            "secondaryNarrativeAction": secondary_action,
+            "dominantShape": dominant_shape,
+            "requiredLandmarks": required_landmarks,
+        }
+        action_signature = _canonical_sha256(signature_payload)
+        digest = bytes.fromhex(action_signature)
+        frame_mid = (frame_start + frame_end) // 2
+        action_family = _story_action_family(story_purpose, secondary_action)
+        landmarks = [
+            {
+                "id": landmark,
+                "geometryKind": _story_geometry_kind(landmark),
+                "pulsePhase": round(
+                    int.from_bytes(
+                        hashlib.sha256(
+                            f"{action_signature}:{landmark}".encode("utf-8")
+                        ).digest()[:2],
+                        byteorder="big",
+                    )
+                    / 65535.0,
+                    6,
+                ),
+            }
+            for landmark in required_landmarks
+        ]
+        shot_actions.append(
+            {
+                "shotId": shot_id,
+                "sequence": int(shot["sequence"]),
+                "actId": act_id,
+                "frameStart": frame_start,
+                "frameMid": frame_mid,
+                "frameEnd": frame_end,
+                "storyPurpose": story_purpose,
+                "storyPurposeSha256": hashlib.sha256(
+                    story_purpose.encode("utf-8")
+                ).hexdigest(),
+                "secondaryNarrativeAction": secondary_action,
+                "secondaryNarrativeActionSha256": hashlib.sha256(
+                    secondary_action.encode("utf-8")
+                ).hexdigest(),
+                "dominantShape": {
+                    "id": dominant_shape,
+                    "geometryKind": _story_geometry_kind(dominant_shape),
+                },
+                "requiredLandmarks": landmarks,
+                "actionFamily": action_family,
+                "actionSignatureSha256": action_signature,
+                "motionSeed": int.from_bytes(digest[:4], byteorder="big"),
+                "controllerStates": _controller_story_states(
+                    frame_start=frame_start,
+                    frame_mid=frame_mid,
+                    frame_end=frame_end,
+                    family=action_family,
+                    digest=digest,
+                ),
+            }
+        )
+    plan: dict[str, Any] = {
+        "schemaVersion": "1.0.0",
+        "projectId": ANDROMEDA_V2_PROJECT_ID,
+        "shotActions": shot_actions,
+    }
+    plan["canonicalSha256"] = _canonical_sha256(plan)
+    return plan
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -356,6 +622,7 @@ def build_andromeda_v2_scene_spec(repository_root: str | Path) -> dict[str, Any]
     if any(count != 5 for count in shots_by_act.values()):
         raise ValueError("each Andromeda V2 act must contain exactly five shots")
 
+    story_action_plan = build_shot_story_action_plan(shots)
     source_payload = {
         "storyPlanSha256": _file_sha256(contracts["storyPath"]),
         "shotPlanSha256": _file_sha256(contracts["shotPath"]),
@@ -365,7 +632,7 @@ def build_andromeda_v2_scene_spec(repository_root: str | Path) -> dict[str, Any]
     }
     spec: dict[str, Any] = {
         "schemaVersion": "1.0.0",
-        "builderId": "andromeda-v2-master-scene-builder-v1",
+        "builderId": ANDROMEDA_V2_BUILDER_ID,
         "projectId": ANDROMEDA_V2_PROJECT_ID,
         "frameStart": ANDROMEDA_V2_FRAME_START,
         "frameEnd": ANDROMEDA_V2_FRAME_END,
@@ -378,6 +645,8 @@ def build_andromeda_v2_scene_spec(repository_root: str | Path) -> dict[str, Any]
         "verticalEnabledByDefault": False,
         "compositionProfiles": all_authored_composition_profiles(),
         "resolvedShotCompositions": resolved_compositions,
+        "storyActionCount": len(story_action_plan["shotActions"]),
+        "storyActionPlanSha256": story_action_plan["canonicalSha256"],
         "sourceBindings": source_payload,
         "productionAuthorized": False,
         "renderStarted": False,
@@ -428,31 +697,81 @@ def _material(
     roughness: float,
     emission_color: tuple[float, float, float, float] | None = None,
     emission_strength: float = 0.0,
+    alpha: float = 1.0,
+    transmission: float = 0.0,
+    noise_scale: float = 7.0,
+    bump_strength: float = 0.08,
 ) -> Any:
     import bpy  # type: ignore[import-not-found]
 
     material = bpy.data.materials.new(name)
     material.use_nodes = True
-    material.diffuse_color = base_color
+    material.diffuse_color = (*base_color[:3], alpha)
     if hasattr(material, "surface_render_method"):
         material.surface_render_method = "DITHERED"
-    principled = material.node_tree.nodes.get("Principled BSDF")
+    node_tree = material.node_tree
+    principled = node_tree.nodes.get("Principled BSDF")
     if principled is not None:
         for socket_name, value in (
             ("Base Color", base_color),
             ("Metallic", metallic),
             ("Roughness", roughness),
+            ("Alpha", alpha),
         ):
             socket = principled.inputs.get(socket_name)
             if socket is not None:
                 socket.default_value = value
         emission = principled.inputs.get("Emission Color") or principled.inputs.get("Emission")
         strength = principled.inputs.get("Emission Strength")
+        transmission_socket = principled.inputs.get(
+            "Transmission Weight"
+        ) or principled.inputs.get("Transmission")
         if emission is not None:
             emission.default_value = emission_color or base_color
         if strength is not None:
             strength.default_value = emission_strength
+        if transmission_socket is not None:
+            transmission_socket.default_value = transmission
+
+        texture_coordinate = node_tree.nodes.new("ShaderNodeTexCoord")
+        texture_coordinate.name = f"{name}_COORDINATES"
+        noise = node_tree.nodes.new("ShaderNodeTexNoise")
+        noise.name = f"{name}_WEATHERING"
+        noise.inputs["Scale"].default_value = noise_scale
+        noise.inputs["Detail"].default_value = 5.0
+        noise.inputs["Roughness"].default_value = 0.72
+        color_ramp = node_tree.nodes.new("ShaderNodeValToRGB")
+        color_ramp.name = f"{name}_WEATHERED_COLOR"
+        color_ramp.color_ramp.elements[0].position = 0.24
+        color_ramp.color_ramp.elements[0].color = (
+            max(0.0, base_color[0] * 0.38),
+            max(0.0, base_color[1] * 0.42),
+            max(0.0, base_color[2] * 0.46),
+            alpha,
+        )
+        color_ramp.color_ramp.elements[1].position = 0.78
+        color_ramp.color_ramp.elements[1].color = (
+            min(1.0, base_color[0] * 1.42 + 0.015),
+            min(1.0, base_color[1] * 1.34 + 0.015),
+            min(1.0, base_color[2] * 1.28 + 0.015),
+            alpha,
+        )
+        bump = node_tree.nodes.new("ShaderNodeBump")
+        bump.name = f"{name}_MICRO_RELIEF"
+        bump.inputs["Strength"].default_value = bump_strength
+        bump.inputs["Distance"].default_value = 0.12
+        node_tree.links.new(texture_coordinate.outputs["Generated"], noise.inputs["Vector"])
+        node_tree.links.new(noise.outputs["Fac"], color_ramp.inputs["Fac"])
+        node_tree.links.new(color_ramp.outputs["Color"], principled.inputs["Base Color"])
+        node_tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+        normal = principled.inputs.get("Normal")
+        if normal is not None:
+            node_tree.links.new(bump.outputs["Normal"], normal)
     material["trackprompt_look_profile"] = ANDROMEDA_V2_LOOK_PROFILE_ID
+    material["trackprompt_material_language"] = "weathered-stone-metal-crystal-v1"
+    material["trackprompt_noise_scale"] = noise_scale
+    material["trackprompt_bump_strength"] = bump_strength
+    material["trackprompt_transparency_mode"] = "DITHERED"
     return material
 
 
@@ -462,6 +781,22 @@ def _mark(obj: Any, *, act_id: str, semantic: str) -> Any:
     obj["trackprompt_semantic"] = semantic
     obj["trackprompt_look_profile"] = ANDROMEDA_V2_LOOK_PROFILE_ID
     return obj
+
+
+def _empty(
+    name: str,
+    collection: Any,
+    *,
+    location: tuple[float, float, float],
+    act_id: str,
+    semantic: str,
+) -> Any:
+    import bpy  # type: ignore[import-not-found]
+
+    obj = bpy.data.objects.new(name, None)
+    collection.objects.link(obj)
+    obj.location = location
+    return _mark(obj, act_id=act_id, semantic=semantic)
 
 
 def _cube(
@@ -474,6 +809,7 @@ def _cube(
     act_id: str,
     semantic: str,
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    bevel: float = 0.06,
 ) -> Any:
     import bpy  # type: ignore[import-not-found]
 
@@ -484,6 +820,11 @@ def _cube(
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     _move_to_collection(obj, collection)
     obj.data.materials.append(material)
+    if bevel > 0.0:
+        modifier = obj.modifiers.new(name="TP_R131_EDGE_WEAR", type="BEVEL")
+        modifier.width = min(bevel, min(dimensions) * 0.24)
+        modifier.segments = 3
+        modifier.limit_method = "ANGLE"
     return _mark(obj, act_id=act_id, semantic=semantic)
 
 
@@ -496,10 +837,15 @@ def _sphere(
     material: Any,
     act_id: str,
     semantic: str,
+    subdivisions: int = 3,
 ) -> Any:
     import bpy  # type: ignore[import-not-found]
 
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=radius, location=location)
+    bpy.ops.mesh.primitive_ico_sphere_add(
+        subdivisions=subdivisions,
+        radius=radius,
+        location=location,
+    )
     obj = bpy.context.object
     obj.name = name
     _move_to_collection(obj, collection)
@@ -524,8 +870,8 @@ def _torus(
     bpy.ops.mesh.primitive_torus_add(
         major_radius=major_radius,
         minor_radius=minor_radius,
-        major_segments=40,
-        minor_segments=8,
+        major_segments=64,
+        minor_segments=12,
         location=location,
         rotation=rotation,
     )
@@ -534,6 +880,378 @@ def _torus(
     _move_to_collection(obj, collection)
     obj.data.materials.append(material)
     return _mark(obj, act_id=act_id, semantic=semantic)
+
+
+def _cylinder(
+    name: str,
+    collection: Any,
+    *,
+    location: tuple[float, float, float],
+    radius: float,
+    depth: float,
+    material: Any,
+    act_id: str,
+    semantic: str,
+    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> Any:
+    import bpy  # type: ignore[import-not-found]
+
+    bpy.ops.mesh.primitive_cylinder_add(
+        vertices=48,
+        radius=radius,
+        depth=depth,
+        location=location,
+        rotation=rotation,
+    )
+    obj = bpy.context.object
+    obj.name = name
+    _move_to_collection(obj, collection)
+    obj.data.materials.append(material)
+    modifier = obj.modifiers.new(name="TP_R131_EDGE_WEAR", type="BEVEL")
+    modifier.width = min(0.055, radius * 0.12, depth * 0.12)
+    modifier.segments = 3
+    return _mark(obj, act_id=act_id, semantic=semantic)
+
+
+def _cone(
+    name: str,
+    collection: Any,
+    *,
+    location: tuple[float, float, float],
+    radius1: float,
+    radius2: float,
+    depth: float,
+    material: Any,
+    act_id: str,
+    semantic: str,
+    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> Any:
+    import bpy  # type: ignore[import-not-found]
+
+    bpy.ops.mesh.primitive_cone_add(
+        vertices=40,
+        radius1=radius1,
+        radius2=radius2,
+        depth=depth,
+        location=location,
+        rotation=rotation,
+    )
+    obj = bpy.context.object
+    obj.name = name
+    _move_to_collection(obj, collection)
+    obj.data.materials.append(material)
+    return _mark(obj, act_id=act_id, semantic=semantic)
+
+
+def _beam_between(
+    name: str,
+    collection: Any,
+    *,
+    start: tuple[float, float, float],
+    end: tuple[float, float, float],
+    thickness: float,
+    material: Any,
+    act_id: str,
+    semantic: str,
+) -> Any:
+    from mathutils import Vector  # type: ignore[import-not-found]
+
+    start_vector = Vector(start)
+    end_vector = Vector(end)
+    direction = end_vector - start_vector
+    length = max(0.001, float(direction.length))
+    midpoint = tuple((start_vector + end_vector) * 0.5)
+    beam = _cube(
+        name,
+        collection,
+        location=midpoint,
+        dimensions=(thickness, thickness, length),
+        material=material,
+        act_id=act_id,
+        semantic=semantic,
+        bevel=min(0.04, thickness * 0.28),
+    )
+    beam.rotation_euler = direction.to_track_quat("Z", "Y").to_euler()
+    return beam
+
+
+def _build_shot_story_architecture(
+    collection: Any,
+    materials: Mapping[str, Any],
+    story_action_plan: Mapping[str, Any],
+) -> dict[str, list[Any]]:
+    """Build connected, shot-addressable structures from the authored plan."""
+
+    objects_by_shot: dict[str, list[Any]] = {}
+    for action in story_action_plan["shotActions"]:
+        shot_id = str(action["shotId"])
+        sequence = int(action["sequence"])
+        act_id = str(action["actId"])
+        index_in_act = (sequence - 1) % 5
+        anchor = _ACT_ANCHORS[act_id]
+        root = _empty(
+            f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_STORY",
+            collection,
+            location=(
+                anchor[0] + (index_in_act - 2) * 1.55 + 5.8,
+                anchor[1] - 2.4 + index_in_act * 3.8,
+                anchor[2] + 2.8 + math.sin(sequence * 0.71) * 0.75,
+            ),
+            act_id=act_id,
+            semantic="shot-story-controller",
+        )
+        root["trackprompt_shot_id"] = shot_id
+        root["trackprompt_story_purpose"] = str(action["storyPurpose"])
+        root["trackprompt_story_purpose_sha256"] = str(
+            action["storyPurposeSha256"]
+        )
+        root["trackprompt_secondary_narrative_action"] = str(
+            action["secondaryNarrativeAction"]
+        )
+        root["trackprompt_secondary_narrative_action_sha256"] = str(
+            action["secondaryNarrativeActionSha256"]
+        )
+        root["trackprompt_dominant_shape"] = str(action["dominantShape"]["id"])
+        root["trackprompt_required_landmarks_json"] = json.dumps(
+            [landmark["id"] for landmark in action["requiredLandmarks"]],
+            ensure_ascii=True,
+            separators=(",", ":"),
+        )
+        root["trackprompt_story_action_family"] = str(action["actionFamily"])
+        root["trackprompt_story_action_signature_sha256"] = str(
+            action["actionSignatureSha256"]
+        )
+        objects = [root]
+
+        dominant = action["dominantShape"]
+        dominant_kind = str(dominant["geometryKind"])
+        if dominant_kind == "ring":
+            dominant_object = _torus(
+                f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_DOMINANT",
+                collection,
+                location=(0.0, 2.8, 2.1),
+                major_radius=2.05,
+                minor_radius=0.16,
+                material=materials[act_id],
+                act_id=act_id,
+                semantic=f"dominant-shape:{dominant['id']}",
+                rotation=(math.pi / 2.0, 0.12 * math.sin(sequence), 0.0),
+            )
+        elif dominant_kind == "crystal":
+            dominant_object = _sphere(
+                f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_DOMINANT",
+                collection,
+                location=(0.0, 2.8, 2.1),
+                radius=1.15,
+                material=materials["crystal"],
+                act_id=act_id,
+                semantic=f"dominant-shape:{dominant['id']}",
+                subdivisions=2,
+            )
+            dominant_object.scale = (0.72, 1.38, 1.12)
+        else:
+            dominant_object = _cube(
+                f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_DOMINANT",
+                collection,
+                location=(0.0, 2.8, 2.1),
+                dimensions=(1.35, 5.6, 0.72),
+                material=materials["stone"],
+                act_id=act_id,
+                semantic=f"dominant-shape:{dominant['id']}",
+                rotation=(0.08, 0.14 * math.sin(sequence), 0.18),
+                bevel=0.11,
+            )
+        dominant_object.parent = root
+        dominant_object["trackprompt_shot_id"] = shot_id
+        dominant_object["trackprompt_story_role"] = "dominant-shape"
+        dominant_object["trackprompt_authored_label"] = str(dominant["id"])
+        objects.append(dominant_object)
+
+        landmark_positions = (
+            (-2.75, 0.65, 1.15),
+            (2.65, 3.75, 2.95),
+            (0.0, 5.2, 0.75),
+        )
+        for landmark_index, landmark in enumerate(action["requiredLandmarks"]):
+            location = landmark_positions[landmark_index % len(landmark_positions)]
+            landmark_id = str(landmark["id"])
+            geometry_kind = str(landmark["geometryKind"])
+            if geometry_kind == "ring":
+                landmark_object = _torus(
+                    f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_LANDMARK_{landmark_index:02d}",
+                    collection,
+                    location=location,
+                    major_radius=0.92 + landmark_index * 0.12,
+                    minor_radius=0.075,
+                    material=materials["amber" if landmark_index else "crystal"],
+                    act_id=act_id,
+                    semantic=landmark_id,
+                    rotation=(math.pi / 2.0, landmark_index * 0.18, 0.0),
+                )
+            elif geometry_kind == "crystal":
+                landmark_object = _sphere(
+                    f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_LANDMARK_{landmark_index:02d}",
+                    collection,
+                    location=location,
+                    radius=0.48 + landmark_index * 0.08,
+                    material=materials["crystal" if landmark_index == 0 else "amber"],
+                    act_id=act_id,
+                    semantic=landmark_id,
+                    subdivisions=2,
+                )
+                landmark_object.scale = (0.48, 0.82, 1.42)
+            else:
+                landmark_object = _cube(
+                    f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_LANDMARK_{landmark_index:02d}",
+                    collection,
+                    location=location,
+                    dimensions=(0.42, 1.45, 2.2),
+                    material=materials["metal"],
+                    act_id=act_id,
+                    semantic=landmark_id,
+                    rotation=(
+                        0.08 * landmark_index,
+                        -0.14 + landmark_index * 0.22,
+                        0.12 * (-1.0 if landmark_index else 1.0),
+                    ),
+                )
+            landmark_object.parent = root
+            landmark_object["trackprompt_shot_id"] = shot_id
+            landmark_object["trackprompt_story_role"] = "required-landmark"
+            landmark_object["trackprompt_required_landmark"] = landmark_id
+            landmark_object["trackprompt_landmark_pulse_phase"] = float(
+                landmark["pulsePhase"]
+            )
+            objects.append(landmark_object)
+            conduit = _beam_between(
+                f"TP_ANDROMEDA_V2_SHOT_{sequence:02d}_CONDUIT_{landmark_index:02d}",
+                collection,
+                start=(0.0, 2.8, 2.1),
+                end=location,
+                thickness=0.10,
+                material=materials["crystal" if landmark_index == 0 else "amber"],
+                act_id=act_id,
+                semantic="functional-shot-landmark-conduit",
+            )
+            conduit.parent = root
+            conduit["trackprompt_shot_id"] = shot_id
+            conduit["trackprompt_story_role"] = "connected-landmark-routing"
+            conduit["trackprompt_required_landmark"] = landmark_id
+            objects.append(conduit)
+        objects_by_shot[shot_id] = objects
+    return objects_by_shot
+
+
+def _animate_shot_story_actions(
+    story_objects: Mapping[str, list[Any]],
+    story_action_plan: Mapping[str, Any],
+) -> int:
+    applied_keyframes = 0
+    for action in story_action_plan["shotActions"]:
+        shot_id = str(action["shotId"])
+        objects = story_objects.get(shot_id)
+        if not objects:
+            raise ValueError(f"shot story objects are missing for {shot_id}")
+        root = objects[0]
+        base_location = tuple(root.location)
+        base_rotation = tuple(root.rotation_euler)
+        base_scale = tuple(root.scale)
+        for state in action["controllerStates"]:
+            frame = int(state["frame"])
+            location_offset = state["locationOffset"]
+            rotation_offset = state["rotationOffset"]
+            scale_factor = float(state["scaleFactor"])
+            root.location = tuple(
+                base_location[index] + float(location_offset[index])
+                for index in range(3)
+            )
+            root.rotation_euler = tuple(
+                base_rotation[index] + float(rotation_offset[index])
+                for index in range(3)
+            )
+            root.scale = tuple(value * scale_factor for value in base_scale)
+            root.keyframe_insert("location", frame=frame)
+            root.keyframe_insert("rotation_euler", frame=frame)
+            root.keyframe_insert("scale", frame=frame)
+            applied_keyframes += 9
+
+        for object_index, obj in enumerate(objects[1:], start=1):
+            base_component_scale = tuple(obj.scale)
+            phase = float(
+                obj.get(
+                    "trackprompt_landmark_pulse_phase",
+                    (object_index * 0.173) % 1.0,
+                )
+            )
+            for state_index, state in enumerate(action["controllerStates"]):
+                frame = int(state["frame"])
+                pulse = (
+                    0.96 + phase * 0.04
+                    if state_index == 0
+                    else 1.04 + phase * 0.10
+                    if state_index == 1
+                    else 1.0
+                )
+                obj.scale = tuple(value * pulse for value in base_component_scale)
+                obj.keyframe_insert("scale", frame=frame)
+                applied_keyframes += 3
+            obj["trackprompt_story_action_signature_sha256"] = str(
+                action["actionSignatureSha256"]
+            )
+    return applied_keyframes
+
+
+def _animate_shot_story_visibility(
+    story_objects: Mapping[str, list[Any]],
+    story_action_plan: Mapping[str, Any],
+    *,
+    scene_frame_start: int = ANDROMEDA_V2_FRAME_START,
+    scene_frame_end: int = ANDROMEDA_V2_FRAME_END,
+) -> int:
+    """Keep only the authored current-shot architecture visible.
+
+    Each shot owns a complete dominant-shape/landmark/conduit assembly. Those
+    assemblies intentionally share an act volume, so leaving every assembly
+    visible creates an unreadable pile-up of all five shots in that act.
+    Boolean visibility keys are stepped (see
+    ``_normalize_animation_interpolation``) to make the hand-off exact.
+    """
+
+    applied_keyframes = 0
+    for action in story_action_plan["shotActions"]:
+        shot_id = str(action["shotId"])
+        frame_start = int(action["frameStart"])
+        frame_end = int(action["frameEnd"])
+        if (
+            frame_start < scene_frame_start
+            or frame_end > scene_frame_end
+            or frame_end < frame_start
+        ):
+            raise ValueError(f"shot visibility range is invalid for {shot_id}")
+        objects = story_objects.get(shot_id)
+        if not objects:
+            raise ValueError(f"shot story objects are missing for {shot_id}")
+
+        states: dict[int, bool] = {}
+        if frame_start > scene_frame_start:
+            states[scene_frame_start] = True
+            states[frame_start - 1] = True
+        states[frame_start] = False
+        states[frame_end] = False
+        if frame_end < scene_frame_end:
+            states[frame_end + 1] = True
+
+        for obj in objects:
+            for frame, hidden in sorted(states.items()):
+                obj.hide_render = hidden
+                obj.hide_viewport = hidden
+                obj.keyframe_insert("hide_render", frame=frame)
+                obj.keyframe_insert("hide_viewport", frame=frame)
+                applied_keyframes += 2
+            obj["trackprompt_visibility_frame_start"] = frame_start
+            obj["trackprompt_visibility_frame_end"] = frame_end
+            obj["trackprompt_visibility_policy"] = "current-shot-only"
+    return applied_keyframes
 
 
 def _build_environment(
@@ -673,7 +1391,7 @@ def _build_environment(
                 collection,
                 location=(ax, ay + 2.0, az + 2.0),
                 radius=2.0,
-                material=crystal,
+                material=materials["membrane"],
                 act_id=act_id,
                 semantic="localized-threshold-membrane",
             )
@@ -743,6 +1461,7 @@ def _build_environment(
                 )
             )
     elif act_id == "arrival":
+        destination = (ax + 6.0, ay + 24.0, az + 5.0)
         for index in range(7):
             objects.append(
                 _torus(
@@ -761,83 +1480,320 @@ def _build_environment(
             _torus(
                 "TP_ANDROMEDA_V2_ARRIVAL_HORIZON",
                 collection,
-                location=(ax, ay + 35.0, az + 14.0),
-                major_radius=24.0,
-                minor_radius=1.2,
+                location=destination,
+                major_radius=18.0,
+                minor_radius=0.82,
                 material=accent,
                 act_id=act_id,
                 semantic="andromeda-horizon-arc",
                 rotation=(math.pi / 2.0, 0.32, 0.0),
             )
         )
+        objects.append(
+            _sphere(
+                "TP_ANDROMEDA_V2_ARRIVAL_ANDROMEDA_CORE",
+                collection,
+                location=destination,
+                radius=3.2,
+                material=materials["amber"],
+                act_id=act_id,
+                semantic="andromeda-destination-luminous-core",
+                subdivisions=3,
+            )
+        )
+        for index, (radius, x_offset, z_offset) in enumerate(
+            (
+                (5.0, -1.1, 0.5),
+                (8.0, 0.8, -0.4),
+                (11.0, -0.4, 0.7),
+                (14.0, 1.2, -0.8),
+            )
+        ):
+            objects.append(
+                _torus(
+                    f"TP_ANDROMEDA_V2_ARRIVAL_GALAXY_ARM_{index:02d}",
+                    collection,
+                    location=(
+                        destination[0] + x_offset,
+                        destination[1] + index * 0.18,
+                        destination[2] + z_offset,
+                    ),
+                    major_radius=radius,
+                    minor_radius=0.18 + index * 0.04,
+                    material=crystal if index % 2 == 0 else accent,
+                    act_id=act_id,
+                    semantic="andromeda-destination-spiral-arm",
+                    rotation=(
+                        math.pi / 2.0,
+                        0.24 + index * 0.035,
+                        -0.18 + index * 0.13,
+                    ),
+                )
+            )
+        for index in range(12):
+            angle = index * 2.399963229728653
+            radius = 5.0 + index * 1.05
+            objects.append(
+                _sphere(
+                    f"TP_ANDROMEDA_V2_ARRIVAL_STAR_MARKER_{index:02d}",
+                    collection,
+                    location=(
+                        destination[0] + math.cos(angle) * radius,
+                        destination[1] - 0.8 + (index % 3) * 0.7,
+                        destination[2] + math.sin(angle) * radius * 0.46,
+                    ),
+                    radius=0.16 + (index % 4) * 0.045,
+                    material=materials["amber" if index % 5 == 0 else "crystal"],
+                    act_id=act_id,
+                    semantic="andromeda-destination-star-depth-marker",
+                    subdivisions=1,
+                )
+            )
+        objects.append(
+            _cube(
+                "TP_ANDROMEDA_V2_ARRIVAL_BEACON_ECHO",
+                collection,
+                location=(
+                    destination[0] + 7.2,
+                    destination[1] - 1.0,
+                    destination[2] + 8.5,
+                ),
+                dimensions=(0.18, 0.18, 8.0),
+                material=crystal,
+                act_id=act_id,
+                semantic="arrival-opening-beacon-echo",
+                rotation=(0.0, -0.24, 0.0),
+            )
+        )
     return objects
 
 
-def _build_protagonist(collection: Any, materials: Mapping[str, Any]) -> Any:
-    import bpy  # type: ignore[import-not-found]
+def _tag_protagonist_component(obj: Any, component_id: str) -> Any:
+    obj["trackprompt_protagonist_component_id"] = component_id
+    obj["trackprompt_component_story_state"] = "authored"
+    obj["trackprompt_look_profile"] = ANDROMEDA_V2_LOOK_PROFILE_ID
+    return obj
 
-    root = bpy.data.objects.new("TP_ANDROMEDA_V2_PROTAGONIST_ROOT", None)
-    collection.objects.link(root)
-    _mark(root, act_id="story", semantic="protagonist-b-ancient-engine")
-    body = _sphere(
-        "TP_ANDROMEDA_V2_PROTAGONIST_BODY",
+
+def _build_protagonist(collection: Any, materials: Mapping[str, Any]) -> Any:
+    root = _empty(
+        "TP_ANDROMEDA_V2_PROTAGONIST_ROOT",
         collection,
         location=(0.0, 0.0, 0.0),
-        radius=1.45,
-        material=materials["hero"],
         act_id="story",
-        semantic="ancient-engine-body",
+        semantic="protagonist-b-ancient-engine",
+    )
+    body = _tag_protagonist_component(
+        _sphere(
+            "TP_ANDROMEDA_V2_PROTAGONIST_BODY",
+            collection,
+            location=(0.0, 0.0, 0.0),
+            radius=1.45,
+            material=materials["hero"],
+            act_id="story",
+            semantic="ancient-engine-dark-structural-shell",
+        ),
+        "structural-shell",
     )
     body.scale = (1.0, 1.22, 0.90)
     body.parent = root
-    band = _torus(
-        "TP_ANDROMEDA_V2_PROTAGONIST_ARMOR_BAND",
-        collection,
-        location=(0.0, 0.0, 0.0),
-        major_radius=1.52,
-        minor_radius=0.16,
-        material=materials["stone"],
-        act_id="story",
-        semantic="single-major-armor-band",
-        rotation=(0.0, math.pi / 2.0, 0.0),
+    core = _tag_protagonist_component(
+        _sphere(
+            "TP_ANDROMEDA_V2_PROTAGONIST_CORE",
+            collection,
+            location=(0.0, -0.18, 0.0),
+            radius=0.70,
+            material=materials["crystal"],
+            act_id="story",
+            semantic="luminous-internal-core",
+        ),
+        "internal-core",
     )
+    core.scale = (0.78, 0.96, 0.74)
+    core.parent = root
+    atmosphere = _tag_protagonist_component(
+        _sphere(
+            "TP_ANDROMEDA_V2_PROTAGONIST_ATMOSPHERE",
+            collection,
+            location=(0.0, 0.0, 0.0),
+            radius=1.58,
+            material=materials["atmosphere"],
+            act_id="story",
+            semantic="single-translucent-atmosphere",
+        ),
+        "atmosphere",
+    )
+    atmosphere.scale = (1.02, 1.24, 0.92)
+    atmosphere.parent = root
+    band = _tag_protagonist_component(
+        _torus(
+            "TP_ANDROMEDA_V2_PROTAGONIST_ARMOR_BAND",
+            collection,
+            location=(0.0, 0.24, 0.0),
+            major_radius=1.50,
+            minor_radius=0.13,
+            material=materials["metal"],
+            act_id="story",
+            semantic="single-major-armor-band",
+            rotation=(math.pi / 2.0, 0.0, 0.0),
+        ),
+        "armor-band",
+    )
+    band.scale = (1.0, 1.0, 0.80)
     band.parent = root
-    aperture = _sphere(
-        "TP_ANDROMEDA_V2_PROTAGONIST_APERTURE",
-        collection,
-        location=(-0.58, -1.52, 0.46),
-        radius=0.54,
-        material=materials["amber"],
-        act_id="story",
-        semantic="integrated-front-aperture",
+    aperture = _tag_protagonist_component(
+        _cylinder(
+            "TP_ANDROMEDA_V2_PROTAGONIST_APERTURE",
+            collection,
+            location=(0.0, -1.50, 0.0),
+            radius=0.55,
+            depth=0.32,
+            material=materials["amber"],
+            act_id="story",
+            semantic="integrated-front-aperture",
+            rotation=(math.pi / 2.0, 0.0, 0.0),
+        ),
+        "front-aperture",
     )
-    aperture.scale = (1.0, 0.28, 0.72)
     aperture.parent = root
-    cue = _cube(
-        "TP_ANDROMEDA_V2_PROTAGONIST_ORIENTATION_CUE",
-        collection,
-        location=(0.75, -0.25, 0.42),
-        dimensions=(0.30, 1.20, 0.35),
-        material=materials["crystal"],
-        act_id="story",
-        semantic="asymmetric-orientation-cue",
-        rotation=(0.15, 0.35, 0.20),
+    aperture_collar = _tag_protagonist_component(
+        _torus(
+            "TP_ANDROMEDA_V2_PROTAGONIST_APERTURE_COLLAR",
+            collection,
+            location=(0.0, -1.62, 0.0),
+            major_radius=0.64,
+            minor_radius=0.075,
+            material=materials["metal"],
+            act_id="story",
+            semantic="aperture-structural-collar",
+            rotation=(math.pi / 2.0, 0.0, 0.0),
+        ),
+        "aperture-collar",
+    )
+    aperture_collar.parent = root
+    cue = _tag_protagonist_component(
+        _cube(
+            "TP_ANDROMEDA_V2_PROTAGONIST_ORIENTATION_CUE",
+            collection,
+            location=(-0.48, -1.42, 0.74),
+            dimensions=(0.30, 0.34, 0.24),
+            material=materials["crystal"],
+            act_id="story",
+            semantic="asymmetric-leading-edge-orientation-cue",
+            rotation=(0.15, -0.08, -0.18),
+            bevel=0.065,
+        ),
+        "orientation-cue",
     )
     cue.parent = root
-    wake = _torus(
-        "TP_ANDROMEDA_V2_PROTAGONIST_REAR_WAKE",
-        collection,
-        location=(0.0, 1.8, 0.0),
-        major_radius=1.05,
-        minor_radius=0.07,
-        material=materials["crystal"],
-        act_id="story",
-        semantic="restrained-rear-wake",
+    damaged_plate = _tag_protagonist_component(
+        _cube(
+            "TP_ANDROMEDA_V2_PROTAGONIST_DAMAGE_PLATE",
+            collection,
+            location=(0.92, 0.12, 0.34),
+            dimensions=(0.30, 1.18, 0.72),
+            material=materials["metal"],
+            act_id="story",
+            semantic="indexed-damage-side-armor-component",
+            rotation=(0.0, 0.16, 0.12),
+            bevel=0.075,
+        ),
+        "damaged-armor-plate",
+    )
+    damaged_plate.parent = root
+    damaged_route = _tag_protagonist_component(
+        _cube(
+            "TP_ANDROMEDA_V2_PROTAGONIST_DAMAGED_ROUTE",
+            collection,
+            location=(0.79, -0.42, -0.12),
+            dimensions=(0.12, 1.32, 0.14),
+            material=materials["crystal"],
+            act_id="story",
+            semantic="damage-side-functional-crystal-route",
+            rotation=(0.12, 0.22, -0.18),
+            bevel=0.025,
+        ),
+        "damaged-crystal-route",
+    )
+    damaged_route.parent = root
+    repaired_bridge = _tag_protagonist_component(
+        _cube(
+            "TP_ANDROMEDA_V2_PROTAGONIST_REPAIRED_BRIDGE",
+            collection,
+            location=(0.70, -0.46, -0.06),
+            dimensions=(0.16, 1.48, 0.18),
+            material=materials["transformed"],
+            act_id="story",
+            semantic="bridging-functional-crystal-route",
+            rotation=(-0.10, 0.28, -0.24),
+            bevel=0.03,
+        ),
+        "repaired-crystal-bridge",
+    )
+    repaired_bridge.parent = root
+    for side in (-1.0, 1.0):
+        fin = _tag_protagonist_component(
+            _cube(
+                f"TP_ANDROMEDA_V2_PROTAGONIST_TRANSFORMED_FIN_{'L' if side < 0 else 'R'}",
+                collection,
+                location=(side * 0.78, 0.38, 0.42 if side < 0 else -0.34),
+                dimensions=(0.16, 1.18, 0.48),
+                material=materials["transformed"],
+                act_id="story",
+                semantic="permanent-transformed-directional-fin",
+                rotation=(0.0, side * 0.16, side * 0.14),
+                bevel=0.055,
+            ),
+            f"transformed-fin-{'left' if side < 0 else 'right'}",
+        )
+        fin.parent = root
+    for side in (-1.0, 1.0):
+        pod = _tag_protagonist_component(
+            _cube(
+                f"TP_ANDROMEDA_V2_PROTAGONIST_REAR_POD_{'L' if side < 0 else 'R'}",
+                collection,
+                location=(side * 0.92, 0.76, -0.08),
+                dimensions=(0.24, 0.72, 0.40),
+                material=materials["metal"],
+                act_id="story",
+                semantic="limited-rear-propulsion-pod",
+                rotation=(0.0, side * 0.12, side * 0.08),
+                bevel=0.06,
+            ),
+            f"rear-pod-{'left' if side < 0 else 'right'}",
+        )
+        pod.parent = root
+    wake = _tag_protagonist_component(
+        _cone(
+            "TP_ANDROMEDA_V2_PROTAGONIST_REAR_WAKE",
+            collection,
+            location=(0.0, 1.92, -0.04),
+            radius1=0.44,
+            radius2=0.12,
+            depth=1.35,
+            material=materials["atmosphere"],
+            act_id="story",
+            semantic="restrained-rear-energy-wake",
+            rotation=(math.pi / 2.0, 0.0, 0.0),
+        ),
+        "rear-wake",
     )
     wake.parent = root
+    component_ids = sorted(
+        str(child["trackprompt_protagonist_component_id"])
+        for child in root.children
+        if child.get("trackprompt_protagonist_component_id")
+    )
     root["trackprompt_major_armor_bands"] = 1
     root["trackprompt_wire_cage"] = False
     root["trackprompt_transparent_atmosphere_layers"] = 1
+    root["trackprompt_component_ids_json"] = json.dumps(
+        component_ids,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+    root["trackprompt_damage_is_component_level"] = True
+    root["trackprompt_transformation_persists_through_arrival"] = True
     return root
 
 
@@ -882,6 +1838,25 @@ def _build_lights(collection: Any) -> list[Any]:
         fill.location = (anchor[0] + 5.0, anchor[1] - 3.0, anchor[2] + 3.0)
         _mark(fill, act_id=act_id, semantic="bounded-act-fill-light")
         lights.append(fill)
+
+        rim_data = bpy.data.lights.new(
+            f"TP_ANDROMEDA_V2_LIGHT_{act_id.upper()}_RIM",
+            type="AREA",
+        )
+        rim_data.energy = 980.0 if act_id not in {"rupture", "transformation"} else 1_280.0
+        rim_data.shape = "DISK"
+        rim_data.size = 5.0
+        rim_data.color = (
+            (0.06, 0.72, 0.68)
+            if act_id in {"signal", "awakening", "gates", "arrival"}
+            else (1.0, 0.24, 0.035)
+        )
+        rim = bpy.data.objects.new(rim_data.name, rim_data)
+        collection.objects.link(rim)
+        rim.location = (anchor[0] + 8.5, anchor[1] + 3.0, anchor[2] + 7.0)
+        _point_camera(rim, (anchor[0], anchor[1], anchor[2] + 1.5))
+        _mark(rim, act_id=act_id, semantic="authored-r13.1-rim-light")
+        lights.append(rim)
     return lights
 
 
@@ -909,7 +1884,12 @@ def _protagonist_transform(
         rotation[1] += 0.48
         scale = (1.0, 0.88, 1.06)
     elif protagonist_state == "transforming":
+        rotation[0] -= 0.10
         scale = (1.04, 1.08, 1.04)
+    elif protagonist_state in {"transformed", "arrived"}:
+        rotation[0] -= 0.16
+        rotation[1] += 0.08
+        scale = (1.08, 1.16, 0.98)
     else:
         scale = (1.0, 1.0, 1.0)
     return {
@@ -918,6 +1898,537 @@ def _protagonist_transform(
         "rotationEuler": tuple(rotation),
         "scale": scale,
     }
+
+
+def _component_story_state(
+    frame: int,
+    stage: str,
+    *,
+    scale: tuple[float, float, float],
+    location: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> dict[str, Any]:
+    return {
+        "frame": frame,
+        "stage": stage,
+        "scaleMultiplier": scale,
+        "locationOffset": location,
+        "rotationOffset": rotation,
+    }
+
+
+def build_protagonist_component_story_plan(
+    shots: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build persistent component damage and transformation states."""
+
+    shots_by_sequence = {
+        int(shot["sequence"]): shot
+        for shot in shots
+        if isinstance(shot, dict) and isinstance(shot.get("sequence"), int)
+    }
+    required_sequences = {23, 27, 28, 29, 30, 31, 35}
+    if not required_sequences.issubset(shots_by_sequence):
+        raise ValueError(
+            "the protagonist component plan requires Rupture, Transformation, "
+            "and Arrival milestone shots"
+        )
+
+    def frames(sequence: int) -> tuple[int, int, int]:
+        shot = shots_by_sequence[sequence]
+        frame_start = int(shot["frameStart"])
+        frame_end = int(shot["frameEnd"])
+        return frame_start, (frame_start + frame_end) // 2, frame_end
+
+    impact_start, impact_mid, impact_end = frames(23)
+    unmake_start, unmake_mid, unmake_end = frames(27)
+    route_start, route_mid, route_end = frames(28)
+    rebirth_start, rebirth_mid, rebirth_end = frames(29)
+    release_start, release_mid, release_end = frames(30)
+    arrival_start = int(shots_by_sequence[31]["frameStart"])
+    final_frame = int(shots_by_sequence[35]["frameEnd"])
+    base_frame = ANDROMEDA_V2_FRAME_START
+
+    components: dict[str, list[dict[str, Any]]] = {
+        "structural-shell": [
+            _component_story_state(
+                base_frame,
+                "intact",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "impact-scarred",
+                scale=(0.98, 0.94, 1.02),
+                rotation=(0.05, 0.12, -0.08),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-permanent-shell",
+                scale=(1.04, 1.08, 1.02),
+                rotation=(-0.04, 0.04, 0.08),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrived-transformed-shell",
+                scale=(1.04, 1.08, 1.02),
+                rotation=(-0.04, 0.04, 0.08),
+            ),
+        ],
+        "internal-core": [
+            _component_story_state(
+                base_frame,
+                "restrained-core",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "impact-dimmed-core",
+                scale=(0.72, 0.72, 0.72),
+            ),
+            _component_story_state(
+                route_end,
+                "repaired-routing-core",
+                scale=(0.96, 0.96, 0.96),
+            ),
+            _component_story_state(
+                rebirth_end,
+                "reborn-core",
+                scale=(1.12, 1.12, 1.12),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrived-reborn-core",
+                scale=(1.12, 1.12, 1.12),
+            ),
+        ],
+        "atmosphere": [
+            _component_story_state(
+                base_frame,
+                "restrained-atmosphere",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "ruptured-atmosphere",
+                scale=(0.72, 0.64, 0.78),
+                location=(0.08, 0.06, -0.04),
+            ),
+            _component_story_state(
+                rebirth_end,
+                "rebuilt-atmosphere",
+                scale=(1.08, 1.12, 1.06),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-permanent-atmosphere",
+                scale=(1.16, 1.20, 1.12),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrived-transformed-atmosphere",
+                scale=(1.16, 1.20, 1.12),
+            ),
+        ],
+        "armor-band": [
+            _component_story_state(
+                base_frame,
+                "intact-single-band",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_mid,
+                "impact-buckled-band",
+                scale=(0.92, 0.84, 1.06),
+                rotation=(0.18, 0.05, 0.16),
+            ),
+            _component_story_state(
+                impact_end,
+                "damaged-single-band",
+                scale=(0.88, 0.80, 1.04),
+                rotation=(0.20, 0.08, 0.20),
+            ),
+            _component_story_state(
+                unmake_mid,
+                "indexed-for-repair",
+                scale=(0.74, 0.68, 0.92),
+                rotation=(0.26, 0.12, 0.24),
+            ),
+            _component_story_state(
+                rebirth_end,
+                "single-reformed-band",
+                scale=(1.02, 1.02, 0.92),
+                rotation=(-0.04, 0.02, -0.08),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-single-band",
+                scale=(1.04, 1.04, 0.94),
+                rotation=(-0.04, 0.02, -0.08),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrived-single-reformed-band",
+                scale=(1.04, 1.04, 0.94),
+                rotation=(-0.04, 0.02, -0.08),
+            ),
+        ],
+        "damaged-armor-plate": [
+            _component_story_state(
+                base_frame,
+                "integrated-armor-plate",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_start,
+                "impact-contact",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_mid,
+                "armor-torn",
+                scale=(0.92, 0.92, 0.92),
+                location=(0.44, -0.16, 0.28),
+                rotation=(0.58, 0.22, 0.42),
+            ),
+            _component_story_state(
+                impact_end,
+                "armor-damaged-persistent",
+                scale=(0.74, 0.74, 0.74),
+                location=(0.88, 0.22, 0.52),
+                rotation=(0.84, 0.42, 0.66),
+            ),
+            _component_story_state(
+                unmake_start,
+                "armor-indexed-for-removal",
+                scale=(0.74, 0.74, 0.74),
+                location=(0.88, 0.22, 0.52),
+                rotation=(0.84, 0.42, 0.66),
+            ),
+            _component_story_state(
+                unmake_mid,
+                "armor-mechanically-withdrawn",
+                scale=(0.40, 0.40, 0.40),
+                location=(1.64, 0.78, 1.05),
+                rotation=(1.18, 0.72, 1.08),
+            ),
+            _component_story_state(
+                unmake_end,
+                "damaged-armor-removed",
+                scale=(0.001, 0.001, 0.001),
+                location=(2.42, 1.24, 1.46),
+                rotation=(1.42, 0.92, 1.34),
+            ),
+            _component_story_state(
+                final_frame,
+                "removed-through-arrival",
+                scale=(0.001, 0.001, 0.001),
+                location=(2.42, 1.24, 1.46),
+                rotation=(1.42, 0.92, 1.34),
+            ),
+        ],
+        "damaged-crystal-route": [
+            _component_story_state(
+                base_frame,
+                "functional-route",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_mid,
+                "route-fracturing",
+                scale=(0.62, 0.52, 0.74),
+                rotation=(0.18, 0.10, -0.22),
+            ),
+            _component_story_state(
+                impact_end,
+                "interrupted-route",
+                scale=(0.18, 0.28, 0.24),
+                location=(0.14, 0.12, -0.10),
+                rotation=(0.32, 0.18, -0.38),
+            ),
+            _component_story_state(
+                route_start,
+                "route-repair-start",
+                scale=(0.18, 0.28, 0.24),
+                location=(0.14, 0.12, -0.10),
+                rotation=(0.32, 0.18, -0.38),
+            ),
+            _component_story_state(
+                route_end,
+                "interrupted-route-retired",
+                scale=(0.001, 0.001, 0.001),
+            ),
+            _component_story_state(
+                final_frame,
+                "retired-through-arrival",
+                scale=(0.001, 0.001, 0.001),
+            ),
+        ],
+        "repaired-crystal-bridge": [
+            _component_story_state(
+                base_frame,
+                "repair-bridge-absent",
+                scale=(0.001, 0.001, 0.001),
+            ),
+            _component_story_state(
+                route_start,
+                "repair-bridge-seeded",
+                scale=(0.001, 0.001, 0.001),
+            ),
+            _component_story_state(
+                route_mid,
+                "repair-bridge-growing",
+                scale=(0.58, 0.58, 0.58),
+            ),
+            _component_story_state(
+                route_end,
+                "repair-bridge-complete",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-functional-route",
+                scale=(1.12, 1.12, 1.12),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrival-functional-route",
+                scale=(1.12, 1.12, 1.12),
+            ),
+        ],
+        "front-aperture": [
+            _component_story_state(
+                base_frame,
+                "restrained-aperture",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "damaged-aperture",
+                scale=(0.68, 0.68, 0.68),
+                rotation=(0.08, -0.12, 0.10),
+            ),
+            _component_story_state(
+                rebirth_start,
+                "aperture-rebirth-start",
+                scale=(0.68, 0.68, 0.68),
+            ),
+            _component_story_state(
+                rebirth_mid,
+                "aperture-rebirth-pulse",
+                scale=(1.26, 1.26, 1.26),
+            ),
+            _component_story_state(
+                rebirth_end,
+                "repaired-aperture",
+                scale=(1.06, 1.06, 1.06),
+            ),
+            _component_story_state(
+                final_frame,
+                "protected-arrival-aperture",
+                scale=(1.06, 1.06, 1.06),
+            ),
+        ],
+        "aperture-collar": [
+            _component_story_state(
+                base_frame,
+                "intact-collar",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "damaged-collar",
+                scale=(0.84, 0.82, 0.90),
+                rotation=(0.10, -0.08, 0.12),
+            ),
+            _component_story_state(
+                rebirth_end,
+                "reformed-collar",
+                scale=(1.08, 1.08, 1.0),
+            ),
+            _component_story_state(
+                final_frame,
+                "arrival-reformed-collar",
+                scale=(1.08, 1.08, 1.0),
+            ),
+        ],
+        "orientation-cue": [
+            _component_story_state(
+                base_frame,
+                "clear-orientation",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "damaged-orientation-cue",
+                scale=(0.72, 0.72, 0.72),
+                rotation=(0.24, 0.18, 0.38),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-orientation-cue",
+                scale=(1.18, 1.18, 1.18),
+                rotation=(-0.06, -0.10, -0.16),
+            ),
+            _component_story_state(
+                final_frame,
+                "held-arrival-orientation",
+                scale=(1.18, 1.18, 1.18),
+                rotation=(-0.06, -0.10, -0.16),
+            ),
+        ],
+        "rear-wake": [
+            _component_story_state(
+                base_frame,
+                "restrained-wake",
+                scale=(1.0, 1.0, 1.0),
+            ),
+            _component_story_state(
+                impact_end,
+                "damaged-wake",
+                scale=(0.24, 0.38, 0.24),
+                rotation=(0.20, 0.12, -0.18),
+            ),
+            _component_story_state(
+                release_start,
+                "release-wake-start",
+                scale=(0.38, 0.52, 0.38),
+            ),
+            _component_story_state(
+                release_mid,
+                "transformed-wake-surge",
+                scale=(1.34, 1.52, 1.34),
+            ),
+            _component_story_state(
+                release_end,
+                "transformed-authored-wake",
+                scale=(1.12, 1.24, 1.12),
+            ),
+            _component_story_state(
+                arrival_start,
+                "arrival-deceleration-wake",
+                scale=(0.82, 0.94, 0.82),
+            ),
+            _component_story_state(
+                final_frame,
+                "quiet-arrival-wake",
+                scale=(0.46, 0.58, 0.46),
+            ),
+        ],
+    }
+    transformed_fin_states = [
+        _component_story_state(
+            base_frame,
+            "transformed-fin-absent",
+            scale=(0.001, 0.001, 0.001),
+        ),
+        _component_story_state(
+            rebirth_start,
+            "transformed-fin-seeded",
+            scale=(0.001, 0.001, 0.001),
+        ),
+        _component_story_state(
+            rebirth_end,
+            "transformed-fin-forming",
+            scale=(0.36, 0.36, 0.36),
+        ),
+        _component_story_state(
+            release_mid,
+            "transformed-fin-opening",
+            scale=(0.84, 0.84, 0.84),
+        ),
+        _component_story_state(
+            release_end,
+            "transformed-fin-permanent",
+            scale=(1.0, 1.0, 1.0),
+        ),
+        _component_story_state(
+            arrival_start,
+            "arrival-transformed-fin",
+            scale=(1.0, 1.0, 1.0),
+        ),
+        _component_story_state(
+            final_frame,
+            "arrived-transformed-fin",
+            scale=(1.0, 1.0, 1.0),
+        ),
+    ]
+    components["transformed-fin-left"] = [
+        dict(state) for state in transformed_fin_states
+    ]
+    components["transformed-fin-right"] = [
+        dict(state) for state in transformed_fin_states
+    ]
+    plan: dict[str, Any] = {
+        "schemaVersion": "1.0.0",
+        "projectId": ANDROMEDA_V2_PROJECT_ID,
+        "damageBeginsFrame": impact_start,
+        "damagePersistsUntilFrame": unmake_end,
+        "transformationCompletesFrame": release_end,
+        "transformationPersistsThroughFrame": final_frame,
+        "components": components,
+    }
+    plan["canonicalSha256"] = _canonical_sha256(plan)
+    return plan
+
+
+def _animate_protagonist_components(
+    protagonist: Any,
+    component_plan: Mapping[str, Any],
+) -> int:
+    components = {
+        str(child.get("trackprompt_protagonist_component_id")): child
+        for child in protagonist.children
+        if child.get("trackprompt_protagonist_component_id")
+    }
+    applied_keyframes = 0
+    for component_id, states in component_plan["components"].items():
+        component = components.get(str(component_id))
+        if component is None:
+            raise ValueError(f"protagonist component {component_id} is missing")
+        base_location = tuple(component.location)
+        base_rotation = tuple(component.rotation_euler)
+        base_scale = tuple(component.scale)
+        for state in states:
+            frame = int(state["frame"])
+            location_offset = state["locationOffset"]
+            rotation_offset = state["rotationOffset"]
+            scale_multiplier = state["scaleMultiplier"]
+            component.location = tuple(
+                base_location[index] + float(location_offset[index])
+                for index in range(3)
+            )
+            component.rotation_euler = tuple(
+                base_rotation[index] + float(rotation_offset[index])
+                for index in range(3)
+            )
+            component.scale = tuple(
+                base_scale[index] * float(scale_multiplier[index])
+                for index in range(3)
+            )
+            component.keyframe_insert("location", frame=frame)
+            component.keyframe_insert("rotation_euler", frame=frame)
+            component.keyframe_insert("scale", frame=frame)
+            applied_keyframes += 9
+        component["trackprompt_component_story_plan_sha256"] = str(
+            component_plan["canonicalSha256"]
+        )
+        component["trackprompt_final_component_story_stage"] = str(
+            states[-1]["stage"]
+        )
+    protagonist["trackprompt_component_story_plan_sha256"] = str(
+        component_plan["canonicalSha256"]
+    )
+    protagonist["trackprompt_damage_begins_frame"] = int(
+        component_plan["damageBeginsFrame"]
+    )
+    protagonist["trackprompt_transformation_completes_frame"] = int(
+        component_plan["transformationCompletesFrame"]
+    )
+    protagonist["trackprompt_transformation_persists_through_frame"] = int(
+        component_plan["transformationPersistsThroughFrame"]
+    )
+    return applied_keyframes
 
 
 def _camera_transform(
@@ -935,6 +2446,12 @@ def _camera_transform(
     base_occupancy = float(composition["subjectScale"])
     lens_scale = float(composition["lensMm"]) / float(base_composition["lensMm"])
     distance_scale = max(0.72, min(2.20, base_occupancy / occupancy * lens_scale))
+    act_id = str(composition.get("actId", ""))
+    narrative_target_bias = (
+        (2.5, 8.0, 2.8)
+        if act_id == "arrival"
+        else (0.0, 0.0, 0.0)
+    )
     return {
         "frame": frame,
         "location": (
@@ -943,9 +2460,15 @@ def _camera_transform(
             anchor[2] + float(camera_offset[2]) * distance_scale,
         ),
         "target": (
-            hero_location[0] + float(target_offset[0]),
-            hero_location[1] + float(target_offset[1]),
-            hero_location[2] + float(target_offset[2]),
+            hero_location[0]
+            + float(target_offset[0])
+            + narrative_target_bias[0],
+            hero_location[1]
+            + float(target_offset[1])
+            + narrative_target_bias[1],
+            hero_location[2]
+            + float(target_offset[2])
+            + narrative_target_bias[2],
         ),
         "lensMm": float(composition["lensMm"]),
     }
@@ -1186,10 +2709,24 @@ def _animate_environment_actions(
                     )
                     obj.keyframe_insert("location", frame=frame)
                     obj.keyframe_insert("rotation_euler", frame=frame)
-            elif semantic in {
-                "connected-reconstruction-arm",
-                "reconstruction-cradle",
-            }:
+            elif semantic == "connected-reconstruction-arm":
+                delay = min(120, index * 12)
+                reveal_frame = min(frame_end - 1, frame_mid + 180 + delay // 2)
+                for frame, scale, turn in (
+                    (frame_start + delay, 0.18, -0.25),
+                    (frame_mid + delay // 2, 0.82, 0.12),
+                    (reveal_frame, 0.32, 0.30),
+                    (frame_end, 0.18, 0.38),
+                ):
+                    obj.scale = (scale, scale, scale)
+                    obj.rotation_euler = (
+                        base_rotation[0],
+                        base_rotation[1] + turn,
+                        base_rotation[2] - turn * 0.5,
+                    )
+                    obj.keyframe_insert("scale", frame=frame)
+                    obj.keyframe_insert("rotation_euler", frame=frame)
+            elif semantic == "reconstruction-cradle":
                 delay = min(120, index * 12)
                 for frame, scale, turn in (
                     (frame_start + delay, 0.18, -0.25),
@@ -1391,7 +2928,7 @@ def _action_identity(action: Any) -> int:
 
 
 def _normalize_animation_interpolation(objects: list[Any]) -> int:
-    """Set every object/data keyframe to LINEAR and return the point count."""
+    """Normalize motion to LINEAR and boolean visibility to stepped CONSTANT."""
 
     normalized = 0
     visited_actions: set[int] = set()
@@ -1408,8 +2945,16 @@ def _normalize_animation_interpolation(objects: list[Any]) -> int:
                 continue
             visited_actions.add(action_identity)
             for fcurve in _action_fcurves(action):
+                interpolation = (
+                    "CONSTANT"
+                    if getattr(fcurve, "data_path", "") in {
+                        "hide_render",
+                        "hide_viewport",
+                    }
+                    else "LINEAR"
+                )
                 for keyframe in getattr(fcurve, "keyframe_points", ()):
-                    keyframe.interpolation = "LINEAR"
+                    keyframe.interpolation = interpolation
                     normalized += 1
     return normalized
 
@@ -1814,6 +3359,10 @@ def build_and_save_andromeda_v2_master(
 
     root_collection = _collection("TP_ANDROMEDA_V2", scene.collection)
     environment_root = _collection("TP_ANDROMEDA_V2_ENVIRONMENTS", root_collection)
+    story_architecture_collection = _collection(
+        "TP_ANDROMEDA_V2_SHOT_STORY_ARCHITECTURE",
+        environment_root,
+    )
     protagonist_collection = _collection("TP_ANDROMEDA_V2_PROTAGONIST", root_collection)
     camera_collection = _collection("TP_ANDROMEDA_V2_CAMERAS", root_collection)
     light_collection = _collection("TP_ANDROMEDA_V2_LIGHTS", root_collection)
@@ -1821,9 +3370,27 @@ def build_and_save_andromeda_v2_master(
     materials: dict[str, Any] = {
         "stone": _material(
             "TP_ANDROMEDA_V2_MAT_WEATHERED_STONE",
-            (0.08, 0.10, 0.11, 1.0),
-            metallic=0.62,
-            roughness=0.47,
+            (0.045, 0.052, 0.060, 1.0),
+            metallic=0.16,
+            roughness=0.69,
+            noise_scale=3.8,
+            bump_strength=0.20,
+        ),
+        "metal": _material(
+            "TP_ANDROMEDA_V2_MAT_ANCIENT_METAL",
+            (0.060, 0.075, 0.085, 1.0),
+            metallic=0.74,
+            roughness=0.42,
+            noise_scale=10.0,
+            bump_strength=0.10,
+        ),
+        "recess": _material(
+            "TP_ANDROMEDA_V2_MAT_LOCK_RECESS",
+            (0.009, 0.014, 0.019, 1.0),
+            metallic=0.45,
+            roughness=0.60,
+            noise_scale=12.0,
+            bump_strength=0.05,
         ),
         "dark": _material(
             "TP_ANDROMEDA_V2_MAT_DARK_VOID",
@@ -1833,25 +3400,65 @@ def build_and_save_andromeda_v2_master(
         ),
         "hero": _material(
             "TP_ANDROMEDA_V2_MAT_ANCIENT_ENGINE",
-            (0.14, 0.18, 0.19, 1.0),
-            metallic=0.78,
-            roughness=0.27,
+            (0.025, 0.040, 0.055, 1.0),
+            metallic=0.66,
+            roughness=0.31,
+            noise_scale=7.0,
+            bump_strength=0.055,
         ),
         "crystal": _material(
             "TP_ANDROMEDA_V2_MAT_CRYSTAL",
-            (0.05, 0.26, 0.29, 1.0),
+            (0.018, 0.120, 0.130, 1.0),
             metallic=0.20,
             roughness=0.18,
-            emission_color=(0.08, 0.68, 0.72, 1.0),
-            emission_strength=1.5,
+            emission_color=(0.050, 0.550, 0.480, 1.0),
+            emission_strength=0.46,
+            noise_scale=8.0,
+            bump_strength=0.035,
+        ),
+        "membrane": _material(
+            "TP_ANDROMEDA_V2_MAT_LOCALIZED_MEMBRANE",
+            (0.025, 0.210, 0.230, 1.0),
+            metallic=0.06,
+            roughness=0.15,
+            emission_color=(0.050, 0.520, 0.500, 1.0),
+            emission_strength=0.08,
+            alpha=0.035,
+            transmission=0.70,
+            noise_scale=5.5,
+            bump_strength=0.018,
         ),
         "amber": _material(
             "TP_ANDROMEDA_V2_MAT_AMBER",
-            (0.44, 0.20, 0.05, 1.0),
+            (0.180, 0.065, 0.010, 1.0),
             metallic=0.24,
             roughness=0.24,
-            emission_color=(1.0, 0.42, 0.08, 1.0),
-            emission_strength=2.0,
+            emission_color=(0.900, 0.280, 0.025, 1.0),
+            emission_strength=0.64,
+            noise_scale=9.0,
+            bump_strength=0.025,
+        ),
+        "atmosphere": _material(
+            "TP_ANDROMEDA_V2_MAT_ATMOSPHERE",
+            (0.035, 0.160, 0.200, 1.0),
+            metallic=0.05,
+            roughness=0.24,
+            emission_color=(0.070, 0.420, 0.550, 1.0),
+            emission_strength=0.12,
+            alpha=0.075,
+            transmission=0.26,
+            noise_scale=5.0,
+            bump_strength=0.02,
+        ),
+        "transformed": _material(
+            "TP_ANDROMEDA_V2_MAT_TRANSFORMED_ROUTE",
+            (0.025, 0.180, 0.220, 1.0),
+            metallic=0.32,
+            roughness=0.20,
+            emission_color=(0.080, 0.720, 0.950, 1.0),
+            emission_strength=1.10,
+            noise_scale=8.5,
+            bump_strength=0.035,
         ),
     }
     for act_id, color in _ACT_PALETTES.items():
@@ -1861,9 +3468,16 @@ def build_and_save_andromeda_v2_master(
             metallic=0.38,
             roughness=0.34,
             emission_color=color,
-            emission_strength=0.55,
+            emission_strength=0.42,
+            noise_scale=6.0,
+            bump_strength=0.055,
         )
 
+    shot_entries = contracts["shots"]["shots"]
+    story_action_plan = build_shot_story_action_plan(shot_entries)
+    protagonist_component_plan = build_protagonist_component_story_plan(
+        shot_entries
+    )
     environment_objects: dict[str, list[Any]] = {}
     for act_id in _ACT_ORDER:
         act_collection = _collection(f"TP_ANDROMEDA_V2_ACT_{act_id.upper()}", environment_root)
@@ -1872,6 +3486,11 @@ def build_and_save_andromeda_v2_master(
             act_collection,
             materials,
         )
+    story_objects = _build_shot_story_architecture(
+        story_architecture_collection,
+        materials,
+        story_action_plan,
+    )
 
     protagonist = _build_protagonist(protagonist_collection, materials)
     lights = _build_lights(light_collection)
@@ -1885,9 +3504,20 @@ def build_and_save_andromeda_v2_master(
             camera_collection,
         ),
     }
-    shot_entries = contracts["shots"]["shots"]
     _animate_story(protagonist, cameras, shot_entries)
     _animate_environment_actions(environment_objects, shot_entries)
+    story_action_keyframe_count = _animate_shot_story_actions(
+        story_objects,
+        story_action_plan,
+    )
+    story_visibility_keyframe_count = _animate_shot_story_visibility(
+        story_objects,
+        story_action_plan,
+    )
+    protagonist_component_keyframe_count = _animate_protagonist_components(
+        protagonist,
+        protagonist_component_plan,
+    )
     visual_cue_state = _animate_bounded_lighting(
         lights,
         shot_entries,
@@ -1896,11 +3526,17 @@ def build_and_save_andromeda_v2_master(
     )
     animated_objects = [
         protagonist,
+        *protagonist.children,
         *cameras.values(),
         *lights,
         *(
             obj
             for objects in environment_objects.values()
+            for obj in objects
+        ),
+        *(
+            obj
+            for objects in story_objects.values()
             for obj in objects
         ),
     ]
@@ -1914,12 +3550,47 @@ def build_and_save_andromeda_v2_master(
     scene.world = world
     background = world.node_tree.nodes.get("Background")
     if background is not None:
-        background.inputs["Color"].default_value = (0.03, 0.065, 0.09, 1.0)
-        background.inputs["Strength"].default_value = 0.18
+        background.inputs["Color"].default_value = (0.004, 0.009, 0.017, 1.0)
+        background.inputs["Strength"].default_value = 0.12
     scene.view_settings.look = "AgX - Medium High Contrast"
     scene.view_settings.exposure = 0.65
 
     _embed_contracts(scene, contracts, spec)
+    for name, payload in (
+        ("TP_ANDROMEDA_V2_STORY_ACTION_PLAN_JSON", story_action_plan),
+        (
+            "TP_ANDROMEDA_V2_PROTAGONIST_COMPONENT_PLAN_JSON",
+            protagonist_component_plan,
+        ),
+    ):
+        text = bpy.data.texts.new(name)
+        text.write(
+            json.dumps(
+                payload,
+                ensure_ascii=True,
+                allow_nan=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        )
+    scene["trackprompt_story_action_plan_sha256"] = story_action_plan[
+        "canonicalSha256"
+    ]
+    scene["trackprompt_story_action_count"] = len(
+        story_action_plan["shotActions"]
+    )
+    scene["trackprompt_story_action_keyframe_count"] = (
+        story_action_keyframe_count
+    )
+    scene["trackprompt_story_visibility_keyframe_count"] = (
+        story_visibility_keyframe_count
+    )
+    scene["trackprompt_protagonist_component_plan_sha256"] = (
+        protagonist_component_plan["canonicalSha256"]
+    )
+    scene["trackprompt_protagonist_component_keyframe_count"] = (
+        protagonist_component_keyframe_count
+    )
     scene["trackprompt_visual_cues_supplied"] = visual_cue_state["supplied"]
     scene["trackprompt_visual_cues_applied"] = visual_cue_state["applied"]
     scene["trackprompt_visual_cues_sha256"] = (
@@ -1934,6 +3605,8 @@ def build_and_save_andromeda_v2_master(
     )
     scene["trackprompt_fcurve_interpolation"] = "LINEAR"
     scene["trackprompt_linear_keyframe_count"] = linear_keyframe_count
+    builder_source_sha256 = _file_sha256(Path(__file__).resolve())
+    scene["trackprompt_builder_source_sha256"] = builder_source_sha256
     render_state = configure_render_mode(scene, render_mode)
     composition_state = select_output_composition(scene, composition_id)
     audio_state = (
@@ -1951,7 +3624,8 @@ def build_and_save_andromeda_v2_master(
     summary: dict[str, Any] = {
         "ok": True,
         "schemaVersion": "1.0.0",
-        "builderId": "andromeda-v2-master-scene-builder-v1",
+        "builderId": ANDROMEDA_V2_BUILDER_ID,
+        "builderSourceSha256": builder_source_sha256,
         "projectId": ANDROMEDA_V2_PROJECT_ID,
         "outputBlend": str(output),
         "frameStart": ANDROMEDA_V2_FRAME_START,
@@ -1961,6 +3635,28 @@ def build_and_save_andromeda_v2_master(
         "shotCount": len(shot_entries),
         "environmentObjectCounts": {
             act_id: len(objects) for act_id, objects in environment_objects.items()
+        },
+        "shotStoryArchitecture": {
+            "shotCount": len(story_objects),
+            "objectCount": sum(len(objects) for objects in story_objects.values()),
+            "actionPlanSha256": story_action_plan["canonicalSha256"],
+            "keyframePointCount": story_action_keyframe_count,
+            "visibilityPolicy": "current-shot-only",
+            "visibilityKeyframePointCount": story_visibility_keyframe_count,
+        },
+        "protagonistComponentStory": {
+            "componentCount": len(protagonist_component_plan["components"]),
+            "planSha256": protagonist_component_plan["canonicalSha256"],
+            "keyframePointCount": protagonist_component_keyframe_count,
+            "damageBeginsFrame": protagonist_component_plan[
+                "damageBeginsFrame"
+            ],
+            "transformationCompletesFrame": protagonist_component_plan[
+                "transformationCompletesFrame"
+            ],
+            "transformationPersistsThroughFrame": protagonist_component_plan[
+                "transformationPersistsThroughFrame"
+            ],
         },
         "composition": composition_state,
         "renderMode": render_state,

@@ -1,0 +1,10 @@
+[  323182ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:8765/api/mission-control/events?jobId=9e892365-3dcb-4107-8b73-2ca39d0615ac&afterSequence=0:0
+[  325504ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/health:0
+[  325769ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/events?jobId=9e892365-3dcb-4107-8b73-2ca39d0615ac&afterSequence=85455:0
+[  330820ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/events?jobId=9e892365-3dcb-4107-8b73-2ca39d0615ac&afterSequence=85455:0
+[  331070ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/health:0
+[  338115ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/health:0
+[  338371ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/events?jobId=9e892365-3dcb-4107-8b73-2ca39d0615ac&afterSequence=85455:0
+[  345162ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/health:0
+[  350418ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/events?jobId=9e892365-3dcb-4107-8b73-2ca39d0615ac&afterSequence=85455:0
+[  350687ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8765/api/mission-control/health:0

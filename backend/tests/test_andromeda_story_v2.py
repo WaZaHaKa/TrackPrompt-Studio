@@ -237,6 +237,15 @@ def test_package_and_authorization_remain_deterministically_blocked() -> None:
     assert gates["enabled-matrix-24h-sla"] == "blocked"
     assert gates["exact-operator-production-authorization"] == "blocked"
     assert foundation.package_manifest.production_start_allowed is False
+    historical_roles = {
+        artifact.role for artifact in foundation.package_manifest.artifacts
+    }
+    assert {
+        "typed-production-contracts",
+        "authored-composition-profiles",
+        "master-scene-builder",
+        "foundation-documentation",
+    }.issubset(historical_roles)
 
 
 def test_contracts_reject_proof_variant_timeline_and_look_drift() -> None:

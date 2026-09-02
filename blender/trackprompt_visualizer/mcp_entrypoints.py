@@ -1270,3 +1270,79 @@ def render_r131_refinement_proof(
     return _safe_entrypoint(
         lambda: _render_r131_refinement_proof(output_directory, ffmpeg_path)
     )
+
+
+def _build_andromeda_v2_master_scene(
+    repository_root: str,
+    output_blend: str,
+    *,
+    composition_id: str,
+    render_mode: str,
+    audio_path: str | None,
+    visual_cues_path: str | None,
+) -> dict[str, Any]:
+    root_candidate = Path(repository_root).expanduser()
+    if not root_candidate.is_absolute():
+        raise VisualizerValidationError("Repository root path must be absolute.")
+    try:
+        root = root_candidate.resolve(strict=True)
+    except OSError as exc:
+        raise VisualizerValidationError(
+            "Repository root must be an existing directory."
+        ) from exc
+    if not root.is_dir():
+        raise VisualizerValidationError(
+            "Repository root must be an existing directory."
+        )
+    output = validate_output_file(output_blend, suffix=".blend")
+    if output.with_suffix(".build.json").exists():
+        raise VisualizerValidationError(
+            "The Andromeda V2 build receipt already exists; choose a new output name."
+        )
+    validated_audio = (
+        validate_input_file(audio_path, label="Audio", suffixes=AUDIO_SUFFIXES)
+        if audio_path is not None
+        else None
+    )
+    validated_cues = (
+        validate_input_file(
+            visual_cues_path,
+            label="Visual cues",
+            suffixes={".json"},
+        )
+        if visual_cues_path is not None
+        else None
+    )
+    from .andromeda_story_v2 import build_and_save_andromeda_v2_master
+
+    return build_and_save_andromeda_v2_master(
+        root,
+        output,
+        composition_id=composition_id,
+        render_mode=render_mode,
+        audio_path=validated_audio,
+        visual_cues_path=validated_cues,
+    )
+
+
+def build_andromeda_v2_master_scene(
+    repository_root: str,
+    output_blend: str,
+    *,
+    composition_id: str = "horizontal-16x9-1080p",
+    render_mode: str = "master",
+    audio_path: str | None = None,
+    visual_cues_path: str | None = None,
+) -> dict[str, Any]:
+    """Build the source-bound 35-shot V2 scene without starting a render."""
+
+    return _safe_entrypoint(
+        lambda: _build_andromeda_v2_master_scene(
+            repository_root,
+            output_blend,
+            composition_id=composition_id,
+            render_mode=render_mode,
+            audio_path=audio_path,
+            visual_cues_path=visual_cues_path,
+        )
+    )

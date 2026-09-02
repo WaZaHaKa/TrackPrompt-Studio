@@ -6,11 +6,17 @@ import shutil
 import sqlite3
 import threading
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from .analysis_archive import (
+    RETENTION_POLICY,
+    AnalysisArchiveError,
+    AnalysisArchiveRepository,
+    AnalysisDependencyError,
+)
 from .config import Settings
 from .privacy import secure_private_directory, secure_private_file
 from .schemas import AnalysisMode, JobStatus
@@ -40,6 +46,7 @@ class JobRecord:
     progress: int
     created_at: datetime
     updated_at: datetime
+    retention_policy: str
     expires_at: datetime
     display_name: str
     error_code: str | None
@@ -69,6 +76,7 @@ class JobStore:
         self.settings.ensure_directories()
         self._write_lock = threading.Lock()
         self._initialize()
+        self.archive = AnalysisArchiveRepository(self.settings.data_dir)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.settings.database_path, timeout=10)
@@ -114,11 +122,16 @@ class JobStore:
                 "lyrics_consent_confirmed": "INTEGER NOT NULL DEFAULT 0",
                 "derive_lyrical_themes": "INTEGER NOT NULL DEFAULT 0",
                 "allow_feature_fallback": "INTEGER NOT NULL DEFAULT 0",
+                "retention_policy": "TEXT NOT NULL DEFAULT 'persistent'",
             }
             for column, declaration in migrations.items():
                 if column not in existing_columns:
                     connection.execute(f"ALTER TABLE jobs ADD COLUMN {column} {declaration}")
-            connection.execute("CREATE INDEX IF NOT EXISTS jobs_expires_at_idx ON jobs(expires_at)")
+            connection.execute(
+                "UPDATE jobs SET retention_policy = ? WHERE retention_policy IS NULL OR retention_policy != ?",
+                (RETENTION_POLICY, RETENTION_POLICY),
+            )
+            connection.execute("DROP INDEX IF EXISTS jobs_expires_at_idx")
         self._secure_database_files()
 
     def _secure_database_files(self) -> None:
@@ -170,16 +183,19 @@ class JobStore:
         directory.mkdir(parents=False, exist_ok=False)
         secure_private_directory(directory)
         now = utc_now()
-        expires = now + timedelta(minutes=self.settings.job_ttl_minutes)
+        # The legacy column remains for additive schema compatibility only.
+        # It is not an active retention deadline and is never queried.
+        legacy_expires_at = now
         with self._write_lock, self._connect() as connection:
             connection.execute(
                 """
                 INSERT INTO jobs (
                     job_id, status, requested_mode, effective_mode, stage, message, progress,
-                    created_at, updated_at, expires_at, display_name, error_code, error_message,
+                    created_at, updated_at, expires_at, retention_policy,
+                    display_name, error_code, error_message,
                     permission_confirmed, enable_lyrical_analysis, enable_genre_analysis,
                     lyrics_consent_confirmed, derive_lyrical_themes, allow_feature_fallback
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     canonical,
@@ -191,7 +207,8 @@ class JobStore:
                     0,
                     _serialize_time(now),
                     _serialize_time(now),
-                    _serialize_time(expires),
+                    _serialize_time(legacy_expires_at),
+                    RETENTION_POLICY,
                     display_name,
                     int(permission_confirmed),
                     int(enable_lyrical_analysis),
@@ -202,7 +219,15 @@ class JobStore:
                 ),
             )
         self._secure_database_files()
-        return self.require_job(canonical)
+        created = self.require_job(canonical)
+        self.archive.register_job(
+            canonical,
+            display_name=display_name,
+            status=created.status.value,
+            created_at=created.created_at,
+            updated_at=created.updated_at,
+        )
+        return created
 
     def get_job(self, job_id: str) -> JobRecord | None:
         try:
@@ -223,6 +248,7 @@ class JobStore:
             progress=int(row["progress"]),
             created_at=_parse_time(str(row["created_at"])),
             updated_at=_parse_time(str(row["updated_at"])),
+            retention_policy=str(row["retention_policy"]),
             expires_at=_parse_time(str(row["expires_at"])),
             display_name=str(row["display_name"]),
             error_code=str(row["error_code"]) if row["error_code"] is not None else None,
@@ -291,13 +317,13 @@ class JobStore:
                 values,
             )
         self._secure_database_files()
-        return self.require_job(job_id)
-
-    def expired_job_ids(self, now: datetime | None = None) -> list[str]:
-        current = _serialize_time(now or utc_now())
-        with self._connect() as connection:
-            rows = connection.execute("SELECT job_id FROM jobs WHERE expires_at <= ?", (current,)).fetchall()
-        return [str(row["job_id"]) for row in rows]
+        updated = self.require_job(job_id)
+        self.archive.update_lifecycle(
+            updated.job_id,
+            status=updated.status.value,
+            updated_at=updated.updated_at,
+        )
+        return updated
 
     def active_job_ids(self) -> list[str]:
         terminal = (
@@ -321,14 +347,13 @@ class JobStore:
                 """
                 UPDATE jobs
                 SET status = ?, stage = ?, message = ?, progress = 0,
-                    updated_at = ?, expires_at = ?, error_code = ?, error_message = ?
+                    updated_at = ?, error_code = ?, error_message = ?
                 WHERE job_id = ?
                 """,
                 (
                     JobStatus.FAILED.value,
                     "cleanup_pending",
                     "Rejected upload cleanup is pending and will be retried",
-                    now,
                     now,
                     "cleanup_pending",
                     "Private upload cleanup is pending and will be retried automatically.",
@@ -344,6 +369,12 @@ class JobStore:
         except KeyError:
             return False
         existed = self.get_job(canonical) is not None or directory.exists()
+        try:
+            self.archive.explicit_delete(canonical)
+        except KeyError:
+            pass
+        except AnalysisDependencyError as exc:
+            raise DeletionError(str(exc)) from exc
         resolved_jobs = self.settings.jobs_dir.resolve()
         resolved_directory = directory.resolve()
         if resolved_directory.parent == resolved_jobs and resolved_directory.name == canonical and resolved_directory.exists():
@@ -376,6 +407,12 @@ class JobStore:
         secure_private_file(temporary)
         os.replace(temporary, destination)
         secure_private_file(destination)
+        record = self.get_job(job_id)
+        if record is not None and record.status == JobStatus.COMPLETED:
+            try:
+                self.archive.publish_artifact(job_id, directory, filename)
+            except AnalysisArchiveError as exc:
+                raise OSError("The persistent analysis archive could not publish this revision") from exc
         return destination
 
     def delete_json(self, job_id: str, filename: str) -> None:
@@ -389,6 +426,12 @@ class JobStore:
         path.unlink(missing_ok=True)
         if path.exists():
             raise OSError("Private job payload could not be invalidated.")
+        try:
+            self.archive.remove_artifact(job_id, filename)
+        except KeyError:
+            pass
+        except AnalysisArchiveError as exc:
+            raise OSError("The archived private payload could not be explicitly deleted") from exc
 
     def read_json(self, job_id: str, filename: str) -> dict[str, Any] | None:
         if filename not in {
@@ -400,10 +443,80 @@ class JobStore:
             raise ValueError("Unsupported job payload filename")
         path = self.job_dir(job_id) / filename
         if not path.is_file():
-            return None
+            artifact_kind = {
+                "analysis.json": "analysis",
+                "detected-analysis.json": "detected-analysis",
+                "prompt.json": "prompt",
+                "preferences.json": "preferences",
+                "lyrics.json": "lyrics",
+                "detected-lyrics.json": "detected-lyrics",
+                "lyrics-summary.json": "lyrics-summary",
+                "visual-features.json": "visual-features",
+                "story-plan.json": "story-plan",
+                "shot-plan.json": "shot-plan",
+                "art-direction-reviews.json": "art-direction-reviews",
+            }[filename]
+            archived = self.archive.resolve_artifact(job_id, artifact_kind)
+            if archived is None:
+                return None
+            path = archived
         if path.stat().st_size > 20_000_000:
             raise ValueError("Stored job payload exceeds the safety limit")
         parsed = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(parsed, dict):
             raise ValueError("Stored job payload is invalid")
         return parsed
+
+    def source_path(self, job_id: str) -> Path | None:
+        source = self.job_dir(job_id) / "source.bin"
+        if source.is_file():
+            return source
+        return self.archive.resolve_source(job_id)
+
+    def archive_completed(self, job_id: str) -> dict[str, Any]:
+        record = self.require_job(job_id)
+        return self.archive.archive_completed(
+            analysis_id=record.job_id,
+            display_name=record.display_name,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
+            job_directory=self.job_dir(record.job_id),
+        )
+
+    def reconcile_archive(self) -> dict[str, int]:
+        archived = 0
+        degraded = 0
+        with self._connect() as connection:
+            rows = connection.execute("SELECT job_id FROM jobs ORDER BY created_at").fetchall()
+        for row in rows:
+            job_id = str(row["job_id"])
+            record = self.require_job(job_id)
+            self.archive.register_job(
+                job_id,
+                display_name=record.display_name,
+                status=record.status.value,
+                created_at=record.created_at,
+                updated_at=record.updated_at,
+            )
+            if record.status != JobStatus.COMPLETED:
+                continue
+            live_directory = self.job_dir(job_id)
+            existing_entry = self.archive.get(job_id)
+            if (
+                existing_entry is not None
+                and existing_entry["archiveHealth"] == "healthy"
+                and (
+                    not (live_directory / "source.bin").is_file()
+                    or not (live_directory / "analysis.json").is_file()
+                )
+            ):
+                archived += 1
+                continue
+            try:
+                self.archive_completed(job_id)
+                archived += 1
+            except (AnalysisArchiveError, KeyError, OSError, ValueError):
+                if self.archive.get(job_id) is not None:
+                    self.archive.mark_degraded(job_id, "reconciliation_failed")
+                degraded += 1
+        return {"archived": archived, "degraded": degraded}

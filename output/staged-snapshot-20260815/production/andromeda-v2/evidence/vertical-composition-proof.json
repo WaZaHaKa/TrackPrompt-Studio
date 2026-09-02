@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-authored-vertical-composition-proof",
+  "projectId": "trip-to-andromeda-v2",
+  "outputVariantId": "vertical-9x16-1080p",
+  "enabledForProduction": false,
+  "masterScene": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-vertical-release-v2.blend",
+    "sha256": "2bcbba3e3b84313f08c52762739727eeda6011c4e0611dc4d2616a74ffcf1baa",
+    "bytes": 321781,
+    "buildReceiptSha256": "f488071be71b0671dc60fd66fd41c8f3ca4079dfd988dea4937212bfd38d16af",
+    "renderStarted": false
+  },
+  "boundedProof": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/vertical-transition-proof-release-v2/vertical-transition-proof-release-v2.mp4",
+    "sha256": "de7b42a7e06e0160eb4b5468f9e297c12f45fd308a43e65a8fd745d12c2189ec",
+    "bytes": 170471,
+    "frameStart": 10915,
+    "frameEnd": 11034,
+    "frameCount": 120,
+    "width": 270,
+    "height": 480,
+    "fps": 30,
+    "videoDurationSeconds": 4.0,
+    "audioDurationSeconds": 3.993991,
+    "sequenceSha256": "d6bf06560dacb18f5fe5f5720b79bd83d390f7ec26bd07bc181d3d4588b403e5",
+    "mediaQaSha256": "8f86eddfb9ec23ad636450f49c84456e5c8b5b52faaa84b595191341f9b9d0de",
+    "technicalPass": true
+  },
+  "independentAuthorship": {
+    "compositionProfileId": "andromeda-v2-vertical-master-v1",
+    "cameraName": "TP_ANDROMEDA_V2_CAMERA_VERTICAL",
+    "cropPolicy": "native-authored-never-crop",
+    "comparisonFrames": [
+      10944,
+      10945
+    ],
+    "horizontalAndVerticalFramingDiffer": true,
+    "proofIsNotHorizontalCrop": true
+  },
+  "productionEligibility": {
+    "separateFinalResolutionCalibrationComplete": false,
+    "aggregateDualMatrixSlaCalculated": false,
+    "exactOperatorAuthorizationPresent": false,
+    "productionStartAllowed": false
+  },
+  "technicalPass": true,
+  "humanArtisticApproval": false
+}

@@ -1,0 +1,6 @@
+- main "WZHK generative geometry runtime" [ref=e2]:
+  - status:
+    - generic: Geometry unavailable
+  - alert [ref=e4]:
+    - strong [ref=e5]: Generative geometry unavailable
+    - generic [ref=e6]: Unsupported easing cubic.

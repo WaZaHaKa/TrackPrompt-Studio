@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "packageExtensionVersion": "local-anime-video-1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "title": "The Riff That Learned to Breathe",
+  "workingCredit": "DJ WaZaHaKa × Nir Pache",
+  "selectedProfileId": "local-wan22-a14b-auto-quality",
+  "generationProfiles": [
+    {
+      "profileId": "local-wan22-a14b-auto-quality",
+      "providerId": "local-comfyui",
+      "modelId": "Wan2.2-I2V-A14B-GGUF",
+      "qualitySelection": [
+        "Q5_K_M",
+        "Q4_K_M"
+      ],
+      "resolution": "1024x576 generation; 1920x1080 delivery",
+      "aspectRatio": "16:9",
+      "generationFps": 16,
+      "deliveryFps": 24,
+      "durationSecondsPerGeneratedClip": 5.0625,
+      "framesPerGeneratedClip": 81,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": false,
+      "personGeneration": "fictional-adults-only",
+      "hardwareQualificationRequired": true
+    },
+    {
+      "profileId": "local-wan22-ti2v-5b-reliable",
+      "providerId": "local-comfyui",
+      "modelId": "Wan2.2-TI2V-5B",
+      "resolution": "1024x576 generation; 1920x1080 delivery",
+      "aspectRatio": "16:9",
+      "generationFps": 16,
+      "deliveryFps": 24,
+      "durationSecondsPerGeneratedClip": 5.0625,
+      "framesPerGeneratedClip": 81,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": false,
+      "personGeneration": "fictional-adults-only",
+      "hardwareQualificationRequired": false
+    }
+  ],
+  "spendPolicy": {
+    "cloudSpendUsd": 0,
+    "networkInferenceAllowed": false,
+    "silentDownloadsAllowed": false
+  },
+  "requiredShotIds": [
+    "shot-001",
+    "shot-002",
+    "shot-003",
+    "shot-004",
+    "shot-005",
+    "shot-006",
+    "shot-007",
+    "shot-008",
+    "shot-009",
+    "shot-010",
+    "shot-011",
+    "shot-012",
+    "shot-013",
+    "shot-014",
+    "shot-015",
+    "shot-016"
+  ],
+  "optionalHeroVariantShotIds": [
+    "shot-008",
+    "shot-014",
+    "shot-015",
+    "shot-016"
+  ],
+  "maxGeneratedVideoClips": 20,
+  "storagePrefix": "trackprompt-local-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation/the-riff-that-learned-to-breathe",
+  "timeline": {
+    "clockSource": "original-audio",
+    "provisionalDurationSeconds": 149.0,
+    "actualAudioDurationIsAuthoritative": true,
+    "analysisBinding": "persistent TrackPrompt StoryPlan/ShotPlan and beat/section analysis",
+    "fps": 24,
+    "width": 1920,
+    "height": 1080,
+    "baseSceneCount": 16,
+    "autoAssembly": true,
+    "transitionPolicy": "beat-snapped artistic transitions, usually 12–24 frames",
+    "davinciExports": [
+      "fcpxml-1.11",
+      "fcp7-xml",
+      "cmx3600-edl",
+      "marker-csv",
+      "edit-sheet-csv"
+    ]
+  },
+  "persistence": {
+    "projectAnalysisRetention": "persistent-until-explicit-project-delete",
+    "versionedSnapshots": true,
+    "contentHashBinding": true,
+    "temporaryRenderCacheMayExpire": true
+  },
+  "rightsRecordId": "nir-wazahaka-collaboration-confirmed-2026-08"
+}

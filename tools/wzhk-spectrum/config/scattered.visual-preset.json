@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "3.1.0",
+  "presetId": "scattered",
+  "displayName": "Scattered — Geometry First",
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "safeMargin": 72
+  },
+  "logo": {
+    "x": 96,
+    "y": 76,
+    "maxWidth": 236,
+    "scale": 0.92,
+    "opacity": 0.94
+  },
+  "spectrum": {
+    "x": 260,
+    "baselineY": 862,
+    "barCount": 56,
+    "barWidth": 14,
+    "barGap": 8,
+    "maxHeight": 304,
+    "scale": 0.9,
+    "sensitivity": 34,
+    "fftSize": 4096,
+    "fftAttack": 0,
+    "fftDecay": 90
+  },
+  "typography": {
+    "artistFont": "Montserrat SemiBold",
+    "titleFont": "Montserrat Light",
+    "artistSize": 54,
+    "titleSize": 34,
+    "metadataSize": 15,
+    "x": 96,
+    "y": 354
+  },
+  "palette": {
+    "background": "#070A12",
+    "backgroundSecondary": "#111827",
+    "spectrum": "#78D8FF",
+    "text": "#F5F7FA",
+    "accent": "#9D7CFF",
+    "glow": "#3AC7FF",
+    "shadow": "#000000"
+  },
+  "background": {
+    "mode": "generative-geometry",
+    "intensity": 0.45,
+    "fragmentOpacity": 0.42,
+    "vignetteOpacity": 0.34,
+    "fragmentSeed": 351705,
+    "fragmentCount": 24,
+    "depthLayers": 3,
+    "maxMotionPixels": 9,
+    "strokeWidth": 1.1
+  },
+  "composition": {
+    "schemaVersion": "1.0.0",
+    "revision": "scattered-geometry-first-3.7",
+    "geometryCoverage": "full-frame",
+    "production": {
+      "logoVisible": true,
+      "artistVisible": true,
+      "titleVisible": true,
+      "spectrumBarsVisible": false,
+      "spectralRibbonVisible": false,
+      "technicalMetadataVisible": false,
+      "sectionLabelsVisible": false
+    },
+    "readability": {
+      "mode": "soft-ellipses",
+      "minimumBrightness": 0.42,
+      "haloSuppression": 0.72,
+      "zones": [
+        {"id": "logo", "center": [0.1073, 0.1722], "radius": [0.092, 0.145], "strength": 0.46},
+        {"id": "identity", "center": [0.162, 0.402], "radius": [0.177, 0.095], "strength": 0.62}
+      ]
+    },
+    "framing": {
+      "center": [0.50, 0.54],
+      "shapeScale": 0.92,
+      "depthStrength": 0.75
+    },
+    "envelope": [
+      {"timeSeconds": 0, "density": 0.40, "brightness": 0.55, "scale": 0.78, "deformation": 0.50},
+      {"timeSeconds": 32, "density": 0.63, "brightness": 0.68, "scale": 0.90, "deformation": 0.65},
+      {"timeSeconds": 60, "density": 0.74, "brightness": 0.82, "scale": 0.98, "deformation": 0.80},
+      {"timeSeconds": 68, "density": 1.0, "brightness": 1.0, "scale": 1.04, "deformation": 1.0},
+      {"timeSeconds": 172, "density": 1.0, "brightness": 1.0, "scale": 1.04, "deformation": 1.0},
+      {"timeSeconds": 184, "density": 0.65, "brightness": 0.72, "scale": 1.05, "deformation": 0.65},
+      {"timeSeconds": 192, "density": 0.42, "brightness": 0.50, "scale": 1.12, "deformation": 0.40},
+      {"timeSeconds": 196.619796, "density": 0, "brightness": 0, "scale": 1.22, "deformation": 0}
+    ]
+  },
+  "generativeGeometry": {
+    "schemaVersion": "1.0.0",
+    "subsystemId": "wzhk-generative-geometry",
+    "enabled": true,
+    "renderMode": "neopixel-points",
+    "fallbackMode": "static-structured",
+    "seed": 84291,
+    "pointDomain": {
+      "pointCount": 4096,
+      "columns": 64
+    },
+    "performanceProfile": "production",
+    "performanceProfiles": [
+      {
+        "id": "preview",
+        "pointCount": 1600,
+        "targetFps": 30,
+        "minimumSustainedFps": 28,
+        "maximumAverageFrameTimeMs": 35
+      },
+      {
+        "id": "production",
+        "pointCount": 4096,
+        "targetFps": 60,
+        "minimumSustainedFps": 55,
+        "maximumAverageFrameTimeMs": 18.5
+      },
+      {
+        "id": "high",
+        "pointCount": 6400,
+        "targetFps": 60,
+        "minimumSustainedFps": 50,
+        "maximumAverageFrameTimeMs": 20
+      }
+    ],
+    "shapeLibrary": [
+      "sparse-field",
+      "lissajous",
+      "matrix-field",
+      "wave-surface",
+      "torus",
+      "twisted-torus",
+      "trefoil-knot",
+      "superformula",
+      "spherical-lattice",
+      "dispersed-field"
+    ],
+    "pointSize": 9.0,
+    "globalScale": 1.35,
+    "camera": {
+      "position": [0, 0, 4.2],
+      "target": [0, 0, 0],
+      "fovDegrees": 48,
+      "near": 0.1,
+      "far": 50,
+      "orbitAmplitudeDegrees": 4.5,
+      "orbitSpeed": 0.025,
+      "dollyAmplitude": 0.05
+    },
+    "audioMapping": {
+      "lowScaleGain": 0.32,
+      "midDisplacementGain": 0.62,
+      "highBrightnessGain": 0.78,
+      "highSparkleThreshold": 0.64,
+      "transientImpulseGain": 0.88,
+      "energyMotionGain": 0.66,
+      "energyComplexityGain": 0.58
+    },
+    "propagation": {
+      "enabled": true,
+      "speed": 1.4,
+      "decay": 1.35,
+      "width": 0.13
+    },
+    "choreography": {
+      "schemaVersion": "1.0.0",
+      "bpm": 120,
+      "beatsPerBar": 4,
+      "gridDurationSeconds": 192,
+      "masterDurationSeconds": 196.619796,
+      "sections": [
+        {"sectionId": "intro", "startSeconds": 0, "endSeconds": 64},
+        {"sectionId": "main", "startSeconds": 64, "endSeconds": 176},
+        {"sectionId": "outro", "startSeconds": 176, "endSeconds": 192},
+        {"sectionId": "post-grid-tail", "startSeconds": 192, "endSeconds": 196.619796}
+      ],
+      "transitions": [
+        {"transitionId": "intro-emergence", "section": "intro", "start": {"value": 0, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "sparse-field", "seed": 84291}, "shapeB": {"shapeId": "lissajous", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "intro-lattice", "section": "intro", "start": {"value": 8, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "lissajous", "seed": 84291}, "shapeB": {"shapeId": "matrix-field", "seed": 84291}, "easing": "sinusoidal"},
+        {"transitionId": "intro-sphere", "section": "intro", "start": {"value": 16, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "matrix-field", "seed": 84291}, "shapeB": {"shapeId": "spherical-lattice", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "intro-torus-arrival", "section": "intro", "start": {"value": 24, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "spherical-lattice", "seed": 84291}, "shapeB": {"shapeId": "torus", "seed": 84291}, "easing": "cubic"},
+        {"transitionId": "main-twist", "section": "main", "start": {"value": 32, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "torus", "seed": 84291}, "shapeB": {"shapeId": "twisted-torus", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "main-knot", "section": "main", "start": {"value": 40, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "twisted-torus", "seed": 84291}, "shapeB": {"shapeId": "trefoil-knot", "seed": 84291}, "easing": "sinusoidal"},
+        {"transitionId": "main-superformula", "section": "main", "start": {"value": 48, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "trefoil-knot", "seed": 84291}, "shapeB": {"shapeId": "superformula", "seed": 84291}, "easing": "cubic"},
+        {"transitionId": "main-spherical-field", "section": "main", "start": {"value": 56, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "superformula", "seed": 84291}, "shapeB": {"shapeId": "spherical-lattice", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "main-wave-surface", "section": "main", "start": {"value": 64, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "spherical-lattice", "seed": 84291}, "shapeB": {"shapeId": "wave-surface", "seed": 84291}, "easing": "sinusoidal"},
+        {"transitionId": "main-matrix-deformation", "section": "main", "start": {"value": 72, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "wave-surface", "seed": 84291}, "shapeB": {"shapeId": "matrix-field", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "main-structured-climax", "section": "main", "start": {"value": 80, "unit": "bars"}, "duration": {"value": 8, "unit": "bars"}, "shapeA": {"shapeId": "matrix-field", "seed": 84291}, "shapeB": {"shapeId": "twisted-torus", "seed": 84291}, "easing": "cubic"},
+        {"transitionId": "outro-simplify", "section": "outro", "start": {"value": 88, "unit": "bars"}, "duration": {"value": 4, "unit": "bars"}, "shapeA": {"shapeId": "twisted-torus", "seed": 84291}, "shapeB": {"shapeId": "spherical-lattice", "seed": 84291}, "easing": "smootherstep"},
+        {"transitionId": "outro-disperse", "section": "outro", "start": {"value": 92, "unit": "bars"}, "duration": {"value": 4, "unit": "bars"}, "shapeA": {"shapeId": "spherical-lattice", "seed": 84291}, "shapeB": {"shapeId": "dispersed-field", "seed": 84291}, "easing": "sinusoidal"},
+        {"transitionId": "tail-extinguish", "section": "post-grid-tail", "start": {"value": 192, "unit": "seconds"}, "duration": {"value": 4.619796, "unit": "seconds"}, "shapeA": {"shapeId": "dispersed-field", "seed": 84291}, "shapeB": {"shapeId": "sparse-field", "seed": 84291}, "easing": "smootherstep"}
+      ]
+    }
+  },
+  "progress": {
+    "visible": false,
+    "height": 2,
+    "opacity": 0.45
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "startSeconds": 0,
+      "endSeconds": 64,
+      "state": {
+        "spectrumColor": "#668FB7",
+        "accentColor": "#7466A8",
+        "glowColor": "#315775",
+        "spectrumIntensity": 0.68,
+        "spectrumScale": 0.82,
+        "sensitivity": 30,
+        "logoOpacity": 0.9,
+        "textOpacity": 0.9,
+        "backgroundIntensity": 0.28,
+        "glowOpacity": 0.16,
+        "fragmentDensity": 0.28,
+        "fragmentMotion": 0.14,
+        "lineIntensity": 0.24
+      }
+    },
+    {
+      "id": "main",
+      "label": "Main",
+      "startSeconds": 64,
+      "endSeconds": 176,
+      "state": {
+        "spectrumColor": "#78D8FF",
+        "accentColor": "#9D7CFF",
+        "glowColor": "#3AC7FF",
+        "spectrumIntensity": 1,
+        "spectrumScale": 1,
+        "sensitivity": 38,
+        "logoOpacity": 0.86,
+        "textOpacity": 1,
+        "backgroundIntensity": 0.58,
+        "glowOpacity": 0.62,
+        "fragmentDensity": 1,
+        "fragmentMotion": 0.38,
+        "lineIntensity": 0.78
+      }
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "startSeconds": 176,
+      "endSeconds": 192,
+      "state": {
+        "spectrumColor": "#7A8DAA",
+        "accentColor": "#655F88",
+        "glowColor": "#33475E",
+        "spectrumIntensity": 0.56,
+        "spectrumScale": 0.76,
+        "sensitivity": 29,
+        "logoOpacity": 1,
+        "textOpacity": 0.82,
+        "backgroundIntensity": 0.22,
+        "glowOpacity": 0.12,
+        "fragmentDensity": 0.48,
+        "fragmentMotion": 0.2,
+        "lineIntensity": 0.3
+      }
+    }
+  ],
+  "postGridTail": {
+    "id": "post-grid-tail",
+    "label": "Post-grid tail",
+    "startSeconds": 192,
+    "state": {
+      "spectrumColor": "#71849C",
+      "accentColor": "#55536E",
+      "glowColor": "#2A3A4A",
+      "spectrumIntensity": 0.48,
+      "spectrumScale": 0.7,
+      "sensitivity": 28,
+      "logoOpacity": 1,
+      "textOpacity": 0.76,
+      "backgroundIntensity": 0.16,
+      "glowOpacity": 0.08,
+      "fragmentDensity": 0.18,
+      "fragmentMotion": 0.08,
+      "lineIntensity": 0.12
+    },
+    "endState": {
+      "spectrumColor": "#4B5665",
+      "accentColor": "#30303D",
+      "glowColor": "#1A222B",
+      "spectrumIntensity": 0.06,
+      "spectrumScale": 0.62,
+      "sensitivity": 24,
+      "logoOpacity": 1,
+      "textOpacity": 0.34,
+      "backgroundIntensity": 0.06,
+      "glowOpacity": 0.01,
+      "fragmentDensity": 0.03,
+      "fragmentMotion": 0,
+      "lineIntensity": 0.02
+    }
+  },
+  "transitions": {
+    "introToMainSeconds": 1.5,
+    "mainToOutroSeconds": 2.5,
+    "finalFadeSeconds": 4
+  },
+  "controller": {
+    "version": "3.0.0",
+    "previewTimingSource": "external-media-player-position",
+    "productionTimingSource": "trackprompt-production-clock",
+    "updateMilliseconds": 16,
+    "previewAccuracy": "preview-level",
+    "productionAccuracy": "host-monotonic-process-boundary"
+  }
+}

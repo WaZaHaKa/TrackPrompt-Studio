@@ -1,5 +1,13 @@
 # Optional models and licenses
 
+## Long-form catalogue milestone
+
+The catalogue, resumable upload, deterministic boundary detector, queue,
+mastering comparison, audit journal, and backup/restore tooling add no model and
+make no network request. Boundary features use the existing FFmpeg/NumPy stack.
+Optional Demucs, CLAP, faster-whisper, and local prompt-writer terms below remain
+unchanged and apply only to bounded child analyses when explicitly enabled.
+
 ## Shipping and installation status
 
 TrackPrompt Studio's base Fast profile bundles no model weights and never
@@ -61,7 +69,7 @@ reviewed prefix.
 Normal runtime sets model clients to offline mode. The browser cannot trigger a
 download, adapters do not silently download, and analysis never receives model-
 installation authority. Demucs stems stay private and temporary. Private
-transcript artifacts remain local until explicit deletion or TTL expiry;
+transcript artifacts remain local until explicit deletion;
 ordinary analysis/export does not expose raw transcripts, model paths, or model
 files.
 
@@ -103,3 +111,14 @@ or otherwise restrictive, keep the adapter disabled and flag the constraint in
 the capability response and UI. Model volumes are removed only by the explicit
 complete-deletion command using `docker compose ... down --volumes`; ordinary
 setup, recovery, rebuild, and shutdown preserve them.
+
+## Local ComfyUI video stack
+
+- ComfyUI application/runtime: GPL-3.0. The optional managed installation is pinned to official release `v0.30.0`; the resulting Git commit is recorded in the local installation lock.
+- Wan2.2 I2V-A14B and TI2V-5B: Apache-2.0 upstream model license. The local setup script pins official Comfy-Org repackaged artifacts for native weights and the documented `bullerwins/Wan2.2-I2V-A14B-GGUF` community quantizations for low-memory Q5/Q4 pairs. Record the exact revision and SHA-256 in the installation lock before use.
+- FLUX.1-schnell FP8 ComfyUI package: Apache-2.0. Used for fictional reference sheets/keyframes only; the setup record binds the exact source revision and SHA-256.
+- ComfyUI-GGUF: Apache-2.0 software license at pinned revision `6ea2651e7df66d7585f6ffee804b20e92fb38b8a`. It is never silently installed; review and pin the selected revision separately.
+- RIFE NCNN Vulkan: MIT software/model release; explicitly configured local executable only.
+- Real-ESRGAN NCNN Vulkan and the distributed `realesrgan-x4plus-anime` model: MIT release bundle at `v0.2.2.4`; explicitly configured local executable only.
+
+Optional anime checkpoints and LoRAs remain disabled unless their source, exact revision, SHA-256, and commercial-use-compatible license are recorded here first.

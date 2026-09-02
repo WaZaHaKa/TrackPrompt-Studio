@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-andromeda-v2-release-report",
+  "projectId": "trip-to-andromeda-v2",
+  "recordedAt": "2026-07-23T11:31:10+03:00",
+  "branch": "feat/andromeda-story-v2",
+  "startingCommitSha": "7e3743f637fb413e10dbde3aff2da9c4a7bf2f44",
+  "implementationCommitSha": "61984132f05fd0a863687fedec58d34b4dd97019",
+  "sourceTreeSha256": "8e9bfef3f56caaaeede68b02100f01c3f793c190e192c177216d03ac0c266f3f",
+  "releaseIdentitySha256": "dd3036eb00baec5f4ab921bea0a7a1565e15fea9fcc5be752e69d114d3c58c56",
+  "ownerCreativeAcceptance": {
+    "path": "production/andromeda-v2/creative-acceptance.json",
+    "sha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+    "source": "owner-attested-r13.1-baseline-not-codex"
+  },
+  "story": {
+    "storyPlanPath": "backend/app/cinematic/templates/trip_to_andromeda_story_v2.json",
+    "storyPlanSha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+    "shotPlanPath": "backend/app/cinematic/templates/trip_to_andromeda_shots_v2.json",
+    "shotPlanSha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+    "actCount": 7,
+    "shotCount": 35,
+    "frameStart": 1,
+    "frameEnd": 13029,
+    "fps": 30
+  },
+  "lookProfile": {
+    "path": "production/andromeda-v2/final-look-profile.json",
+    "sha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+    "blenderVersion": "5.2",
+    "engine": "BLENDER_EEVEE",
+    "temporalSamples": 64,
+    "volumetricSamples": 32,
+    "motionBlur": false,
+    "colorManagement": "AgX Medium High Contrast"
+  },
+  "enabledOutputMatrix": {
+    "matrixId": "andromeda-v2-horizontal-only-v2",
+    "enabledVariantIds": [
+      "horizontal-16x9-1080p"
+    ],
+    "optionalDisabledVariantIds": [
+      "vertical-9x16-1080p"
+    ]
+  },
+  "horizontal": {
+    "scenePath": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-horizontal-release-v2.blend",
+    "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+    "profilePath": "render-profiles/trip-to-andromeda/andromeda-v2-horizontal-1080p-final.json",
+    "profileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "imageSequence": "PNG RGB 16-bit",
+    "framesPerChunk": 300,
+    "chunkCount": 44,
+    "delivery": "H.264 High yuv420p CRF 16 slow plus AAC 320k 44.1 kHz"
+  },
+  "vertical": {
+    "enabled": false,
+    "sceneSha256": "2bcbba3e3b84313f08c52762739727eeda6011c4e0611dc4d2616a74ffcf1baa",
+    "profilePath": "render-profiles/trip-to-andromeda/andromeda-v2-vertical-1080x1920-final-optional.json",
+    "profileSha256": "c4543eea639a06e548262b68c78bbd825b08f4f2a63f95d9c3eaf1502ba034ed",
+    "compositionProfileId": "andromeda-v2-vertical-master-v1",
+    "cameraName": "TP_ANDROMEDA_V2_CAMERA_VERTICAL",
+    "boundedCompositionProofPassed": true,
+    "separateFinalResolutionCalibrationRequiredBeforeEnablement": true
+  },
+  "fullAnimatic": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/animatic-horizontal-release-v2/animatic-horizontal-full-release-v2.mp4",
+    "sha256": "bb88363b9dca91088c4d358964460d569d424bf408815cf84ed9164c74598d8b",
+    "frameCount": 13029,
+    "durationSeconds": 434.3,
+    "audioDurationSeconds": 434.285011,
+    "technicalPass": true
+  },
+  "calibration": {
+    "path": "production/andromeda-v2/v2-calibration.json",
+    "sha256": "31afac2cf80dfb37ba25125d68beb04c364486d30800947477d8ecb755e9d10f",
+    "renderSecondsPerFrameP50": 0.622351199999684,
+    "renderSecondsPerFrameP90": 0.834927400021115,
+    "aggregateSecondsP50": 11456.614,
+    "aggregateSecondsP90": 18799.5228,
+    "aggregateHoursP50": 3.182393,
+    "aggregateHoursP90": 5.22209,
+    "slaHours": 24,
+    "slaSatisfied": true
+  },
+  "technicalAuthorization": {
+    "path": "production/andromeda-v2/technical-authorization-v2.json",
+    "sha256": "3e5d6c93b5530fc677638e1213db2ec2d94fce8935157e520511d58d137f1e78",
+    "technicalReady": true,
+    "operatorStartGate": "not-authorized",
+    "productionStartAllowed": false,
+    "finalRenderStarted": false
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 7 3700X",
+    "logicalCores": 16,
+    "ramBytes": 34282479616,
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "vramMiB": 12288,
+    "gpuDriver": "610.62",
+    "blender": "5.2.0 LTS",
+    "ffmpeg": "8.1.1",
+    "diskFreeBytesAtFinalCalibration": 379058008064,
+    "diskHeadroomSatisfied": true
+  },
+  "verification": {
+    "backendPytest": "392 passed",
+    "backendRuff": "passed",
+    "backendMypy": "93 source files passed",
+    "frontendUnit": "66 passed",
+    "frontendLint": "passed",
+    "frontendTypecheck": "passed",
+    "frontendBuild": "passed",
+    "missionControlBrowserE2e": "4 passed",
+    "blenderTests": "86 passed",
+    "mediaQaToolTests": "7 passed",
+    "focusedReleaseContractTests": "24 passed",
+    "boundedFinalToolingSmoke": "PASS: three-frame render, one-frame resume, delivery encode, and verification",
+    "fullProductionRenderInvoked": false
+  },
+  "remoteStatusAtReportGeneration": "pending-final-local-evidence-commit-and-push-attempt",
+  "codexHumanArtisticApproval": false,
+  "humanArtisticJudgmentSource": "owner-attested-r13.1-baseline-not-codex",
+  "productionRenderStarted": false
+}

@@ -1,0 +1,11 @@
+{
+  "healthUrl": "http://127.0.0.1:8123/api/mission-control/health",
+  "host": "127.0.0.1",
+  "instanceId": "ea262eb7-4f36-4916-bc68-de5e8b0cb442",
+  "kind": "trackprompt-mission-control-instance",
+  "pid": 32704,
+  "port": 8123,
+  "schemaVersion": "1.0.0",
+  "startedAt": "2026-08-21T19:18:53.184188+00:00",
+  "url": "http://127.0.0.1:8123"
+}

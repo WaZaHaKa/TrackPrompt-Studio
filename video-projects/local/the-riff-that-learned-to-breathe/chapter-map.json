@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "bindingMode": "provisional seconds scaled to actual audio duration, then snapped to nearest detected phrase/downbeat within 1.25 seconds while preserving 16 scenes",
+  "chapters": [
+    {
+      "chapterId": "source",
+      "title": "01 — Source",
+      "startSeconds": 0,
+      "endSeconds": 35,
+      "startFraction": 0.0,
+      "endFraction": 0.234899,
+      "shotIds": [
+        "shot-001",
+        "shot-002",
+        "shot-003",
+        "shot-004"
+      ],
+      "transitionIn": "fade-from-black",
+      "transitionOut": "wing-to-reel match"
+    },
+    {
+      "chapterId": "transformation",
+      "title": "02 — Transformation",
+      "startSeconds": 35,
+      "endSeconds": 71,
+      "startFraction": 0.234899,
+      "endFraction": 0.47651,
+      "shotIds": [
+        "shot-005",
+        "shot-006",
+        "shot-007",
+        "shot-008"
+      ],
+      "transitionIn": "wing-to-reel match",
+      "transitionOut": "amber trail split"
+    },
+    {
+      "chapterId": "conflict-collaboration",
+      "title": "03 — Keep the Heart",
+      "startSeconds": 71,
+      "endSeconds": 107,
+      "startFraction": 0.47651,
+      "endFraction": 0.718121,
+      "shotIds": [
+        "shot-009",
+        "shot-010",
+        "shot-011",
+        "shot-012"
+      ],
+      "transitionIn": "amber trail split",
+      "transitionOut": "watercolor bloom"
+    },
+    {
+      "chapterId": "release-return",
+      "title": "04 — Release and Return",
+      "startSeconds": 107,
+      "endSeconds": 149,
+      "startFraction": 0.718121,
+      "endFraction": 1.0,
+      "shotIds": [
+        "shot-013",
+        "shot-014",
+        "shot-015",
+        "shot-016"
+      ],
+      "transitionIn": "watercolor bloom",
+      "transitionOut": "fade-to-black"
+    }
+  ]
+}

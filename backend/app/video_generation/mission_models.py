@@ -55,6 +55,13 @@ class VideoReviewState(StrEnum):
     REJECTED = "rejected"
 
 
+class VideoAnalysisDependencyState(StrEnum):
+    SNAPSHOTTED = "snapshotted"
+    ARCHIVED_ANALYSIS = "archived-analysis"
+    LIVE_ANALYSIS = "live-analysis"
+    LEGACY_ANALYSIS_MISSING = "legacy-analysis-missing"
+
+
 class VideoError(VideoMissionModel):
     code: str = Field(min_length=1, max_length=100)
     summary: str = Field(min_length=1, max_length=1_000)
@@ -137,6 +144,11 @@ class VideoJobRecord(VideoMissionModel):
     region: Literal["us-central1"] = "us-central1"
     audio_path: str | None = None
     audio_binding: VideoAudioBinding | None = None
+    analysis_dependency_state: VideoAnalysisDependencyState = (
+        VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING
+    )
+    dependency_manifest_path: str | None = None
+    local_delivery_revision: dict[str, Any] | None = None
     local_edit_digest: str | None = Field(default=None, min_length=64, max_length=64)
     authorization: dict[str, Any] | None = None
     reference_assets: dict[str, dict[str, Any]] = Field(default_factory=dict)
@@ -201,11 +213,18 @@ class VideoChainReferenceRequest(VideoMissionModel):
 
 class VideoAudioBrowseRequest(VideoMissionModel):
     initial_directory: str | None = Field(default=None, max_length=32_000)
+    accept_local_delivery_revision: bool = False
+    confirmation: str | None = Field(default=None, max_length=500)
 
 
 class VideoAudioSelectionError(VideoMissionModel):
     code: str = Field(min_length=1, max_length=100)
     message: str = Field(min_length=1, max_length=1_000)
+    expected_hash_prefix: str | None = Field(default=None, max_length=16)
+    selected_hash_prefix: str | None = Field(default=None, max_length=16)
+    expected_duration_seconds: float | None = Field(default=None, gt=0)
+    selected_duration_seconds: float | None = Field(default=None, gt=0)
+    confirmation_phrase: str | None = Field(default=None, max_length=500)
 
 
 class VideoAudioSelection(VideoMissionModel):
@@ -239,6 +258,19 @@ class VideoAnalysisSource(VideoMissionModel):
     story_plan_available: bool
     shot_plan_available: bool
     retained_audio_available: bool
+    created_at: datetime | None = None
+    duration_seconds: float | None = Field(default=None, gt=0)
+    archived: bool = False
+    archive_health: str = "legacy-live"
+
+
+class VideoAnalysisDependencyView(VideoMissionModel):
+    source_state: VideoAnalysisDependencyState
+    manifest_ready: bool
+    story_plan_available: bool
+    shot_plan_available: bool
+    legacy_analysis_missing: bool
+    warning: str | None = None
 
 
 class VideoProfileSummary(VideoMissionModel):
@@ -327,6 +359,7 @@ class VideoJobView(VideoMissionModel):
     authorization_expires_at: str | None
     audio_master_bound: bool
     audio: VideoAudioSelection
+    analysis_dependency: VideoAnalysisDependencyView
     local_edit_digest: str | None
     shots: tuple[VideoShotView, ...]
     progress_percent: float = Field(ge=0, le=100)

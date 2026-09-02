@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-live-dashboard-proof",
+  "projectId": "trip-to-andromeda-v2",
+  "capturedAt": "2026-07-23T10:37:00+03:00",
+  "sourceRevision": {
+    "gitCommitSha": "6b49812fe933e7e3df7dc677c109bbe8aa3a9d2a",
+    "sourceTreeSha256": "c95270909faf1d047fad0570220bd76c27de551b5a616e6cb97219eda58cc174"
+  },
+  "runtime": {
+    "backend": "real-local-mission-control-service",
+    "frontend": "real-production-react-build",
+    "eventChannel": "persistent-server-sent-events",
+    "renderer": "bounded-deterministic-fake-renderer",
+    "blenderStarted": false,
+    "fullProductionRenderStarted": false
+  },
+  "boundedRender": {
+    "frameStart": 1,
+    "frameEnd": 120,
+    "framesPerChunk": 30,
+    "completedFrames": 120,
+    "validatedFrames": 120,
+    "safeStopAtChunkBoundary": true,
+    "browserReloaded": true,
+    "jobRestoredAfterReload": true,
+    "exactResumeCompleted": true
+  },
+  "actualFrame": {
+    "path": "frontend/.e2e-data/mission-control/output/frames/frame_000030.png",
+    "sha256": "e490c418709a42921f5eb35f298a919382eb6394f872f0cab0b2f156142c4483",
+    "bytes": 6857,
+    "width": 1280,
+    "height": 720,
+    "generatedByRenderer": true,
+    "previewWasExactCompletedFrame": true,
+    "fullResolutionEndpointAvailable": true,
+    "safetyAtCapture": "validated-published"
+  },
+  "dashboardAtCapture": {
+    "currentFrame": 34,
+    "latestRenderedFrame": 34,
+    "latestSafeFrame": 30,
+    "inFlightFrames": 4,
+    "songTimestamp": "00:01.1",
+    "renderEtaP50": "2 minutes",
+    "renderEtaP90": "calibrating",
+    "currentChunkEtaP50": "30 seconds",
+    "currentChunkEtaP90": "39 seconds",
+    "connectionState": "connected"
+  },
+  "screenshot": {
+    "path": "docs/images/mission-control-render-progress.png",
+    "sha256": "242a9b8abe189128293263b09f06d303e41b32d9bdb06b613d3b7b71e1a4e8ea",
+    "bytes": 117575,
+    "visuallyInspected": true
+  },
+  "verification": {
+    "command": "npm.cmd run test:e2e:mission-control",
+    "browser": "chromium",
+    "testsPassed": 4,
+    "testsFailed": 0,
+    "crossFormatTelemetryRejected": true,
+    "staleTelemetryRejected": true,
+    "horizontalOnlyHasNoPhantomVerticalProgress": true,
+    "previewFailureCanFailProductionRender": false
+  },
+  "technicalPass": true,
+  "humanArtisticApproval": false
+}

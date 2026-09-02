@@ -112,11 +112,22 @@ visualCueExportAvailable: true
 visualCueSheetSchemaVersion: 1.1.0
 visualFeatureArtifactSchemaVersion: 1.0.0
 blenderVisualizerPreset: abstract-geometry
+blenderVisualizerDefaultPreset: abstract-geometry
+blenderVisualizerPresets: [abstract-geometry, space-journey]
+blenderVisualizerConfigSchemaVersion: 1.0.0
 ```
 
-These values describe the bundled local exporter and preset. They do not claim
+The original `blenderVisualizerPreset` field is retained as a legacy default.
+The additive fields enumerate the typed preset capability. They do not claim
 that a particular job is complete or has a compatible private feature artifact;
 the visual-cue routes still validate those conditions per job.
+
+Preset selection and visual parameters use the separate
+`POST /api/visualizer/config/resolve` contract documented in
+[space-journey-visualizer.md](space-journey-visualizer.md). Configuration is not
+embedded in `TrackPromptVisualCueSheet`, so changing a palette, camera distance,
+or response multiplier cannot weaken or version-churn the minimized analysis
+interchange format.
 
 Old completed jobs may export timing and structure with `includeCurves=false`.
 When curves are requested but `visual-features.json` does not exist, the API
@@ -141,7 +152,7 @@ recorded music.
 ## Private artifact lifecycle
 
 `visual-features.json` lives only inside the UUID job directory. It is schema
-validated and size bounded, contains no path or source identity, and is removed
-with the rest of the job on explicit deletion and TTL expiry. Cancellation or
-failure before completion removes it along with partial decoded media and other
-private intermediates.
+validated and size bounded, contains no path or source identity, and is retained
+as a versioned private analysis artifact until explicit deletion. Cancellation
+or failure before completion removes it along with partial decoded media and
+other private intermediates.

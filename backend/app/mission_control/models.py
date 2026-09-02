@@ -38,6 +38,8 @@ class JobState(StrEnum):
     STARTING = "STARTING"
     RUNNING = "RUNNING"
     STOP_REQUESTED = "STOP_REQUESTED"
+    RETRY_REQUESTED = "RETRY_REQUESTED"
+    CANCEL_REQUESTED = "CANCEL_REQUESTED"
     FINISHING_CURRENT_CHUNK = "FINISHING_CURRENT_CHUNK"
     PAUSED_SAFELY = "PAUSED_SAFELY"
     RESUMABLE = "RESUMABLE"
@@ -281,6 +283,17 @@ class Resolution(MissionModel):
     label: str
 
 
+class OutputVariantSummary(MissionModel):
+    id: str
+    enabled_by_default: bool
+    required: bool
+    width: int
+    height: int
+    fps: float
+    deliverable_role: str
+    composition_profile_id: str
+
+
 class ProfileSummary(MissionModel):
     id: str
     project_id: str
@@ -310,6 +323,7 @@ class ProfileSummary(MissionModel):
     recommended: bool = False
     last_used_at: datetime | None = None
     output_variant_id: str = "primary"
+    output_variants: list[OutputVariantSummary] = Field(default_factory=list)
     composition_profile_id: str = "primary"
     composition_profile_sha256: str | None = None
 
@@ -327,6 +341,7 @@ class ProfileValidation(MissionModel):
 
 class AuthorizationRequest(MissionModel):
     scene_id: str
+    enabled_output_variant_ids: list[str] | None = None
     settings_and_hashes_reviewed: bool = False
     production_render_authorized: bool = False
 
@@ -341,6 +356,7 @@ class AuthorizationResult(MissionModel):
     token_sha256: str
     record_path: str
     authorized_at: datetime
+    enabled_output_variant_ids: list[str] = Field(default_factory=list)
 
 
 class OutputEntry(MissionModel):
@@ -364,6 +380,7 @@ class RenderIdentity(MissionModel):
     profile_id: str
     profile_sha256: str
     output_directory: str
+    enabled_output_variant_ids: tuple[str, ...] = ()
     output_variant_id: str = "primary"
     output_width: int | None = None
     output_height: int | None = None
@@ -410,6 +427,11 @@ class PreflightRequest(MissionModel):
             "output_path",
         ),
         serialization_alias="outputDirectory",
+    )
+    enabled_output_variant_ids: list[str] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=16,
     )
     renderer: RendererKind = RendererKind.PRODUCTION
 
@@ -520,6 +542,8 @@ class JobRecord(MissionModel):
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
+    retry_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
     safe_stop_status: SafeStopStatus = SafeStopStatus.NONE
     output_variants: tuple[OutputVariant, ...] = ()
     active_variant_id: str | None = None
@@ -595,6 +619,8 @@ class RenderEvent(MissionModel):
     latest_log_line: str | None = None
     warning: str | None = None
     error: StructuredError | None = None
+    retry_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
     safe_stop_status: SafeStopStatus = SafeStopStatus.NONE
     output_variants: tuple[OutputVariant, ...] = ()
     active_variant_id: str | None = None
@@ -635,6 +661,18 @@ class ResumeRequest(MissionModel):
         if len(upper) != 64 or any(character not in "0123456789ABCDEF" for character in upper):
             raise ValueError("must be a 64-character SHA-256 value")
         return upper
+
+
+class CancelRenderRequest(ResumeRequest):
+    operator_confirmed: bool = False
+
+
+class RetryFailedRenderRequest(ResumeRequest):
+    operator_confirmed: bool = False
+
+
+class RetryCurrentChunkRequest(ResumeRequest):
+    operator_confirmed: bool = False
 
 
 class CalibrationCandidate(MissionModel):
@@ -731,6 +769,9 @@ class EncodeReadiness(MissionModel):
     published_frames: int
     total_frames: int
     ffmpeg_available: bool
+    enabled_output_kinds: list[Literal["delivery", "master"]] = Field(
+        default_factory=list
+    )
     detail: str
 
 

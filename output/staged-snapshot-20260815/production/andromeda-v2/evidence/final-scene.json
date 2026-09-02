@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-final-scene-receipt",
+  "projectId": "trip-to-andromeda-v2",
+  "outputVariantId": "horizontal-16x9-1080p",
+  "localArtifact": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-horizontal-release-v2.blend",
+    "sha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+    "bytes": 322012,
+    "committed": false
+  },
+  "buildReceipt": {
+    "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-horizontal-release-v2.build.json",
+    "sha256": "176806209aa4cd9e606154a2742127cb29ee916353673d29a2207dde1697936b",
+    "canonicalSha256": "78f3e1c410c468dae5eb4ff5b7d0b0a02e7225b53bc3ada921099249efaff08d",
+    "committed": false
+  },
+  "source": {
+    "builderSha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "sceneSpecSha256": "ba466a4f09a6d798c9dcc441f9b2c683b5bfdf8deb4004cf8a23deb74deb7428",
+    "audioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "cueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2"
+  },
+  "timeline": {
+    "frameStart": 1,
+    "frameEnd": 13029,
+    "fps": 30,
+    "shotCount": 35,
+    "actCount": 7
+  },
+  "composition": {
+    "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+    "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+    "width": 1920,
+    "height": 1080,
+    "cropPolicy": "native-authored-never-crop"
+  },
+  "renderSettings": {
+    "engine": "BLENDER_EEVEE",
+    "temporalSamples": 64,
+    "volumetricSamples": 32,
+    "reprojection": true,
+    "motionBlur": false,
+    "bitDepth": 16,
+    "lockedSettingsReadBack": true
+  },
+  "animation": {
+    "keyframePointCount": 6406,
+    "linearKeyframePointCount": 6406,
+    "nonLinearKeyframePointCount": 0,
+    "intentionalCutFrames": [
+      1,
+      1304,
+      2867,
+      4691,
+      6776,
+      8600,
+      10945
+    ],
+    "cueLightingKeyframePointCount": 3190,
+    "maximumCueInfluenceFraction": 0.12,
+    "cueControlsMajorCameraOrProtagonistTravel": false
+  },
+  "productionAuthorized": false,
+  "finalRenderStarted": false
+}

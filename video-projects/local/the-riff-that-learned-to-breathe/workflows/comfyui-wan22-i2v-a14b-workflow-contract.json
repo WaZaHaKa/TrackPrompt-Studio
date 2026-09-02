@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "providerId": "local-comfyui",
+  "workflowId": "wan22-i2v-a14b-quality",
+  "strategy": "Import the current official ComfyUI Wan2.2 14B I2V template, then compile a stable API-format workflow by semantic node role rather than hard-coded UI node IDs.",
+  "requiredInputs": [
+    {
+      "name": "startImage",
+      "type": "local-image-path-or-upload-id"
+    },
+    {
+      "name": "positivePrompt",
+      "type": "string",
+      "maxWords": 100,
+      "purpose": "motion and camera only"
+    },
+    {
+      "name": "negativePrompt",
+      "type": "string"
+    },
+    {
+      "name": "seed",
+      "type": "integer"
+    },
+    {
+      "name": "width",
+      "type": "integer",
+      "default": 1024
+    },
+    {
+      "name": "height",
+      "type": "integer",
+      "default": 576
+    },
+    {
+      "name": "lengthFrames",
+      "type": "integer",
+      "default": 81
+    },
+    {
+      "name": "steps",
+      "type": "integer",
+      "default": 24
+    },
+    {
+      "name": "cfg",
+      "type": "number",
+      "default": 3.5
+    },
+    {
+      "name": "outputPrefix",
+      "type": "safe-relative-string"
+    }
+  ],
+  "semanticNodeRoles": [
+    "load high-noise expert",
+    "load low-noise expert",
+    "load text encoder",
+    "load VAE",
+    "load and resize start image",
+    "encode positive and negative prompts",
+    "create Wan image-to-video latent",
+    "high-noise sampling stage",
+    "low-noise sampling stage",
+    "VAE decode",
+    "save frame sequence and video",
+    "emit progress/history identifiers"
+  ],
+  "outputContract": {
+    "frameSequenceRequired": true,
+    "videoPreviewRequired": true,
+    "historyPromptIdRecorded": true,
+    "workflowJsonArchived": true,
+    "modelFileHashesRecorded": true,
+    "seedRecorded": true
+  },
+  "compatibilityRules": [
+    "Do not rely on browser automation.",
+    "Use ComfyUI local HTTP and WebSocket APIs.",
+    "Discover installed node classes and fail with an exact missing-node report.",
+    "Patch workflow values by semantic role and validated class type, not by fixed numeric node ID.",
+    "Never send audio to ComfyUI.",
+    "Never download a custom node silently."
+  ]
+}

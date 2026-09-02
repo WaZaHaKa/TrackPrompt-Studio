@@ -2,7 +2,7 @@
 
 ## Verified starting point
 
-TrackPrompt Studio already has a deterministic Fast DSP pipeline, a private asynchronous job lifecycle, strict media validation, a CUDA-capable Demucs adapter, editable findings and sections, deterministic prompt composition, exports, cancellation, deletion, TTL cleanup, Docker packaging, and frontend/backend tests. This pass extends those boundaries; it does not replace the working analysis core.
+TrackPrompt Studio already has a deterministic Fast DSP pipeline, a private asynchronous job lifecycle, strict media validation, a CUDA-capable Demucs adapter, editable findings and sections, deterministic prompt composition, exports, cancellation, explicit deletion, Docker packaging, and frontend/backend tests. This pass extends those boundaries; it does not replace the working analysis core. Timed analysis deletion has since been superseded by the persistent Analysis Library.
 
 The implementation keeps the governing separation explicit:
 

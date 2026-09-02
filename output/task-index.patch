@@ -1,0 +1,163 @@
+diff --git a/backend/app/mission_control/models.py b/backend/app/mission_control/models.py
+--- a/backend/app/mission_control/models.py
++++ b/backend/app/mission_control/models.py
+@@ -4,7 +4,7 @@ from datetime import datetime
+ from enum import StrEnum
+ from typing import Any, Literal
+ 
+-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
++from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+ from pydantic.alias_generators import to_camel
+ 
+ from ..cinematic.schemas import ArtDirectionReviewCollection, ShotPlan, StoryPlan
+@@ -165,9 +165,27 @@ class NativePickerRequest(MissionModel):
+ 
+ 
+ class NativePickerResponse(MissionModel):
++    selected: bool
+     cancelled: bool
+     path: str | None = None
+ 
++    @model_validator(mode="before")
++    @classmethod
++    def normalize_selected(cls, value: object) -> object:
++        if isinstance(value, dict) and "selected" not in value:
++            cancelled = value.get("cancelled")
++            if isinstance(cancelled, bool):
++                return {**value, "selected": not cancelled}
++        return value
++
++    @model_validator(mode="after")
++    def selection_is_typed_and_consistent(self) -> NativePickerResponse:
++        if self.selected == self.cancelled:
++            raise ValueError("selected must be the boolean inverse of cancelled")
++        if self.selected != (self.path is not None):
++            raise ValueError("path must be present exactly when selected is true")
++        return self
++
+ 
+ class OpenPathRequest(MissionModel):
+     job_id: str = Field(min_length=1, max_length=128)
+diff --git a/backend/app/mission_control/router.py b/backend/app/mission_control/router.py
+--- a/backend/app/mission_control/router.py
++++ b/backend/app/mission_control/router.py
+@@ -14,6 +14,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
+ 
+ from ..cinematic.schemas import ArtDirectionReview
+ from ..video_generation.mission_models import (
++    VideoAudioBrowseRequest,
++    VideoAudioSelection,
+     VideoAuthorizationRequest,
+     VideoCatalog,
+     VideoChainReferenceRequest,
+@@ -546,6 +548,57 @@ async def review_video_shot(
+     return await _service(request).video_generation.review(job_id, shot_id, payload)
+ 
+ 
++def _audio_selection_response(selection: VideoAudioSelection) -> VideoAudioSelection | JSONResponse:
++    if selection.error is None:
++        return selection
++    return JSONResponse(
++        status_code=422,
++        content=selection.model_dump(mode="json", by_alias=True),
++    )
++
++
++@router.get(
++    "/video/jobs/{job_id}/audio",
++    response_model=VideoAudioSelection,
++)
++async def get_video_audio(job_id: str, request: Request) -> VideoAudioSelection:
++    return _service(request).video_generation.audio_selection(job_id)
++
++
++@router.post(
++    "/video/jobs/{job_id}/audio/select",
++    response_model=VideoAudioSelection,
++)
++async def select_video_audio(
++    job_id: str,
++    payload: VideoAudioBrowseRequest,
++    request: Request,
++) -> VideoAudioSelection | JSONResponse:
++    selection = await _service(request).select_video_audio(job_id, payload)
++    return _audio_selection_response(selection)
++
++
++@router.post(
++    "/video/jobs/{job_id}/audio/retained",
++    response_model=VideoAudioSelection,
++)
++async def bind_retained_video_audio(
++    job_id: str,
++    request: Request,
++) -> VideoAudioSelection | JSONResponse:
++    selection = await _service(request).video_generation.bind_retained_audio(job_id)
++    return _audio_selection_response(selection)
++
++
++@router.delete(
++    "/video/jobs/{job_id}/audio",
++    response_model=VideoAudioSelection,
++)
++async def clear_video_audio(job_id: str, request: Request) -> VideoAudioSelection | JSONResponse:
++    selection = await _service(request).video_generation.clear_audio(job_id)
++    return _audio_selection_response(selection)
++
++
+ @router.post("/video/jobs/{job_id}/resolve", response_model=VideoJobView)
+ async def resolve_video_timeline(job_id: str, request: Request) -> VideoJobView:
+     return await _service(request).video_generation.resolve(job_id)
+@@ -587,6 +640,10 @@ async def video_artifact(job_id: str, artifact: str, request: Request) -> FileRe
+         "edl": "text/plain",
+         "edit-sheet": "text/csv",
+         "markers": "text/csv",
++        "relink-map": "text/csv",
++        "coverage-report": "application/json",
++        "render-manifest": "application/json",
++        "verification-report": "application/json",
+         "preview": "video/mp4",
+     }
+     return FileResponse(path, media_type=media_types.get(artifact, "application/octet-stream"))
+diff --git a/backend/app/mission_control/service.py b/backend/app/mission_control/service.py
+--- a/backend/app/mission_control/service.py
++++ b/backend/app/mission_control/service.py
+@@ -26,7 +26,11 @@ from ..cinematic.schemas import (
+ )
+ from ..cinematic.validation import validate_cinematic_privacy, validate_plan_pair
+ from ..video_generation.mission_controller import VideoGenerationController
+-from ..video_generation.mission_models import VideoGenerationEvent
++from ..video_generation.mission_models import (
++    VideoAudioBrowseRequest,
++    VideoAudioSelection,
++    VideoGenerationEvent,
++)
+ from .config import MissionControlConfig
+ from .discovery import (
+     MissionDiscovery,
+@@ -593,6 +597,25 @@ class MissionControlService:
+             title=request.title,
+         )
+ 
++    async def select_video_audio(
++        self,
++        job_id: str,
++        request: VideoAudioBrowseRequest,
++    ) -> VideoAudioSelection:
++        selection = await self.native_picker.choose(
++            "file",
++            initial_directory=request.initial_directory,
++            title="Select the original local audio master",
++        )
++        if not selection.selected:
++            return VideoAudioSelection(selected=False, verified=False)
++        assert selection.path is not None
++        return await self.video_generation.bind_audio(
++            job_id,
++            Path(selection.path),
++            source="local-selection",
++        )
++
+     async def open_path(self, request: OpenPathRequest) -> OpenPathResult:
+         if os.name != "nt":
+             raise MissionControlError(

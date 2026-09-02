@@ -1,0 +1,261 @@
+{
+  "schemaVersion": "2.0.0",
+  "templateId": "trip-to-andromeda-story-v2",
+  "projectId": "trip-to-andromeda-v2",
+  "seed": 84291,
+  "frameStart": 1,
+  "frameEnd": 13029,
+  "fps": 30.0,
+  "durationSeconds": 434.286,
+  "sourceAudioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+  "sourceCueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+  "lookProfileId": "andromeda-r13.1-final-look-v1",
+  "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+  "acts": [
+    {
+      "id": "signal",
+      "name": "Signal",
+      "frameStart": 1,
+      "frameEnd": 1303,
+      "purpose": "A dormant ancient engine recognizes an impossible transmission and chooses to answer.",
+      "protagonistStateStart": "dormant",
+      "protagonistStateEnd": "signalled",
+      "environmentBlueprintId": "andromeda-v2-dead-moon-signal-observatory",
+      "transitionOut": "The answering observatory aperture aligns into a physical launch axis.",
+      "shotIds": [
+        "andromeda-v2-shot-01-dead-moon-establish",
+        "andromeda-v2-shot-02-beacon-sweep",
+        "andromeda-v2-shot-03-ruin-answer",
+        "andromeda-v2-shot-04-ancient-engine-stir",
+        "andromeda-v2-shot-05-chamber-call"
+      ],
+      "beats": [
+        {
+          "id": "signal-isolation",
+          "frame": 1,
+          "purpose": "Establish the engine as a dormant point against the dead moon observatory."
+        },
+        {
+          "id": "signal-recognition",
+          "frame": 652,
+          "purpose": "The distant beacon and local crystal routing answer one another."
+        },
+        {
+          "id": "signal-choice",
+          "frame": 1303,
+          "purpose": "The front aperture turns toward the opening chamber rather than merely reacting."
+        }
+      ]
+    },
+    {
+      "id": "awakening",
+      "name": "Awakening",
+      "frameStart": 1304,
+      "frameEnd": 2866,
+      "purpose": "The observatory rebuilds a path around the protagonist as dormant machinery becomes agency.",
+      "protagonistStateStart": "signalled",
+      "protagonistStateEnd": "awakened",
+      "environmentBlueprintId": "andromeda-v2-reactivation-iris-chamber",
+      "transitionOut": "The chamber ribs separate into a monumental corridor whose guide rails ignite outward.",
+      "shotIds": [
+        "andromeda-v2-shot-06-aperture-ignition",
+        "andromeda-v2-shot-07-armor-band-rise",
+        "andromeda-v2-shot-08-orientation-choice",
+        "andromeda-v2-shot-09-chamber-release",
+        "andromeda-v2-shot-10-launch-axis-reveal"
+      ],
+      "beats": [
+        {
+          "id": "awakening-first-light",
+          "frame": 1304,
+          "purpose": "A restrained amber line activates inside the integrated front aperture."
+        },
+        {
+          "id": "awakening-orientation",
+          "frame": 2085,
+          "purpose": "The asymmetric shell turns independently from the chamber mechanism."
+        },
+        {
+          "id": "awakening-release",
+          "frame": 2866,
+          "purpose": "The engine leaves its cradle under its own controlled thrust."
+        }
+      ]
+    },
+    {
+      "id": "departure",
+      "name": "Departure",
+      "frameStart": 2867,
+      "frameEnd": 4690,
+      "purpose": "The protagonist commits to a route whose scale and speed continually exceed the safety of the chamber.",
+      "protagonistStateStart": "awakened",
+      "protagonistStateEnd": "travelling",
+      "environmentBlueprintId": "andromeda-v2-launch-spine-corridor",
+      "transitionOut": "The corridor rails converge and physically lock into the nested-ring monolith.",
+      "shotIds": [
+        "andromeda-v2-shot-11-commitment-lift",
+        "andromeda-v2-shot-12-rib-corridor-entry",
+        "andromeda-v2-shot-13-guide-packet-chase",
+        "andromeda-v2-shot-14-parallax-pylon-pass",
+        "andromeda-v2-shot-15-first-threshold-sight"
+      ],
+      "beats": [
+        {
+          "id": "departure-commitment",
+          "frame": 2867,
+          "purpose": "The protagonist accelerates beyond the reactivation chamber's return envelope."
+        },
+        {
+          "id": "departure-independent-flight",
+          "frame": 3779,
+          "purpose": "Guide packets and camera lag reveal independent, intentional travel."
+        },
+        {
+          "id": "departure-gate-sight",
+          "frame": 4690,
+          "purpose": "The gate resolves from distant light into a constructed and dangerous mechanism."
+        }
+      ]
+    },
+    {
+      "id": "gates",
+      "name": "Gates",
+      "frameStart": 4691,
+      "frameEnd": 6775,
+      "purpose": "A nested-ring threshold tests anticipation, compression, recovery, and the cost of an irreversible crossing.",
+      "protagonistStateStart": "travelling",
+      "protagonistStateEnd": "travelling",
+      "environmentBlueprintId": "andromeda-v2-nested-ring-threshold",
+      "transitionOut": "The closing rings misalign the route lattice and tear open a directional fracture canyon.",
+      "shotIds": [
+        "andromeda-v2-shot-16-monolith-approach",
+        "andromeda-v2-shot-17-lock-ring-alignment",
+        "andromeda-v2-shot-18-membrane-anticipation",
+        "andromeda-v2-shot-19-localized-crossing",
+        "andromeda-v2-shot-20-route-seal"
+      ],
+      "beats": [
+        {
+          "id": "gates-scale",
+          "frame": 4691,
+          "purpose": "The outer monolith exceeds frame while leaving the protagonist readable."
+        },
+        {
+          "id": "gates-compression",
+          "frame": 5733,
+          "purpose": "Localized membrane pressure compresses the engine without turning the frame into a wash."
+        },
+        {
+          "id": "gates-seal",
+          "frame": 6775,
+          "purpose": "The lock rings close behind the recovered engine and break the old route."
+        }
+      ]
+    },
+    {
+      "id": "rupture",
+      "name": "Rupture",
+      "frameStart": 6776,
+      "frameEnd": 8599,
+      "purpose": "The route becomes a navigable fracture canyon; an asymmetric impact damages the engine and forces a conscious choice.",
+      "protagonistStateStart": "travelling",
+      "protagonistStateEnd": "damaged",
+      "environmentBlueprintId": "andromeda-v2-broken-route-fracture-canyon",
+      "transitionOut": "Falling route ribs catch the damaged engine and rotate into the radial arms of a reconstruction cathedral.",
+      "shotIds": [
+        "andromeda-v2-shot-21-false-calm",
+        "andromeda-v2-shot-22-route-shear",
+        "andromeda-v2-shot-23-fracture-impact",
+        "andromeda-v2-shot-24-damaged-freefall",
+        "andromeda-v2-shot-25-broken-path-choice"
+      ],
+      "beats": [
+        {
+          "id": "rupture-false-calm",
+          "frame": 6776,
+          "purpose": "A deceptively stable route exposes stress lines inherited from the sealed gate."
+        },
+        {
+          "id": "rupture-impact",
+          "frame": 7688,
+          "purpose": "A directional route rib strikes one armor side and extinguishes its crystal routing."
+        },
+        {
+          "id": "rupture-choice",
+          "frame": 8599,
+          "purpose": "Still damaged, the engine turns toward a faint reconstruction signal instead of the open void."
+        }
+      ]
+    },
+    {
+      "id": "transformation",
+      "name": "Transformation",
+      "frameStart": 8600,
+      "frameEnd": 10944,
+      "purpose": "A functional reconstruction cathedral unbuilds, reroutes, and releases the protagonist as a more intentional form.",
+      "protagonistStateStart": "damaged",
+      "protagonistStateEnd": "transformed",
+      "environmentBlueprintId": "andromeda-v2-reconstruction-cathedral",
+      "transitionOut": "The cathedral arms become a long parallax lattice that parts to expose Andromeda's horizon.",
+      "shotIds": [
+        "andromeda-v2-shot-26-cradle-capture",
+        "andromeda-v2-shot-27-armor-unmake",
+        "andromeda-v2-shot-28-crystal-routing",
+        "andromeda-v2-shot-29-aperture-rebirth",
+        "andromeda-v2-shot-30-transformed-release"
+      ],
+      "beats": [
+        {
+          "id": "transformation-capture",
+          "frame": 8600,
+          "purpose": "Connected cathedral arms arrest the freefall without hiding the damaged silhouette."
+        },
+        {
+          "id": "transformation-reroute",
+          "frame": 9772,
+          "purpose": "Functional crystals bridge the damaged side and redirect energy through one restrained armor band."
+        },
+        {
+          "id": "transformation-release",
+          "frame": 10944,
+          "purpose": "The rebuilt engine opens its aperture and departs before the machinery withdraws."
+        }
+      ]
+    },
+    {
+      "id": "arrival",
+      "name": "Arrival",
+      "frameStart": 10945,
+      "frameEnd": 13029,
+      "purpose": "The transformed engine crosses a measured destination lattice and arrives before an Andromeda horizon larger than its quest.",
+      "protagonistStateStart": "transformed",
+      "protagonistStateEnd": "arrived",
+      "environmentBlueprintId": "andromeda-v2-andromeda-lattice-horizon",
+      "transitionOut": "The camera settles only after the protagonist stops, preserving a quiet final scale relationship.",
+      "shotIds": [
+        "andromeda-v2-shot-31-dust-veil-parting",
+        "andromeda-v2-shot-32-andromeda-horizon",
+        "andromeda-v2-shot-33-scale-marker-pass",
+        "andromeda-v2-shot-34-destination-approach",
+        "andromeda-v2-shot-35-quiet-arrival"
+      ],
+      "beats": [
+        {
+          "id": "arrival-first-depth",
+          "frame": 10945,
+          "purpose": "A quiet lattice establishes real destination depth before the galactic reveal."
+        },
+        {
+          "id": "arrival-scale",
+          "frame": 11987,
+          "purpose": "Successive markers make the protagonist visibly smaller without losing orientation."
+        },
+        {
+          "id": "arrival-rest",
+          "frame": 13029,
+          "purpose": "The engine reaches a stable foreground orbit while the Andromeda horizon continues beyond frame."
+        }
+      ]
+    }
+  ]
+}

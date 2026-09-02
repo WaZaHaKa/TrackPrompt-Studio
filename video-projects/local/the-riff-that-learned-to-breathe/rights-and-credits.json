@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "rightsStatus": "confirmed-collaboration-full-creative-permission",
+  "recordedFrom": "direct user statement for this TrackPrompt Studio project",
+  "contributors": [
+    {
+      "name": "Nir Pache",
+      "credit": "Original MIDI composition/source idea, main riff, and solo source material",
+      "permission": "full creative collaboration permission confirmed"
+    },
+    {
+      "name": "DJ WaZaHaKa",
+      "credit": "Downtempo remix, tempo/rhythm transformation, arrangement, production, Serum 2 and Omnisphere 3 sound design",
+      "permission": "project owner and collaborator"
+    },
+    {
+      "name": "WZHK Media / TrackPrompt Studio",
+      "credit": "Music-video concept, local generation pipeline, edit, and delivery"
+    }
+  ],
+  "workflowPolicy": {
+    "copyrightApprovalGate": "satisfied; do not ask again for this project",
+    "collaboratorApprovalGate": "satisfied; non-blocking review artifacts are allowed",
+    "privateEvidenceHandling": "do not copy private chat screenshots or messages into provider prompts, logs, or release assets",
+    "realPersonDepiction": "not used; all characters are fictional symbolic adults",
+    "modelLicenseAndOutputQc": "still mandatory"
+  },
+  "suggestedOnScreenCredit": "No opening title card; place credits in YouTube description and optional end metadata only.",
+  "suggestedDescriptionCredit": "Original MIDI composition/source idea: Nir Pache. Downtempo remix, arrangement and production: DJ WaZaHaKa. Anime music video created with TrackPrompt Studio by WZHK Media."
+}

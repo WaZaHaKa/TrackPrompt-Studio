@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "purpose": "authoritative starting references; Codex must verify current revisions at implementation time",
+  "references": [
+    {
+      "name": "ComfyUI official Wan2.2 native workflow documentation",
+      "url": "https://docs.comfy.org/tutorials/video/wan/wan2_2",
+      "use": "current native 5B and 14B I2V workflow structure and model placement"
+    },
+    {
+      "name": "Wan2.2 official repository",
+      "url": "https://github.com/Wan-Video/Wan2.2",
+      "use": "model capabilities, license, inference reference"
+    },
+    {
+      "name": "Wan2.2 I2V-A14B official model card",
+      "url": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B",
+      "use": "official model identity, supported resolutions, license"
+    },
+    {
+      "name": "FLUX.1-schnell official model card",
+      "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell",
+      "use": "keyframe model identity and Apache-2.0 license"
+    }
+  ],
+  "doNotBundle": [
+    "model weights",
+    "private audio",
+    "private screenshots",
+    "stale third-party workflow blobs without provenance"
+  ],
+  "verificationRecord": "Store fetched URL, revision/ETag when available, retrieval time, license, and SHA-256 of every installed model/workflow file."
+}

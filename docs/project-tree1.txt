@@ -1,0 +1,49 @@
+﻿Folder PATH listing
+Volume serial number is 000001CC D42C:80F4
+C:\USERS\THEON\GITHUB\TRACKPROMPT-STUDIO\DOCS
+|   analysis-methods.md
+|   analysis-quality-audit.md
+|   andromeda-v2-production-runbook.md
+|   andromeda-v2-release-finalization.md
+|   architecture.md
+|   archive-backup-restore.md
+|   audit-and-provenance.md
+|   blender-visual-cue-sheet.md
+|   blender-visualizer-mvp.md
+|   bulk-ingestion.md
+|   cinematic-visualizer-v2.md
+|   client-project-catalogue.md
+|   cloud-render-cost-model.md
+|   cloud-render-privacy.md
+|   cloud-render-recovery.md
+|   cloud-rendering.md
+|   codex-andromeda-v2-ship-prompt.md
+|   codex-blender-mcp-preview.md
+|   final-render-production-tooling.md
+|   fix-full-gpu-startup-codex-task.md
+|   full-feature-implementation-plan.md
+|   implementation-plan.md
+|   local-performance-mode.md
+|   long-form-bulk-archive-implementation-plan.md
+|   long-form-set-segmentation.md
+|   mastering-comparison-report.md
+|   mission-control-react-ui.md
+|   mission-control-realtime-events.md
+|   mission-control-troubleshooting.md
+|   mission-control-user-guide.md
+|   model-licenses.md
+|   nvidia-brev-rendering.md
+|   privacy.md
+|   project-tree1.txt
+|   render-calibration-and-remote-rendering.md
+|   render-calibration-results-20260720.md
+|   render-calibration.md
+|   render-operation-architecture.md
+|   render-profiles.md
+|   space-journey-visualizer.md
+|   TRACKPROMPT_SELF_HANDOFF.md
+|   
+\---images
+        mission-control-home.png
+        mission-control-render-progress.png
+        

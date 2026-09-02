@@ -1,0 +1,29 @@
+Runtime only — never commit these generated artifacts:
+
+.trackprompt-data/video-generation/static-into-signal/<video-job-id>/
+├── plan.json
+├── request-preview/
+│   ├── shot-001.json
+│   └── ... shot-016.json
+├── audio/
+│   ├── audio-selection.json
+│   ├── audio-binding.json
+│   └── artifacts/
+├── attempts/
+├── clips/
+└── davinci/final-fast-1080p/
+    ├── resolved-timeline.json
+    ├── edit-plan.json
+    ├── trackprompt-timeline.fcpxml
+    ├── trackprompt-timeline.xml
+    ├── trackprompt-timeline.edl
+    ├── edit-sheet.csv
+    ├── davinci-markers.csv
+    ├── relink-map.csv
+    ├── coverage-report.json
+    ├── assembly-plan.json
+    ├── ASSEMBLE-PREVIEW.ps1
+    ├── autonomous-preview-1080p.mp4
+    ├── render-manifest.json
+    ├── verification-report.json
+    └── README-DAVINCI.txt

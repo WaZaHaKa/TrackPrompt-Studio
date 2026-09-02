@@ -1,0 +1,183 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "masterSeed": 24081000,
+  "seedLocked": true,
+  "seedDerivation": "master-seed-plus-shot-order-v1; record exact workflow seed in every manifest",
+  "characterProfiles": [
+    {
+      "id": "architect",
+      "label": "The Architect",
+      "identity": "One consistent fictional adult with wavy dark hair and warm brown eyes.",
+      "wardrobe": "Rust work jacket, charcoal shirt, practical dark trousers; no changes.",
+      "faceHairAge": "Clearly adult, stable face, wavy dark hair, no celebrity or real-person likeness.",
+      "referenceAssetIds": [
+        "reference-sheet-architect"
+      ]
+    },
+    {
+      "id": "listener",
+      "label": "The Listener",
+      "identity": "One consistent fictional adult with short dark hair, one silver forelock, and observant eyes.",
+      "wardrobe": "Indigo overshirt, muted amber scarf, charcoal trousers; no changes.",
+      "faceHairAge": "Clearly adult, stable face and silver forelock, no celebrity or real-person likeness.",
+      "referenceAssetIds": [
+        "reference-sheet-listener"
+      ]
+    }
+  ],
+  "propProfiles": [
+    {
+      "id": "origami-bird",
+      "label": "The Riff Bird",
+      "identity": "Palm-sized origami bird with exact stable silhouette and a visible amber mechanical heart.",
+      "evolution": [
+        "shots 001–005: brushed dark metal feathers and guitar-string-like ribs",
+        "shot 006 onward: indigo paper-and-fabric feathers over the same metal ribs",
+        "all shots: same amber heart, scale, silhouette, and eye placement"
+      ],
+      "referenceAssetIds": [
+        "reference-sheet-origami-bird"
+      ]
+    }
+  ],
+  "visualAnchors": {
+    "world": "hand-painted intimate city and two rooms connected by amber thread",
+    "palette": [
+      "iron blue",
+      "deep indigo",
+      "charcoal",
+      "rain teal",
+      "warm amber thread",
+      "restrained rust",
+      "pale rose dawn"
+    ],
+    "lighting": [
+      "soft rain-window light",
+      "warm practical workshop pools",
+      "amber heart and thread as motivated highlights",
+      "rich shadow detail",
+      "dawn release without blown highlights"
+    ],
+    "camera": [
+      "slow deliberate dolly, orbit, lateral glide, or crane",
+      "stable horizon and coherent screen direction",
+      "macro material detail alternating with wide negative space",
+      "subject motion may accelerate while camera remains readable",
+      "24 fps delivery with an animated-on-twos feeling where appropriate"
+    ],
+    "texture": [
+      "watercolor wash",
+      "gouache shadow shapes",
+      "fine ink contour",
+      "paper grain",
+      "brushed dark metal",
+      "stitched fabric",
+      "subtle analog film grain"
+    ],
+    "aspectRatio": "16:9"
+  },
+  "continuityGroups": [
+    {
+      "id": "architect-identity",
+      "lockedTokens": [
+        "same adult Architect",
+        "wavy dark hair",
+        "rust work jacket",
+        "charcoal shirt"
+      ]
+    },
+    {
+      "id": "listener-identity",
+      "lockedTokens": [
+        "same adult Listener",
+        "short dark hair",
+        "one silver forelock",
+        "indigo overshirt",
+        "muted amber scarf"
+      ]
+    },
+    {
+      "id": "origami-bird-core",
+      "lockedTokens": [
+        "same palm-sized origami bird",
+        "same silhouette",
+        "visible warm amber mechanical heart"
+      ]
+    },
+    {
+      "id": "origami-bird-metal",
+      "lockedTokens": [
+        "brushed dark metal feathers",
+        "guitar-string-like ribs"
+      ]
+    },
+    {
+      "id": "origami-bird-hybrid",
+      "lockedTokens": [
+        "indigo paper-and-fabric feathers",
+        "visible original metal ribs",
+        "unchanged amber heart"
+      ]
+    },
+    {
+      "id": "warm-workshop",
+      "lockedTokens": [
+        "warm rust practical light",
+        "compact mechanical workbench",
+        "rain-dark window",
+        "no labels"
+      ]
+    },
+    {
+      "id": "rain-room",
+      "lockedTokens": [
+        "cool indigo rain light",
+        "unlabeled tape deck",
+        "circular rain window",
+        "acoustic fabric"
+      ]
+    },
+    {
+      "id": "amber-thread",
+      "lockedTokens": [
+        "fine warm amber thread",
+        "motivated glow",
+        "never becomes text"
+      ]
+    },
+    {
+      "id": "night-city",
+      "lockedTokens": [
+        "quiet hand-painted city",
+        "wet roofs",
+        "iron-blue and indigo palette",
+        "no signs"
+      ]
+    },
+    {
+      "id": "bridge-world",
+      "lockedTokens": [
+        "floating unmarked translucent bridge",
+        "indigo void",
+        "warm and cool room fragments"
+      ]
+    },
+    {
+      "id": "coauthored-ribbons",
+      "lockedTokens": [
+        "precise rust-and-amber ribbon",
+        "fluid indigo-and-amber ribbon",
+        "braided result"
+      ]
+    },
+    {
+      "id": "amber-heart",
+      "lockedTokens": [
+        "exactly one original amber mechanical heart",
+        "never duplicates",
+        "unchanged core"
+      ]
+    }
+  ]
+}

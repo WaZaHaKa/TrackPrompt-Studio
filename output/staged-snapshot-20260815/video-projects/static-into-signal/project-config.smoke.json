@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "title": "Static Into Signal",
+  "selectedProfileId": "smoke-fast-720p",
+  "generationProfiles": [
+    {"profileId": "smoke-fast-720p", "modelId": "veo-3.1-fast-generate-001", "resolution": "720p", "aspectRatio": "16:9", "fps": 24, "durationSeconds": 4, "sampleCount": 1, "generateAudio": false, "enhancePrompt": true, "compressionQuality": "optimized", "personGeneration": "allow_adult"}
+  ],
+  "maxSpendUsd": 1.0,
+  "retryReserveFactor": 1.0,
+  "requiredShotIds": ["shot-001"],
+  "storagePrefix": "trackprompt-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation",
+  "timeline": {"clockSource": "original-audio", "fps": 24, "width": 1280, "height": 720, "generatedClipDurationSeconds": 4, "autoAssembly": false}
+}

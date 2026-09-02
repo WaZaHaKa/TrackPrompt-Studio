@@ -48,7 +48,7 @@ async def _compile(job_id: str, request: Request, payload: CinematicCompileReque
         async with manager.job_lock(job_id):
             record = await asyncio.to_thread(store.get_job, job_id)
             if record is None:
-                raise CinematicAPIError(404, "job_not_found", "Analysis job was not found or has expired.")
+                raise CinematicAPIError(404, "job_not_found", "Analysis job was not found.")
             if record.status != JobStatus.COMPLETED:
                 raise CinematicAPIError(409, "analysis_not_ready", "Analysis must complete before cinematic planning.")
             analysis_payload = await asyncio.to_thread(store.read_json, job_id, "analysis.json")
@@ -80,7 +80,7 @@ async def _compile(job_id: str, request: Request, payload: CinematicCompileReque
                 raise CinematicAPIError(503, "cinematic_storage_failed", "Cinematic plans could not be stored safely.") from exc
             return bundle
     except KeyError as exc:
-        raise CinematicAPIError(404, "job_not_found", "Analysis job was not found or has expired.") from exc
+        raise CinematicAPIError(404, "job_not_found", "Analysis job was not found.") from exc
 
 
 @router.post("/plan", response_model=CinematicPlanBundle)
@@ -97,7 +97,7 @@ async def get_plan(job_id: str, request: Request) -> CinematicPlanBundle:
     store = request.app.state.store
     try:
         if await asyncio.to_thread(store.get_job, job_id) is None:
-            raise CinematicAPIError(404, "job_not_found", "Analysis job was not found or has expired.")
+            raise CinematicAPIError(404, "job_not_found", "Analysis job was not found.")
         bundle = await asyncio.to_thread(read_plan_bundle, store, job_id)
     except ValueError as exc:
         raise CinematicAPIError(422, "invalid_cinematic_plan", "Stored cinematic plans failed validation.") from exc
@@ -142,7 +142,7 @@ async def export_shot_plan(job_id: str, request: Request) -> Response:
 async def list_reviews(job_id: str, request: Request) -> ArtDirectionReviewCollection:
     store = request.app.state.store
     if await asyncio.to_thread(store.get_job, job_id) is None:
-        raise CinematicAPIError(404, "job_not_found", "Analysis job was not found or has expired.")
+        raise CinematicAPIError(404, "job_not_found", "Analysis job was not found.")
     try:
         return await asyncio.to_thread(read_reviews, store, job_id)
     except ValueError as exc:

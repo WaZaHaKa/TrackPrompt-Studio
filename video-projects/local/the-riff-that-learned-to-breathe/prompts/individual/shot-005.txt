@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-005 — Turn the Tempo
+Provisional timing: 35.000–44.000 s
+Seed: 24081005
+
+NARRATIVE INTENT
+Make the tempo change visible as a compassionate act of listening.
+
+KEYFRAME PROMPT
+The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos turns a large unlabeled tape reel by hand beside the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged. The reel, the bird's wing, and suspended rain droplets share the same circular composition. Indigo shadows soften; a thin amber thread runs from the reel to the bird's mechanical heart. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The Listener slowly turns the reel counterclockwise. With each rotation, the bird's wingbeats relax, rain droplets descend more slowly, and the amber pulse widens into a breathing rhythm. The camera gently pushes closer to the shared circular motion, ending as one metal feather begins to soften.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+listener-identity, origami-bird-core, rain-room, amber-thread
+
+TRANSITION IN
+wing-to-reel rotational match
+
+TRANSITION OUT
+the softened metal feather spreads into an ink-and-paper bleed
+
+ACCEPTANCE NOTES
+- Tempo change must read without text or clocks.
+- The scene should feel tender, not like equipment failure.

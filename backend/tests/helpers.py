@@ -16,11 +16,11 @@ FIXTURES = REPOSITORY_ROOT / "test-fixtures"
 
 
 def settings_for(data_dir: Path, *, ttl_minutes: int = 60) -> Settings:
+    _ = ttl_minutes  # Legacy test-call compatibility; automatic TTL is disabled.
     return Settings(
         data_dir=data_dir,
         max_upload_mb=20,
         max_duration_seconds=120,
-        job_ttl_minutes=ttl_minutes,
         analysis_workers=1,
         max_pending_jobs=2,
         model_cache_dir=data_dir / "models",

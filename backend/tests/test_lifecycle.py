@@ -119,32 +119,28 @@ def test_sqlite_contains_lifecycle_metadata_only(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_ttl_cleanup_removes_metadata_and_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_completed_analysis_survives_legacy_ttl_deadline_and_restart(tmp_path: Path) -> None:
     settings = settings_for(tmp_path / "data")
     store = JobStore(settings)
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
     (store.job_dir(job_id) / "source.bin").write_bytes(b"private audio")
-    (store.job_dir(job_id) / "visual-features.json").write_text("{}", encoding="utf-8")
+    store.write_json(job_id, "analysis.json", {"schemaVersion": "1.0.0", "file": {}})
+    store.update_job(job_id, status=JobStatus.COMPLETED, stage="completed", progress=100)
+    store.archive_completed(job_id)
+    with sqlite3.connect(settings.database_path) as connection:
+        connection.execute(
+            "UPDATE jobs SET expires_at = ? WHERE job_id = ?",
+            ((utc_now() - timedelta(days=7)).isoformat(), job_id),
+        )
     manager = JobManager(store, settings)
-    monkeypatch.setattr(store, "expired_job_ids", lambda _now: [job_id])
     try:
-        completed_task = asyncio.create_task(asyncio.sleep(0))
-        await completed_task
-        manager.tasks[job_id] = completed_task
-        manager.sequences[job_id] = 7
-        manager.subscribers[job_id].add(asyncio.Queue())
-        manager.deleted_jobs.add(job_id)
-        assert await manager.try_admit(job_id)
-        assert await manager.cleanup_expired_once() == 1
-        assert store.get_job(job_id) is None
-        assert not store.job_dir(job_id).exists()
-        assert job_id not in manager.tasks
-        assert job_id not in manager.sequences
-        assert job_id not in manager.subscribers
-        assert job_id not in manager.deleted_jobs
-        assert job_id not in manager.admitted_jobs
-        assert job_id not in manager.job_locks
+        await manager.startup()
+        assert store.require_job(job_id).status == JobStatus.COMPLETED
+        assert store.require_job(job_id).retention_policy == "persistent"
+        assert (store.job_dir(job_id) / "source.bin").is_file()
+        assert store.archive.get(job_id)["archiveHealth"] == "healthy"
+        assert not hasattr(manager, "ttl_task")
     finally:
         await manager.shutdown()
 
@@ -209,11 +205,12 @@ def test_deletion_failure_retains_metadata_for_retry(tmp_path: Path, monkeypatch
     assert (store.job_dir(job_id) / "source.bin").exists()
 
 
-def test_expiration_query_uses_utc_deadline(tmp_path: Path) -> None:
+def test_legacy_expiration_column_is_ignored(tmp_path: Path) -> None:
     store = JobStore(settings_for(tmp_path / "data", ttl_minutes=1))
     job_id = str(uuid4())
-    store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
-    assert job_id in store.expired_job_ids(utc_now() + timedelta(minutes=2))
+    record = store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
+    assert record.retention_policy == "persistent"
+    assert not hasattr(store, "expired_job_ids")
 
 
 @pytest.mark.asyncio
@@ -261,6 +258,7 @@ async def test_response_repairs_lyrics_summary_when_private_artifact_is_missing(
     store = JobStore(settings)
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
+    (store.job_dir(job_id) / "source.bin").write_bytes(b"private audio")
     analysis = click_analysis.model_copy(update={"job_id": job_id}, deep=True)
     analysis.lyrics_summary = LyricsAnalysisSummary(
         enabled=True,
@@ -302,6 +300,7 @@ async def test_success_stages_are_monotonic_and_semantically_ordered(
     store = JobStore(settings)
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
+    (store.job_dir(job_id) / "source.bin").write_bytes(b"private audio")
     manager = JobManager(store, settings)
     subscription = await manager.open_subscription(job_id)
     analysis = click_analysis.model_copy(update={"job_id": job_id}, deep=True)
@@ -322,23 +321,16 @@ async def test_success_stages_are_monotonic_and_semantically_ordered(
 
 
 @pytest.mark.asyncio
-async def test_expiry_emits_terminal_event_before_strict_deletion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_no_automatic_expiry_event_or_deletion_path_exists(tmp_path: Path) -> None:
     settings = settings_for(tmp_path / "data")
     store = JobStore(settings)
     job_id = str(uuid4())
     store.create_job(job_id, AnalysisMode.FAST, "track.wav", True, False)
     manager = JobManager(store, settings)
-    subscription = await manager.open_subscription(job_id)
-    monkeypatch.setattr(store, "expired_job_ids", lambda _now: [job_id])
     try:
-        assert await manager.cleanup_expired_once() == 1
-        events = [event async for event in subscription]
-        assert events[-1].status == JobStatus.EXPIRED
-        assert events[-1].stage == "expired"
-        assert store.get_job(job_id) is None
-        assert job_id not in manager.job_locks
+        assert not hasattr(manager, "cleanup_expired_once")
+        assert not hasattr(manager, "_ttl_loop")
+        assert store.get_job(job_id) is not None
     finally:
         await manager.shutdown()
 

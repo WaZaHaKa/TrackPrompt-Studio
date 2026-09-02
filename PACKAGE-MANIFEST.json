@@ -1,0 +1,483 @@
+{
+  "schemaVersion": "1.0.0",
+  "package": "TrackPrompt-GCP-Video-FastLane-Codex-Starter",
+  "version": "0.1.0",
+  "createdDate": "2026-08-13",
+  "targetRoot": "C:\\Users\\theon\\GitHub\\TrackPrompt-Studio",
+  "archiveLayout": "root-aligned",
+  "manifestExcludesSelf": true,
+  "fileCount": 94,
+  "totalBytes": 399305,
+  "files": [
+    {
+      "path": ".gitignore.gcp-video-fastlane.snippet",
+      "bytes": 197,
+      "sha256": "4596ccdc1e81fb9376877243c75fec30119d89c1d1b32460f61bb557fd58f1b0"
+    },
+    {
+      "path": "backend/app/video_generation/__init__.py",
+      "bytes": 309,
+      "sha256": "f87980f72da9d8bf6d158fa2f0a86e35477348656859c4552dc534cd12f6a98e"
+    },
+    {
+      "path": "backend/app/video_generation/assembly.py",
+      "bytes": 6240,
+      "sha256": "0575ba454f7824f892136e027d9d6085a3fc90ff2449218b9c623b3d8afac318"
+    },
+    {
+      "path": "backend/app/video_generation/authorization.py",
+      "bytes": 4098,
+      "sha256": "b4c3240ea37f28448548b9a755a4081239c1c9a57ee1aadb1dcc74ed52eba601"
+    },
+    {
+      "path": "backend/app/video_generation/cli.py",
+      "bytes": 20720,
+      "sha256": "eb9e5604e8fd57b8331964fa87e6c7a7b5a26b78519e0cdb1cdb1e99e27392b0"
+    },
+    {
+      "path": "backend/app/video_generation/contracts.py",
+      "bytes": 16437,
+      "sha256": "8a37085e6239df151a3ad1d4cca3245f9fd9862ea857d367954e95e0bbfde307"
+    },
+    {
+      "path": "backend/app/video_generation/costs.py",
+      "bytes": 3385,
+      "sha256": "bbaa9aade8fb203798b2e95c0d2bf551e170a617eed9aa94bac320480af237ad"
+    },
+    {
+      "path": "backend/app/video_generation/davinci.py",
+      "bytes": 15088,
+      "sha256": "6826e2f4345d43225128bf0f3b1d930bcd700d0976c3198f367db873ed4d2fc4"
+    },
+    {
+      "path": "backend/app/video_generation/exporter.py",
+      "bytes": 2953,
+      "sha256": "cc9d5d3f073045ae4a479114d3cb495d5d22f2e34eee8d1cd81c5928ff598a58"
+    },
+    {
+      "path": "backend/app/video_generation/gcp_veo.py",
+      "bytes": 8837,
+      "sha256": "b82e502141af5e6fe4b8d96b862c7ceecd7564beaa0dbbe084c2f9fb5c3aa767"
+    },
+    {
+      "path": "backend/app/video_generation/jsonio.py",
+      "bytes": 1624,
+      "sha256": "7f88cfa294aab5a49645bc8b90d2d0afd43d328f79625d37dc806505e3b58539"
+    },
+    {
+      "path": "backend/app/video_generation/media.py",
+      "bytes": 4196,
+      "sha256": "b5ec9acc89c54ac51b62dae96780b00484da2bd00d1ad11a558ac60210d8e266"
+    },
+    {
+      "path": "backend/app/video_generation/operations.py",
+      "bytes": 5168,
+      "sha256": "bc26c009961735a2d1bacf235dd358f2682cad9f6758ca6ce7382a129030dce5"
+    },
+    {
+      "path": "backend/app/video_generation/planning.py",
+      "bytes": 3582,
+      "sha256": "28b85415d7c8087bf3e11680326f1ae9dbdf68fd97072400c4a4d0523d5c75d5"
+    },
+    {
+      "path": "backend/app/video_generation/prompting.py",
+      "bytes": 1629,
+      "sha256": "5bd299e812e21f22b1cc9913f2a8f0ce73bc4dda41af6a8552102e27f1f3bbfd"
+    },
+    {
+      "path": "backend/app/video_generation/timeline.py",
+      "bytes": 11320,
+      "sha256": "3590c2b7750521bf059421ec9c501b175ffbf1c52f7bb072ebba0302e3fb4321"
+    },
+    {
+      "path": "backend/tests/video_generation/__init__.py",
+      "bytes": 58,
+      "sha256": "92c1e48a0fdd52fc191e7dc4365578ef5dc09333323cfaaf875cb8fdad031571"
+    },
+    {
+      "path": "backend/tests/video_generation/test_video_generation_fastlane.py",
+      "bytes": 11742,
+      "sha256": "8ac31eaac26aa55fa0aab99449ce2743b3af45b48a68ca9c382417e867a65996"
+    },
+    {
+      "path": "CODEX-GCP-VIDEO-FASTLANE-PROMPT.md",
+      "bytes": 27544,
+      "sha256": "e5b6a974c9d63e8d10339dc899dd9352da24079d87d98813191dc7fe53e7216e"
+    },
+    {
+      "path": "config/gcp-video-fastlane.example.json",
+      "bytes": 340,
+      "sha256": "0fe5db467e626f250fdd9c08189d9241cf88f5f515047cab47cf69acd73258d4"
+    },
+    {
+      "path": "config/mission-control-video-task-types.json",
+      "bytes": 1107,
+      "sha256": "5c2f1e3a3e372e4f29caabfb88344db3468ed98352d75b44d19c6645ecced7b5"
+    },
+    {
+      "path": "DIRECTORY-MAP.txt",
+      "bytes": 6592,
+      "sha256": "bb8248d1cd1370af49d7a070547ab1b8d0d0b00b30c42307e0e1d484d43b7352"
+    },
+    {
+      "path": "docs/davinci-video-fastlane-handoff.md",
+      "bytes": 2080,
+      "sha256": "4b04cb1b3b6b1c31bc605792c69c9da1a1485a55150a1e708419a251c979fdde"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-api-contract.md",
+      "bytes": 3144,
+      "sha256": "1be4840cd04d0e10b269283cd713d9bf68bee218f30c45b5a28759fcb13ff870"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-architecture.md",
+      "bytes": 3140,
+      "sha256": "e7bf984c10814d06cba34809d841f2de6779a6caa36cecb99bd042b002fc9a04"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-gcp.md",
+      "bytes": 2632,
+      "sha256": "a93a3ab0de6a6e6424f4d0ae2d67b0102b24d3b5fb722b44cf9fac61630e7a32"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-integration-checklist.md",
+      "bytes": 1816,
+      "sha256": "99cb4449e1c1083d964f399a65318d531a5c253f3e3c05108109441e4a88afc9"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-privacy.md",
+      "bytes": 1745,
+      "sha256": "e791fcdee0b001a6e4947c21eecd00229479799ca02b544957381ed316b70193"
+    },
+    {
+      "path": "docs/gcp-video-fastlane-runbook.md",
+      "bytes": 2758,
+      "sha256": "a022d0a8082648b5aa7a931906f31be7cf0a113020c1e814d319a8f17d22f0c7"
+    },
+    {
+      "path": "INSTALLATION.txt",
+      "bytes": 814,
+      "sha256": "209b96b710621ad1366927c14cbfe7b95e872c59ead134982a722822b050ff96"
+    },
+    {
+      "path": "README-GCP-VIDEO-FASTLANE-STARTER.md",
+      "bytes": 4692,
+      "sha256": "c71eb23def881b085d60978022a643e96fcd6928ee836ab8dc3119e19f839ffd"
+    },
+    {
+      "path": "schemas/batch-authorization.schema.json",
+      "bytes": 893,
+      "sha256": "1f7093d7baf8ac12765e6bf2b9a9d44d0705a8cd9b7816f7d52f693eb1676ba4"
+    },
+    {
+      "path": "schemas/chapter-map.schema.json",
+      "bytes": 1564,
+      "sha256": "6eefc1e5978201dbd2d1793cc5981e305a2514116d5e5b5f20db268b30c0bd46"
+    },
+    {
+      "path": "schemas/compiled-video-plan.schema.json",
+      "bytes": 5435,
+      "sha256": "dc42ebc2b97fd6cef54e4be5f014657deef50afd2321d09c81a2ca26ae40c483"
+    },
+    {
+      "path": "schemas/creative-bible.schema.json",
+      "bytes": 1498,
+      "sha256": "5259d49863771cb9fad8ccce7a11e6589ab1a08201102c571e46828e2d14397a"
+    },
+    {
+      "path": "schemas/resolved-timeline.schema.json",
+      "bytes": 3021,
+      "sha256": "58e9fecb3f1c248fbef6c36571bdba934a8107655c3f6922bf915069049936fb"
+    },
+    {
+      "path": "schemas/shot-bank.schema.json",
+      "bytes": 2759,
+      "sha256": "8f5c5678a241d2b968aa59569728423cb835288a83868d940f4da768d279cc81"
+    },
+    {
+      "path": "schemas/video-operation.schema.json",
+      "bytes": 1633,
+      "sha256": "29d534c5a859fe03ea31dbada56d2c0139bf7738b6b2a65fba1c0caeb2a2fdb8"
+    },
+    {
+      "path": "schemas/video-project.schema.json",
+      "bytes": 3411,
+      "sha256": "3f343fe14c9b48c0ec971dff9f373be4857188c90e6d48b67afb4b70174a1d86"
+    },
+    {
+      "path": "START-HERE-GCP-VIDEO-FASTLANE.md",
+      "bytes": 3304,
+      "sha256": "83ed80cdc336a3cf178e24d43bd244ea4469069429ba207df08d953baa037e2e"
+    },
+    {
+      "path": "tools/RUN-GCP-VIDEO-FASTLANE.ps1",
+      "bytes": 8940,
+      "sha256": "23d15ed62cc7dd32fc75b5c46f85af79829428f8c6cde52261919fa213330c9e"
+    },
+    {
+      "path": "tools/SETUP-GCP-VIDEO-FASTLANE.ps1",
+      "bytes": 2891,
+      "sha256": "902dbeccd86a0204b68dbae174fe154b6ff95e38efca4e65890557f7435fbf71"
+    },
+    {
+      "path": "tools/validate_gcp_video_fastlane_bundle.py",
+      "bytes": 7397,
+      "sha256": "0ae9f3c7270f97e718df47c94a33aeb9921602a2f75fca954b7d6bde1fe785db"
+    },
+    {
+      "path": "tools/VERIFY-GCP-VIDEO-FASTLANE.cmd",
+      "bytes": 136,
+      "sha256": "89b3b8122f17e8db3d7bc5e8e08180d3d7f7e117be5df97ae33c2ba55c0025dc"
+    },
+    {
+      "path": "tools/VERIFY-GCP-VIDEO-FASTLANE.ps1",
+      "bytes": 2800,
+      "sha256": "cc38f115038eae130b522a7449ca43beedb354864a80b8b4f3ec05c7a13b4398"
+    },
+    {
+      "path": "VALIDATION-REPORT.md",
+      "bytes": 3552,
+      "sha256": "a485e64d410c9780791048861c4fcf8e4c4399e5d0f5af71fd7d5b3ca026f935"
+    },
+    {
+      "path": "video-projects/_template/chapter-map.template.json",
+      "bytes": 676,
+      "sha256": "9b4a723f6d1ba8c73189dd0c0f8da69a5f62591ad2dd8ecb347c5ea66d4d0d78"
+    },
+    {
+      "path": "video-projects/_template/creative-bible.template.json",
+      "bytes": 1068,
+      "sha256": "b180eadd772dabb09207af5e5a5fdc02f2fe0f9b2b1c105e97e34aede1e069ca"
+    },
+    {
+      "path": "video-projects/_template/project-config.template.json",
+      "bytes": 1130,
+      "sha256": "89fcba3cf102844c6635fd50021694482f442fd87362b798c3392f699edc55a8"
+    },
+    {
+      "path": "video-projects/_template/README.md",
+      "bytes": 696,
+      "sha256": "7854fcd36d3a4c6663bf0ac755a03c9bc1d99210b3e82510807a3c73e6b5eb86"
+    },
+    {
+      "path": "video-projects/_template/shot-bank.template.json",
+      "bytes": 1707,
+      "sha256": "db8c79b2a9c36e87e573033ebdc517cbed09dae694d1686ce4c69b08e3a67e0e"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/chapter-map.json",
+      "bytes": 2484,
+      "sha256": "8f1e8fabf6580f56e560bb6baf1d0356b35e01c0947979704068a9b96a8cac42"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/compiled-plan.example.json",
+      "bytes": 58198,
+      "sha256": "b217ffa5ada831d8e6a76f06221d3d1133428f975c4c39fab3482059ce09d7be"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/creative-bible.json",
+      "bytes": 2381,
+      "sha256": "1bd7db889702d1d414e72e52bd99b9e7c6c5d9a88c192c7ef4cabbc10156d1d3"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/edit-blueprint.json",
+      "bytes": 1252,
+      "sha256": "b9f323a53c549ed07b324e3f34925afebdfa958ef52fcc5041e3cc7d38528181"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/expected-output-tree.txt",
+      "bytes": 1451,
+      "sha256": "fc644fe35f5861a90800e2c8457d3b94b2cc162c65a64ad74f04980ec9fefbdb"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/project-config.4k-optional.json",
+      "bytes": 2484,
+      "sha256": "05250900cbbe039fcf8513ec172f0504a927bc45ea9d155fd1439c441f237132"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/project-config.json",
+      "bytes": 2484,
+      "sha256": "baa62c3c0b835cb5b8cacef5cc3c39ccc519a8a328ccd1c14ec891a9ab03bd76"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/project-config.quality-1080p.json",
+      "bytes": 2487,
+      "sha256": "4b570ff890edcf1fc5e4022e3b313618c00716396f2b40b4ed0261d308e0d4d8"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/project-config.smoke.json",
+      "bytes": 2241,
+      "sha256": "4acb29f080fa934de4eca902c2955b7519e870401c960aba07042d9d401816fd"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-001-suspended-droplet-in-the-digital-ocean.txt",
+      "bytes": 933,
+      "sha256": "f16e99e9c5735a26670b2602dced6f44cf98632d015ed8d45fd7c3d664efc2b8"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-002-the-siren-materializes.txt",
+      "bytes": 911,
+      "sha256": "e683f6c43022bbc70e086af606324c643f393086b4af07dc5b2cd4c74ef111f3"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-003-cold-flickering-room.txt",
+      "bytes": 874,
+      "sha256": "a8f584401242e74fc0110e0e145d13e0c6e276e9c95023d190f693a385ee6d84"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-004-impossible-smile-reconstruction.txt",
+      "bytes": 912,
+      "sha256": "cf3282e8d1fa83e7b8f7ebbf42b9c885cd6cdc79c5189f65cab39023e6ffa9d7"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-005-the-distance-equation.txt",
+      "bytes": 924,
+      "sha256": "aa2f3615e6eee1858c7d06e60c353bd2cdd964283d6a80bfe7bf4ca00dbdc6c3"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-006-house-made-of-bone.txt",
+      "bytes": 888,
+      "sha256": "51890733b858a54efb54cf0c33e4b4f3fdb252f4f899c3267b3cdb1c3348f0b1"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-007-mirror-without-a-face.txt",
+      "bytes": 902,
+      "sha256": "1a1a02a3c1b785a4dba495523b66b663dd97d40f813b1424a0ac05eb3cf30b21"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-008-distant-crowd-through-blue-glass.txt",
+      "bytes": 933,
+      "sha256": "1def1336164b2fe42b94843fd2718722115e9ce35d9f9b0cc9260931bf6f577a"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-009-cold-hand-and-broken-microphone.txt",
+      "bytes": 862,
+      "sha256": "695b0f4c1927cab18d77ee23eadfe3e64938e32379adc9db27921cd67542f395"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-010-time-splits-out-of-sync.txt",
+      "bytes": 900,
+      "sha256": "f6a04127121e9f5d0eee8105787637d494f90a781fcf02e94ee48d8ae07af529"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-011-liquid-guitar-filaments.txt",
+      "bytes": 924,
+      "sha256": "8b1ee390478c6478b4aaee3d36e412ec2c3cdf3fe56fff9d9cfd99b4b3378bcf"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-012-satellite-pulse-behind-the-mind.txt",
+      "bytes": 925,
+      "sha256": "2458d86d8495c1145d386aa5353d73369e103bb4bdc8230fc3bd5992f1d244a5"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-013-siren-breaks-through-the-machine.txt",
+      "bytes": 916,
+      "sha256": "2f23c5b68d138f000904de198fd361d17cfa80efb7e8169d1548bd2d7a2a23c1"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-014-the-equation-dissolves-into-stars.txt",
+      "bytes": 936,
+      "sha256": "89035882844a647c508172149c5b9dfc84c578608e5640bc2e032557118f2e6b"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-015-world-dissolves-into-reverb.txt",
+      "bytes": 876,
+      "sha256": "d2530d1b803e20a9533bfb02bd1555192142de45811a02bdf1e50fb9ab7db522"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/prompts/shot-016-the-pixelated-brink.txt",
+      "bytes": 980,
+      "sha256": "3093ed05f1f356332c8c96f3860cf36b528d08c397b91647359a66786af2efd2"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-001.request.json",
+      "bytes": 3213,
+      "sha256": "2e44fc23f9f980dfb0f979e64d550de20c9b1168d4a706dc7c7a7761c43908c6"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-002.request.json",
+      "bytes": 3253,
+      "sha256": "229e00ade333f4902cafc4f8dd7efa5edf263e96c227b324839fb2f8617ebbc3"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-003.request.json",
+      "bytes": 3237,
+      "sha256": "116e6e331defffcbb8fe4365b5df17db7ce26381186cd36e32343247d3e37bb0"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-004.request.json",
+      "bytes": 3271,
+      "sha256": "5ef8dba51080cd72deacbb6877bc07b2f4c526b3c3f3ff25f3d18651a6a77ac5"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-005.request.json",
+      "bytes": 3283,
+      "sha256": "300ddc81361b28e80b5ed0ce5b04de2a183ed319489060212cee5bd6db20f1b2"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-006.request.json",
+      "bytes": 3222,
+      "sha256": "95ec423b0f426c6e09a47cc0df13451b23811443bf3b6dd88be019590f389f5e"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-007.request.json",
+      "bytes": 3244,
+      "sha256": "79eb0bdfd574a853d57bea0a3bd23219b6188fcdffee0e341197788e312cdf27"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-008.request.json",
+      "bytes": 3289,
+      "sha256": "1ed83bfefb18c52aac49a881214f0f5b746681c02822d0739af5fe37c732f9e5"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-009.request.json",
+      "bytes": 3200,
+      "sha256": "edeba007f93d6e24d3a2346dc7edd867f2d88fd19315def6bfc8d86de548fd05"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-010.request.json",
+      "bytes": 3264,
+      "sha256": "936375619f4e39c34c9b8e210ae5065d20f62ad0a41baa0b68e27cc588d57811"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-011.request.json",
+      "bytes": 3272,
+      "sha256": "a269bfafbd736b2efce408849969bb8f38b428cd764fdfbdde8fab52196e2896"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-012.request.json",
+      "bytes": 3267,
+      "sha256": "361fd2cfa4978155c159799b935a2ec558f3ed583df618166dde336de1c55769"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-013.request.json",
+      "bytes": 3291,
+      "sha256": "e4e7af1b8b04be37a116191eba79132e7c33c24f87a824b63f329f44d574afa6"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-014.request.json",
+      "bytes": 3299,
+      "sha256": "088f41b13e024ee1ce6a0da041e17f9a4d9ae05a50ad97911e45f5b9d063b7b2"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-015.request.json",
+      "bytes": 3219,
+      "sha256": "3f6cb328493a5a869d480669b614912e65ffa5aee544f354b6ff571e91df9626"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/provider-request-examples/shot-016.request.json",
+      "bytes": 3329,
+      "sha256": "736a9c55db42f554dce669adc0ad65ab02ba5fa38c90b57f167d4779a26c009c"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/shot-bank.json",
+      "bytes": 24177,
+      "sha256": "ab0623ed25b859c7f276cac7130a3c2cea734067e2ffe2a6be754787d1310f59"
+    },
+    {
+      "path": "video-projects/the-glitch-is-me/SHOT-LIST.md",
+      "bytes": 2419,
+      "sha256": "a4f84d5f5b48535bcb2f1b43329e039595f951f63e9fde1e0d0eb000af1ea2b3"
+    }
+  ]
+}

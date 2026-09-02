@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "targetMachine": {
+    "os": "Windows",
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "vramGiB": 12,
+    "systemRamGiB": 32,
+    "cpu": "AMD Ryzen 7 3700X 8-Core Processor"
+  },
+  "preflight": {
+    "minimumFreeDiskGiB": 60,
+    "recommendedPagefile": "Windows system-managed pagefile with at least 32 GiB free on the pagefile volume",
+    "requiredCommands": [
+      "nvidia-smi",
+      "ffmpeg",
+      "ffprobe",
+      "python",
+      "git"
+    ],
+    "comfyUiHealthCheck": "GET /system_stats and a no-op or tiny workflow through the local API"
+  },
+  "oneTimeQualification": {
+    "cacheKey": "GPU model + VRAM + driver + ComfyUI commit + model hashes",
+    "candidates": [
+      {
+        "tier": "A14B-Q5_K_M",
+        "probe": {
+          "width": 512,
+          "height": 288,
+          "lengthFrames": 33,
+          "steps": 4,
+          "timeoutMinutes": 45
+        }
+      },
+      {
+        "tier": "A14B-Q4_K_M",
+        "probe": {
+          "width": 512,
+          "height": 288,
+          "lengthFrames": 33,
+          "steps": 4,
+          "timeoutMinutes": 45
+        }
+      },
+      {
+        "tier": "TI2V-5B",
+        "probe": {
+          "width": 512,
+          "height": 288,
+          "lengthFrames": 33,
+          "steps": 4,
+          "timeoutMinutes": 30
+        }
+      }
+    ],
+    "successCriteria": [
+      "process completes without CUDA OOM or unrecovered worker crash",
+      "output decodes with ffprobe",
+      "all expected frames exist",
+      "peak committed system memory remains below a safe threshold",
+      "no repeated pagefile thrashing or stalled progress beyond the timeout"
+    ],
+    "selection": "first passing candidate in order; persist result and do not repeat unless hardware, driver, runtime, or model hash changes"
+  },
+  "runtimeGuards": {
+    "maxConcurrentVideoGenerations": 1,
+    "maxConcurrentKeyframeGenerations": 1,
+    "cancelAndResume": true,
+    "boundedRetriesPerShot": 1,
+    "automaticRerollLimit": 0,
+    "heroVariantLimit": 4,
+    "thermalPauseSupported": true,
+    "neverChangeWindowsPagefileAutomatically": true
+  }
+}

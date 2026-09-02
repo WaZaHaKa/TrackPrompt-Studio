@@ -1,0 +1,543 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#mission-control-main"
+  - complementary "Mission Control navigation" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e10]:
+        - strong [ref=e11]: WZHK
+        - generic [ref=e12]: MEDIA · MISSION CONTROL
+      - button "Close navigation" [ref=e13] [cursor=pointer]
+    - navigation [ref=e17]:
+      - button "Home" [ref=e18] [cursor=pointer]
+      - button "Render" [ref=e23] [cursor=pointer]
+      - button "Profiles" [ref=e27] [cursor=pointer]
+      - button "Calibration" [ref=e30] [cursor=pointer]
+      - button "Jobs" [ref=e34] [cursor=pointer]
+      - button "Director" [ref=e40] [cursor=pointer]
+      - button "Encode" [ref=e47] [cursor=pointer]
+      - button "Video" [active] [ref=e51] [cursor=pointer]
+      - button "Cloud" [ref=e56] [cursor=pointer]
+      - button "Settings" [ref=e60] [cursor=pointer]
+    - generic [ref=e65]:
+      - generic [ref=e74]:
+        - strong [ref=e75]: Connected
+        - generic [ref=e76]: Local service
+      - generic [ref=e82]:
+        - text: Local & private
+        - generic [ref=e83]: No telemetry
+  - generic [ref=e84]:
+    - banner [ref=e85]:
+      - generic [ref=e86]: Video
+      - generic [ref=e88]:
+        - generic "Show exact hashes, paths, and metrics" [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]: Simple
+          - switch "Simple" [ref=e91]
+        - button "Use light theme" [ref=e124] [cursor=pointer]
+        - generic "Backend connected" [ref=e131]
+    - main [ref=e103]:
+      - generic [ref=e249]:
+        - region [ref=e250]:
+          - generic [ref=e251]:
+            - generic [ref=e252]:
+              - generic [ref=e253]: Fully local · ComfyUI · no inference spend
+              - heading "Local anime video provider" [level=2] [ref=e254]
+            - generic [ref=e255]: Setup required
+          - paragraph [ref=e256]: Analyze and archive the real track, qualify one Wan2.2 tier, then resume the same 16-scene revision through references, keyframes, video, post, edit, and final QC.
+          - generic [ref=e257]:
+            - generic [ref=e258]:
+              - text: Local project package
+              - combobox "Local project package" [ref=e259]:
+                - option "The Riff That Learned to Breathe · Blocked Provider Setup" [selected]
+            - generic [ref=e260]:
+              - generic [ref=e261]: Audio clock
+              - strong [ref=e262]: 2:29.354
+              - generic [ref=e263]: SHA-256 68463d6c8a24…
+            - generic [ref=e264]:
+              - generic [ref=e265]: Archived analysis
+              - strong [ref=e266]: Persistent
+              - generic [ref=e267]: Revision 38c98b8d
+            - generic [ref=e268]:
+              - generic [ref=e269]: GPU / VRAM
+              - strong [ref=e270]: Not reported
+              - generic [ref=e271]: Local readiness check
+            - generic [ref=e272]:
+              - generic [ref=e273]: Workflow
+              - strong [ref=e274]: API workflow required
+              - generic [ref=e275]: Register the current official API-format workflow
+          - generic [ref=e276]:
+            - button "Analyze and archive project" [ref=e277] [cursor=pointer]
+            - button "Refresh local readiness" [ref=e281] [cursor=pointer]
+            - button "Run bounded Q5 → Q4 → 5B qualification" [disabled] [ref=e288]
+            - button "Start or resume exact 16-scene run" [disabled] [ref=e293]
+          - status [ref=e297]:
+            - generic [ref=e300]:
+              - strong [ref=e301]: The configured local ComfyUI service is unavailable.
+              - paragraph [ref=e302]: Start or configure the local ComfyUI service, then run readiness again.
+              - code [ref=e303]: provider_unavailable
+          - status [ref=e304]:
+            - generic [ref=e307]:
+              - strong [ref=e308]: The project analysis is safely archived, but local ComfyUI is not ready.
+              - paragraph [ref=e309]: Run the local provider setup plan, register current API workflows, and qualify the GPU.
+              - code [ref=e310]: local_comfyui_setup_required
+          - generic [ref=e311]:
+            - generic [ref=e312]:
+              - generic [ref=e313]: Current exact revision
+              - heading "Blocked" [level=3] [ref=e314]
+            - generic [ref=e315]: blocked provider setup
+          - progressbar "Local video project progress" [ref=e316]
+          - paragraph [ref=e317]: 0 / 16 units · current shot — · ETA calibrating · final QC not passed
+          - group [ref=e318]:
+            - generic "Snapped 16-scene audio timeline" [ref=e319]
+        - generic [ref=e323]:
+          - generic [ref=e324]:
+            - generic [ref=e325]: GCP Veo 3.1 · exact-batch workflow
+            - heading "Generate the complete music video" [level=1] [ref=e326]
+            - paragraph [ref=e327]: Compile a deterministic plan from TrackPrompt analysis, approve one hard cost ceiling, then let Mission Control smoke-test, resume, verify, assemble, and export the same batch.
+          - button "Refresh" [ref=e329] [cursor=pointer]
+        - status [ref=e336]:
+          - generic [ref=e339]:
+            - strong [ref=e340]: No paid request occurs during planning or readiness checks
+            - paragraph [ref=e341]: The first billable request is the smoke shot, and Start remains locked until the exact plan, pricing snapshot, maximum spend, and confirmation phrase are reviewed.
+        - region [ref=e342]:
+          - generic [ref=e344]:
+            - generic [ref=e345]: Step 1 · source and delivery
+            - heading "Compile the exact plan" [level=2] [ref=e346]
+          - generic [ref=e349]:
+            - generic [ref=e350]:
+              - text: Track analysis
+              - combobox "Track analysis" [ref=e351]:
+                - option "Local video project analysis · archived · 2:29 · audio retained" [selected]
+                - option "Analysis 5ec62fcc"
+            - generic [ref=e352]:
+              - text: Content package
+              - combobox "Content package" [ref=e353]:
+                - option "Static Into Signal · 16 shots" [selected]
+                - option "The Glitch Is Me · 16 shots"
+            - generic [ref=e354]:
+              - text: Delivery profile
+              - combobox "Delivery profile" [ref=e355]:
+                - option "Veo 3.1 Fast · 1080p · default"
+                - option "Veo 3.1 Quality · 1080p · optional" [selected]
+                - option "Veo 3.1 Quality · 4K (optional) · optional · unavailable" [disabled]
+            - generic [ref=e356]:
+              - text: GCP project ID
+              - textbox "GCP project ID" [ref=e357]
+            - generic [ref=e358]:
+              - text: GCS bucket
+              - textbox "GCS bucket" [ref=e359]:
+                - /placeholder: my-private-video-bucket
+            - generic [ref=e360]:
+              - text: Master continuity seed
+              - generic [ref=e361]:
+                - spinbutton "Master continuity seed Generate new seed Lock seed for this plan" [ref=e362]: "314159265"
+                - button "Generate new seed" [disabled] [ref=e363]
+              - generic [ref=e365]:
+                - checkbox [checked] [ref=e366]
+                - text: Lock seed for this plan
+            - generic [ref=e367]:
+              - text: Private character / first-frame reference
+              - generic [ref=e368]:
+                - textbox "Private character / first-frame reference Attach reference Hash-bound into the plan and uploaded only after exact-batch authorization. Veo receives it as a supported first-frame image, not as an unsupported referenceImages field." [ref=e369]:
+                  - /placeholder: Optional JPEG or PNG
+                - button "Attach reference" [ref=e370] [cursor=pointer]
+              - generic [ref=e374]: Hash-bound into the plan and uploaded only after exact-batch authorization. Veo receives it as a supported first-frame image, not as an unsupported referenceImages field.
+          - generic [ref=e375]:
+            - generic [ref=e376]:
+              - generic [ref=e377]: Base estimate
+              - strong [ref=e378]: $25.60
+            - generic [ref=e379]:
+              - generic [ref=e380]: Conservative estimate
+              - strong [ref=e381]: $38.40
+            - generic [ref=e382]:
+              - generic [ref=e383]: Hard ceiling
+              - strong [ref=e384]: $45.00
+            - generic [ref=e385]:
+              - generic [ref=e386]: Pricing snapshot
+              - strong [ref=e387]: 2026-08-13
+          - generic [ref=e388]:
+            - button "Compile exact video plan" [disabled] [ref=e389]
+            - button "Run free GCP readiness check" [disabled] [ref=e393]
+        - generic [ref=e398]:
+          - text: Saved video job
+          - combobox "Saved video job" [ref=e399]:
+            - option "Static Into Signal · Review Ready · cce1fa1c" [selected]
+            - option "The Glitch Is Me · Failed · 9e892365"
+            - option "Static Into Signal · Planned · dfdae03e"
+            - option "The Glitch Is Me · Failed · 65d50742"
+            - option "The Glitch Is Me · Failed · 2013d006"
+            - option "The Glitch Is Me · Failed · 52828c7a"
+        - region [ref=e400]:
+          - generic [ref=e401]:
+            - generic [ref=e402]:
+              - generic [ref=e403]: Step 2 · immutable batch
+              - heading "Review prompts and maximum spend" [level=2] [ref=e404]
+            - generic [ref=e405]: Review Ready
+          - generic [ref=e406]:
+            - generic [ref=e407]:
+              - generic [ref=e408]: Shots
+              - strong [ref=e409]: "16"
+              - generic [ref=e410]: 16 verified
+            - generic [ref=e411]:
+              - generic [ref=e412]: Base estimate
+              - strong [ref=e413]: $25.60
+            - generic [ref=e414]:
+              - generic [ref=e415]: Conservative
+              - strong [ref=e416]: $38.40
+            - generic [ref=e417]:
+              - generic [ref=e418]: Maximum spend
+              - strong [ref=e419]: $45.00
+          - progressbar "Video generation progress" [ref=e420]
+          - paragraph [ref=e422]: Pricing snapshot 2026-08-13 · $0.20 per output second · reserved $27.20 · remaining $17.80
+          - status [ref=e423]:
+            - generic [ref=e426]:
+              - strong [ref=e427]: Continuity profile is deterministic; model identity remains best effort
+              - paragraph [ref=e428]: Locked continuity anchors and deterministic seeds improve repeatability. First-frame conditioning is applied only when an approved, hash-bound reference is in the exact plan; no generative model guarantees perfect identity lock.
+          - group [ref=e429]:
+            - generic "Continuity profile, master seed, and groups" [ref=e430] [cursor=pointer]
+          - group [ref=e433]:
+            - generic "Exact provider requests and plan identity" [ref=e434] [cursor=pointer]
+          - status [ref=e437]:
+            - generic [ref=e440]:
+              - strong [ref=e441]: Legacy analysis workspace is unavailable
+              - paragraph [ref=e442]: Your generated clips are safe. Continue using the compiled video plan and reattach the original local audio master only if its durable binding is unavailable.
+              - generic [ref=e443]:
+                - button "Repair legacy dependency" [ref=e444] [cursor=pointer]
+                - button "Reattach original audio" [ref=e446] [cursor=pointer]
+                - button "Resolve timeline" [ref=e450] [cursor=pointer]
+        - region "Planned video shots" [ref=e452]:
+          - article [ref=e453]:
+            - generic [ref=e454]:
+              - generic [ref=e455]: 01 · chapter-01
+              - generic [ref=e456]:
+                - generic [ref=e457]: Verified
+                - generic [ref=e458]: "Review: Accepted"
+            - heading "Dead Air" [level=2] [ref=e459]
+            - generic "Dead Air generated clip" [ref=e460]
+            - paragraph [ref=e461]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Opening image and paid smoke shot establishing the grounded palette, realism and signal motif without difficult face or hand generation.. Shot action and environment: Begin in near-total black. A single pale cyan-white static filament flickers across rain-covered concrete. A slow macro tracking movement follows it along the ground and vertically up the outside of a dark brutalist apartment block. Nearly every window is unlit. One distant window softly illuminates when the filament reaches it. Restrained, photoreal and mysterious. No people and no text. End with the light stable in the window and the filament continuing out of frame. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: pale cyan-white filament, rain-covered concrete, dark brutalist apartment block, one softly lit window. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, rain-dark apartment block, cold blue modest room, signal beginning as interference, controlled first pulse."
+            - group [ref=e462]:
+              - generic "Negative prompt, seed, and continuity" [ref=e463] [cursor=pointer]
+            - generic [ref=e466]:
+              - generic [ref=e467]: Attempt 2 · $3.20
+              - generic [ref=e468]:
+                - button "Accept" [ref=e469] [cursor=pointer]
+                - button "Reject" [ref=e473] [cursor=pointer]
+                - button "Retry same setup" [ref=e475] [cursor=pointer]
+                - button "Generate new variation" [ref=e477] [cursor=pointer]
+          - article [ref=e479]:
+            - generic [ref=e480]:
+              - generic [ref=e481]: 02 · chapter-01
+              - generic [ref=e482]:
+                - generic [ref=e483]: Verified
+                - generic [ref=e484]: "Review: Accepted"
+            - heading "Unseen Hands" [level=2] [ref=e485]
+            - generic "Unseen Hands generated clip" [ref=e486]
+            - paragraph [ref=e487]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Reveal private careful work and the first controlled pulse without exposing identity.. Shot action and environment: Seen through a condensation-covered apartment window, an anonymous adult silhouette quietly assembles a modest homemade signal device on a small table. Only two natural adult hands, simple wires, an old speaker and a small unlabelled metal housing are visible. Blue street light falls through the glass. The pale filament briefly responds to the final connection. Slow inward camera movement. No readable screens or text. End on the first controlled pulse. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: condensation-covered window, modest homemade device, cold blue street light, controlled pale pulse. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, rain-dark apartment block, cold blue modest room, signal beginning as interference, controlled first pulse."
+            - group [ref=e488]:
+              - generic "Negative prompt, seed, and continuity" [ref=e489] [cursor=pointer]
+            - generic [ref=e492]:
+              - generic [ref=e493]: Attempt 1 · $1.60
+              - generic [ref=e494]:
+                - button "Accept" [ref=e495] [cursor=pointer]
+                - button "Reject" [ref=e499] [cursor=pointer]
+                - button "Retry same setup" [ref=e501] [cursor=pointer]
+                - button "Generate new variation" [ref=e503] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e505] [cursor=pointer]
+          - article [ref=e507]:
+            - generic [ref=e508]:
+              - generic [ref=e509]: 03 · chapter-02
+              - generic [ref=e510]:
+                - generic [ref=e511]: Verified
+                - generic [ref=e512]: "Review: Accepted"
+            - heading "Four A.M." [level=2] [ref=e513]
+            - generic "Four A.M. generated clip" [ref=e514]
+            - paragraph [ref=e515]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Establish isolation, exhaustion and persistence through the recurring adult figure.. Shot action and environment: The recurring adult Signal Bearer sits alone at a cramped desk before dawn, face mostly hidden, charcoal hooded coat still on. Cold blue light cuts through damaged blinds. Rain moves across the window and the room is otherwise silent. The camera makes a slow sideward dolly while the figure remains focused despite visible exhaustion. The wrist filament is dim but alive. Grounded social realism with subtle surreal tension. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: same adult Signal Bearer, charcoal hooded coat, cold blue damaged blinds, dim wrist filament. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, rain-dark apartment block, cold blue modest room, signal beginning as interference, controlled first pulse."
+            - group [ref=e516]:
+              - generic "Negative prompt, seed, and continuity" [ref=e517] [cursor=pointer]
+            - generic [ref=e520]:
+              - generic [ref=e521]: Attempt 1 · $1.60
+              - generic [ref=e522]:
+                - button "Accept" [ref=e523] [cursor=pointer]
+                - button "Reject" [ref=e527] [cursor=pointer]
+                - button "Retry same setup" [ref=e529] [cursor=pointer]
+                - button "Generate new variation" [ref=e531] [cursor=pointer]
+          - article [ref=e533]:
+            - generic [ref=e534]:
+              - generic [ref=e535]: 04 · chapter-02
+              - generic [ref=e536]:
+                - generic [ref=e537]: Verified
+                - generic [ref=e538]: "Review: Accepted"
+            - heading "Little Worlds" [level=2] [ref=e539]
+            - generic "Little Worlds generated clip" [ref=e540]
+            - paragraph [ref=e541]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Turn discarded workbench parts into a quietly living miniature city.. Shot action and environment: A cinematic macro journey across a desk covered with plain circuit boards, folded sketches without readable writing, cables, tools and small architectural fragments. Together they resemble a miniature city being built from discarded parts. The pale signal filament travels between the objects, briefly turning each unfinished structure alive. Realistic materials and shallow depth of field. End on the miniature city casting light onto the real dark room. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: plain discarded components, miniature city, pale signal filament, cold blue real room. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, rain-dark apartment block, cold blue modest room, signal beginning as interference, controlled first pulse."
+            - group [ref=e542]:
+              - generic "Negative prompt, seed, and continuity" [ref=e543] [cursor=pointer]
+            - generic [ref=e546]:
+              - generic [ref=e547]: Attempt 1 · $1.60
+              - generic [ref=e548]:
+                - button "Accept" [ref=e549] [cursor=pointer]
+                - button "Reject" [ref=e553] [cursor=pointer]
+                - button "Retry same setup" [ref=e555] [cursor=pointer]
+                - button "Generate new variation" [ref=e557] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e559] [cursor=pointer]
+          - article [ref=e561]:
+            - generic [ref=e562]:
+              - generic [ref=e563]: 05 · chapter-03
+              - generic [ref=e564]:
+                - generic [ref=e565]: Verified
+                - generic [ref=e566]: "Review: Accepted"
+            - heading "Red Line" [level=2] [ref=e567]
+            - generic "Red Line generated clip" [ref=e568]
+            - paragraph [ref=e569]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Show repeated failure becoming useful structural information rather than literal code.. Shot action and environment: A restrained red fault line moves across a sheet of black glass inside an industrial corridor. It repeatedly breaks, stops and restarts. Instead of disappearing, each failed segment transforms into a pale cyan-white thread. The threads weave themselves into a stable geometric support running through the concrete wall. Slow precise camera motion. The visual meaning is failure becoming useful information, not computer code. No readable symbols or text. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: restrained red fault line, black glass, industrial concrete, cyan-white structural thread. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, industrial concrete, restrained warning red, failure becoming cyan-white structure, signal moving through hidden infrastructure."
+            - group [ref=e570]:
+              - generic "Negative prompt, seed, and continuity" [ref=e571] [cursor=pointer]
+            - generic [ref=e574]:
+              - generic [ref=e575]: Attempt 1 · $1.60
+              - generic [ref=e576]:
+                - button "Accept" [ref=e577] [cursor=pointer]
+                - button "Reject" [ref=e581] [cursor=pointer]
+                - button "Retry same setup" [ref=e583] [cursor=pointer]
+                - button "Generate new variation" [ref=e585] [cursor=pointer]
+          - article [ref=e587]:
+            - generic [ref=e588]:
+              - generic [ref=e589]: 06 · chapter-03
+              - generic [ref=e590]:
+                - generic [ref=e591]: Verified
+                - generic [ref=e592]: "Review: Accepted"
+            - heading "Winter Watch" [level=2] [ref=e593]
+            - generic "Winter Watch generated clip" [ref=e594]
+            - paragraph [ref=e595]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Express respectful inheritance between two adults without military or literal exposition.. Shot action and environment: Under distant industrial floodlights during quiet snowfall, an older adult watchman in a plain heavy coat stands alone protecting an unidentified place through the winter night. No uniform, weapon, insignia or military symbol. The younger recurring Signal Bearer appears only as a reflection in nearby dark glass. The older figure gently touches the pale filament, and its light continues toward the younger reflection. Respectful, restrained and emotionally inherited rather than literal. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: quiet snowfall, industrial floodlights, older adult watchman, younger Signal Bearer reflection, pale filament handoff. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, industrial concrete, restrained warning red, failure becoming cyan-white structure, signal moving through hidden infrastructure."
+            - group [ref=e596]:
+              - generic "Negative prompt, seed, and continuity" [ref=e597] [cursor=pointer]
+            - generic [ref=e600]:
+              - generic [ref=e601]: Attempt 1 · $1.60
+              - generic [ref=e602]:
+                - button "Accept" [ref=e603] [cursor=pointer]
+                - button "Reject" [ref=e607] [cursor=pointer]
+                - button "Retry same setup" [ref=e609] [cursor=pointer]
+                - button "Generate new variation" [ref=e611] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e613] [cursor=pointer]
+          - article [ref=e615]:
+            - generic [ref=e616]:
+              - generic [ref=e617]: 07 · chapter-04
+              - generic [ref=e618]:
+                - generic [ref=e619]: Verified
+                - generic [ref=e620]: "Review: Accepted"
+            - heading "Staircase from Static" [level=2] [ref=e621]
+            - generic "Staircase from Static generated clip" [ref=e622]
+            - paragraph [ref=e623]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Primary chorus hero image: a grounded first step forming out of controlled static.. Shot action and environment: In the centre of a rain-dark brutalist courtyard, controlled television-like static gathers in the air and forms a physically believable staircase one step at a time. The recurring Signal Bearer approaches without spectacle and places one foot on the first completed step. Each step becomes solid dark material edged by pale light. Slow rising camera movement, powerful but grounded. This is the primary chorus hero shot. End with the unfinished staircase continuing upward into darkness. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: rain-dark brutalist courtyard, same Signal Bearer, static becoming solid staircase, pale stair edges. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, industrial concrete, restrained warning red, failure becoming cyan-white structure, signal moving through hidden infrastructure."
+            - group [ref=e624]:
+              - generic "Negative prompt, seed, and continuity" [ref=e625] [cursor=pointer]
+            - generic [ref=e628]:
+              - generic [ref=e629]: Attempt 1 · $1.60
+              - generic [ref=e630]:
+                - button "Accept" [ref=e631] [cursor=pointer]
+                - button "Reject" [ref=e635] [cursor=pointer]
+                - button "Retry same setup" [ref=e637] [cursor=pointer]
+                - button "Generate new variation" [ref=e639] [cursor=pointer]
+          - article [ref=e641]:
+            - generic [ref=e642]:
+              - generic [ref=e643]: 08 · chapter-04
+              - generic [ref=e644]:
+                - generic [ref=e645]: Verified
+                - generic [ref=e646]: "Review: Accepted"
+            - heading "Wiring in the Smoke" [level=2] [ref=e647]
+            - generic "Wiring in the Smoke generated clip" [ref=e648]
+            - paragraph [ref=e649]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Reveal the hidden infrastructure connecting private work to the surrounding building.. Shot action and environment: Inside a damaged concrete room, a thin layer of smoke reveals hidden electrical paths running beneath the walls like infrastructure rather than anatomy. The recurring Signal Bearer connects one plain cable. The concealed lines illuminate outward through the room, ceiling and neighbouring building. The camera slowly pulls back as private work becomes a larger network. Photoreal, restrained and non-cyberpunk. No body horror and no readable interface. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: damaged concrete room, same Signal Bearer, plain cable, smoke-revealed infrastructure, pale outward network. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, industrial concrete, restrained warning red, failure becoming cyan-white structure, signal moving through hidden infrastructure."
+            - group [ref=e650]:
+              - generic "Negative prompt, seed, and continuity" [ref=e651] [cursor=pointer]
+            - generic [ref=e654]:
+              - generic [ref=e655]: Attempt 1 · $1.60
+              - generic [ref=e656]:
+                - button "Accept" [ref=e657] [cursor=pointer]
+                - button "Reject" [ref=e661] [cursor=pointer]
+                - button "Retry same setup" [ref=e663] [cursor=pointer]
+                - button "Generate new variation" [ref=e665] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e667] [cursor=pointer]
+          - article [ref=e669]:
+            - generic [ref=e670]:
+              - generic [ref=e671]: 09 · chapter-05
+              - generic [ref=e672]:
+                - generic [ref=e673]: Verified
+                - generic [ref=e674]: "Review: Accepted"
+            - heading "Every Window a Life" [level=2] [ref=e675]
+            - generic "Every Window a Life generated clip" [ref=e676]
+            - paragraph [ref=e677]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Turn anonymous residential rectangles into respectful glimpses of ordinary adult lives sharing one pulse.. Shot action and environment: A long-lens night view of a large residential block. At first the windows appear as identical anonymous rectangles. During a slow push forward, subtle silhouettes reveal ordinary adult lives inside: someone working, someone resting, two people talking, someone making music, someone looking outside. No voyeuristic detail and no readable screens. The windows begin responding to one shared pale pulse, showing that every apparent number contains a human life. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: large residential block, ordinary adult silhouettes, respectful distance, shared pale window pulse. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, ordinary adult lives, shared practical work, cold measuring machinery, dark glass reassembly without harm."
+            - group [ref=e678]:
+              - generic "Negative prompt, seed, and continuity" [ref=e679] [cursor=pointer]
+            - generic [ref=e682]:
+              - generic [ref=e683]: Attempt 1 · $1.60
+              - generic [ref=e684]:
+                - button "Accept" [ref=e685] [cursor=pointer]
+                - button "Reject" [ref=e689] [cursor=pointer]
+                - button "Retry same setup" [ref=e691] [cursor=pointer]
+                - button "Generate new variation" [ref=e693] [cursor=pointer]
+          - article [ref=e695]:
+            - generic [ref=e696]:
+              - generic [ref=e697]: 10 · chapter-05
+              - generic [ref=e698]:
+                - generic [ref=e699]: Verified
+                - generic [ref=e700]: "Review: Accepted"
+            - heading "Foundation" [level=2] [ref=e701]
+            - generic "Foundation generated clip" [ref=e702]
+            - paragraph [ref=e703]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Show practical cooperation among ordinary adults and a shared signal holding modest work together.. Shot action and environment: Three ordinary adults work together at night beneath an unfinished concrete structure, quietly placing modest metal and timber supports. They are not posing for the camera. The recurring Signal Bearer is one of them, recognised by the coat and wrist filament. Each person briefly holds part of the pale thread as the structure becomes stable. Wet ground, practical light, realistic teamwork and no heroic construction spectacle. End on the completed foundation holding. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: three ordinary adults, same Signal Bearer wardrobe, wet ground practical light, metal and timber supports, shared pale thread. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, ordinary adult lives, shared practical work, cold measuring machinery, dark glass reassembly without harm."
+            - group [ref=e704]:
+              - generic "Negative prompt, seed, and continuity" [ref=e705] [cursor=pointer]
+            - generic [ref=e708]:
+              - generic [ref=e709]: Attempt 1 · $1.60
+              - generic [ref=e710]:
+                - button "Accept" [ref=e711] [cursor=pointer]
+                - button "Reject" [ref=e715] [cursor=pointer]
+                - button "Retry same setup" [ref=e717] [cursor=pointer]
+                - button "Generate new variation" [ref=e719] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e721] [cursor=pointer]
+          - article [ref=e723]:
+            - generic [ref=e724]:
+              - generic [ref=e725]: 11 · chapter-06
+              - generic [ref=e726]:
+                - generic [ref=e727]: Verified
+                - generic [ref=e728]: "Review: Accepted"
+            - heading "No Metric" [level=2] [ref=e729]
+            - generic "No Metric generated clip" [ref=e730]
+            - paragraph [ref=e731]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Contrast cold credible measurement with a human cost the machine cannot quantify.. Shot action and environment: The Signal Bearer stands inside a vast dark industrial measuring room. A large analogue gauge and scanning arm attempt to quantify the figure, but the needle cannot settle and the machine repeatedly returns to zero. Meanwhile a soft pale heartbeat pulse moves from the wrist filament through the coat and into the surrounding room. The machine remains cold and accurate-looking but fundamentally unable to measure the human cost. No medical imagery and no readable numbers. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: same Signal Bearer, vast dark measuring room, unsettled analogue gauge, soft pale heartbeat pulse. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, ordinary adult lives, shared practical work, cold measuring machinery, dark glass reassembly without harm."
+            - group [ref=e732]:
+              - generic "Negative prompt, seed, and continuity" [ref=e733] [cursor=pointer]
+            - generic [ref=e736]:
+              - generic [ref=e737]: Attempt 1 · $1.60
+              - generic [ref=e738]:
+                - button "Accept" [ref=e739] [cursor=pointer]
+                - button "Reject" [ref=e743] [cursor=pointer]
+                - button "Retry same setup" [ref=e745] [cursor=pointer]
+                - button "Generate new variation" [ref=e747] [cursor=pointer]
+          - article [ref=e749]:
+            - generic [ref=e750]:
+              - generic [ref=e751]: 12 · chapter-06
+              - generic [ref=e752]:
+                - generic [ref=e753]: Verified
+                - generic [ref=e754]: "Review: Accepted"
+            - heading "Built from Pieces" [level=2] [ref=e755]
+            - generic "Built from Pieces generated clip" [ref=e756]
+            - paragraph [ref=e757]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Bridge climax and beat-switch transition: vulnerable fragmentation followed by steadier reassembly without pain.. Shot action and environment: Against a nearly black background, the recurring Signal Bearer appears as a realistic figure whose outer silhouette becomes dark glass. Without pain or body horror, the glass separates into dozens of clean fragments and hangs motionless in space. After a quiet pause, the pale filament moves through them and the pieces reassemble into a steadier version of the same person. The face remains obscured. Slow, intimate and emotionally vulnerable. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: same obscured Signal Bearer, dark glass silhouette, clean suspended fragments, pale filament reassembly, no pain. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, ordinary adult lives, shared practical work, cold measuring machinery, dark glass reassembly without harm."
+            - group [ref=e758]:
+              - generic "Negative prompt, seed, and continuity" [ref=e759] [cursor=pointer]
+            - generic [ref=e762]:
+              - generic [ref=e763]: Attempt 1 · $1.60
+              - generic [ref=e764]:
+                - button "Accept" [ref=e765] [cursor=pointer]
+                - button "Reject" [ref=e769] [cursor=pointer]
+                - button "Retry same setup" [ref=e771] [cursor=pointer]
+                - button "Generate new variation" [ref=e773] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e775] [cursor=pointer]
+          - article [ref=e777]:
+            - generic [ref=e778]:
+              - generic [ref=e779]: 13 · chapter-07
+              - generic [ref=e780]:
+                - generic [ref=e781]: Verified
+                - generic [ref=e782]: "Review: Accepted"
+            - heading "Glitch Language" [level=2] [ref=e783]
+            - generic "Glitch Language generated clip" [ref=e784]
+            - paragraph [ref=e785]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Let structural imperfections organise into abstract architecture and music without forming text.. Shot action and environment: Cracks, scanline distortions and small structural imperfections move across a brutalist wall. At first they appear random. As the recurring Signal Bearer traces the pale filament nearby, the defects align into an elegant abstract rhythm resembling architecture and music without forming letters or readable notation. The organised pattern spreads from the wall into the street lights. The city begins responding to what had looked like damage. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: same Signal Bearer, brutalist wall, abstract non-text rhythm, pale filament, responsive street lights. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, city responding to organised signal, rooms awakening, muted amber entering cold blue, natural dawn next step."
+            - group [ref=e786]:
+              - generic "Negative prompt, seed, and continuity" [ref=e787] [cursor=pointer]
+            - generic [ref=e790]:
+              - generic [ref=e791]: Attempt 1 · $1.60
+              - generic [ref=e792]:
+                - button "Accept" [ref=e793] [cursor=pointer]
+                - button "Reject" [ref=e797] [cursor=pointer]
+                - button "Retry same setup" [ref=e799] [cursor=pointer]
+                - button "Generate new variation" [ref=e801] [cursor=pointer]
+          - article [ref=e803]:
+            - generic [ref=e804]:
+              - generic [ref=e805]: 14 · chapter-07
+              - generic [ref=e806]:
+                - generic [ref=e807]: Verified
+                - generic [ref=e808]: "Review: Accepted"
+            - heading "One Small Sound" [level=2] [ref=e809]
+            - generic "One Small Sound generated clip" [ref=e810]
+            - paragraph [ref=e811]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: A single physical pulse awakens rooms in sequence without becoming flashy magic.. Shot action and environment: A dead, dark room contains an old unlabelled speaker, loose papers and unfinished objects. One small low-frequency pulse makes the speaker surface move. A visible pressure ripple crosses the room, lifting the papers slightly and turning dormant lamps on one after another. The camera follows the ripple through a doorway where more rooms awaken. The effect is emotional and physical, not magical spectacle. End with the signal moving onward. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: unlabelled old speaker, unfinished dark room, physical pressure ripple, lamps awakening, signal moving onward. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, city responding to organised signal, rooms awakening, muted amber entering cold blue, natural dawn next step."
+            - group [ref=e812]:
+              - generic "Negative prompt, seed, and continuity" [ref=e813] [cursor=pointer]
+            - generic [ref=e816]:
+              - generic [ref=e817]: Attempt 1 · $1.60
+              - generic [ref=e818]:
+                - button "Accept" [ref=e819] [cursor=pointer]
+                - button "Reject" [ref=e823] [cursor=pointer]
+                - button "Retry same setup" [ref=e825] [cursor=pointer]
+                - button "Generate new variation" [ref=e827] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e829] [cursor=pointer]
+          - article [ref=e831]:
+            - generic [ref=e832]:
+              - generic [ref=e833]: 15 · chapter-08
+              - generic [ref=e834]:
+                - generic [ref=e835]: Verified
+                - generic [ref=e836]: "Review: Accepted"
+            - heading "Relay" [level=2] [ref=e837]
+            - generic "Relay generated clip" [ref=e838]
+            - paragraph [ref=e839]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Begin the final post-chorus with the signal released into a diverse adult community and warmer light.. Shot action and environment: Across several nearby rooftops before dawn, a small diverse group of ordinary adults passes the thin pale filament from one person to the next. Nobody performs for the camera. Each handoff causes a few more windows and street lights to awaken below. The recurring Signal Bearer releases the filament rather than keeping it. The camera cranes gently upward as the signal becomes shared. Muted amber begins entering the cold blue palette. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: ordinary diverse adults, nearby rooftops, same Signal Bearer releases filament, awakening windows, muted amber enters cold blue. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, the same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, face obscured, pale filament around the left wrist, city responding to organised signal, rooms awakening, muted amber entering cold blue, natural dawn next step."
+            - group [ref=e840]:
+              - generic "Negative prompt, seed, and continuity" [ref=e841] [cursor=pointer]
+            - generic [ref=e844]:
+              - generic [ref=e845]: Attempt 1 · $1.60
+              - generic [ref=e846]:
+                - button "Accept" [ref=e847] [cursor=pointer]
+                - button "Reject" [ref=e851] [cursor=pointer]
+                - button "Retry same setup" [ref=e853] [cursor=pointer]
+                - button "Generate new variation" [ref=e855] [cursor=pointer]
+          - article [ref=e857]:
+            - generic [ref=e858]:
+              - generic [ref=e859]: 16 · chapter-08
+              - generic [ref=e860]:
+                - generic [ref=e861]: Verified
+                - generic [ref=e862]: "Review: Accepted"
+            - heading "Next Step" [level=2] [ref=e863]
+            - generic "Next Step generated clip" [ref=e864]
+            - paragraph [ref=e865]: "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy. Persistent protagonist: The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock. Narrative intent: Own the sustained outro with restrained first-person hope and only the next step revealed.. Shot action and environment: First-person point of view at early dawn facing a dark outdoor concrete staircase. Only the nearest step illuminates when the viewer approaches it. Each previous step dims softly while the next one becomes visible, so the entire destination is never revealed at once. The camera reaches a modest rooftop horizon where the pale filament continues forward beyond the frame. Natural dawn light, restrained hope and no triumphant fantasy ending. Finish on one clearly illuminated next step. Palette: graphite black, cold blue, concrete grey, rare controlled warning red, pale cyan-white signal filament, muted amber and natural dawn only near the ending. Camera language: restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, stable readable opening composition, one dominant action, controlled movement, usable closing frame. Lighting: winter night practical light, cold blue street light, industrial floodlights, deep but detailed shadow, gradual muted amber near the ending, natural early dawn for the final image. Texture and atmosphere: rain on concrete and glass, brutalist surfaces, winter air, subtle film grain, realistic metal timber smoke and dark glass, one restrained impossible event inside believable reality. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: first-person view, dark concrete staircase, one illuminated next step, natural dawn, pale filament beyond frame. Locked continuity profile: photoreal non-specific British city, graphite cold-blue concrete palette, pale cyan-white signal filament, one restrained impossible event, believable movement and physics, city responding to organised signal, rooms awakening, muted amber entering cold blue, natural dawn next step."
+            - group [ref=e866]:
+              - generic "Negative prompt, seed, and continuity" [ref=e867] [cursor=pointer]
+            - generic [ref=e870]:
+              - generic [ref=e871]: Attempt 1 · $1.60
+              - generic [ref=e872]:
+                - button "Accept" [ref=e873] [cursor=pointer]
+                - button "Reject" [ref=e877] [cursor=pointer]
+                - button "Retry same setup" [ref=e879] [cursor=pointer]
+                - button "Generate new variation" [ref=e881] [cursor=pointer]
+                - button "Use previous accepted end frame" [ref=e883] [cursor=pointer]
+        - generic [ref=e885]:
+          - generic [ref=e887]:
+            - generic [ref=e888]: Step 3 · local finishing package
+            - heading "Automatic assembly and Resolve handoff" [level=2] [ref=e889]
+          - generic [ref=e893]:
+            - generic [ref=e894]:
+              - strong [ref=e895]: Original master
+              - generic [ref=e896]: Audio master bound · verified
+              - paragraph [ref=e897]: STATIC INTO SIGNAL.wav · 218.320 seconds · 48,000 Hz · 2 channels
+              - generic [ref=e898]: "Source: local selection · verified: yes"
+              - generic [ref=e899]:
+                - text: SHA-256
+                - code [ref=e900]: 81442330297a2a14a1d88e5acb1d4a08bc78e432e119ab6529e73dac1c8b175e
+            - generic [ref=e901]:
+              - button "Replace audio…" [ref=e902] [cursor=pointer]
+              - button "Clear binding" [ref=e906] [cursor=pointer]
+          - generic [ref=e908]:
+            - button "Resolve timeline" [ref=e909] [cursor=pointer]
+            - button "Export Resolve package" [ref=e911] [cursor=pointer]
+            - button "Assemble full preview" [ref=e913] [cursor=pointer]
+            - button "Open output" [ref=e915] [cursor=pointer]
+          - generic [ref=e919]:
+            - link "FCPXML" [ref=e920] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/fcpxml
+            - link "FCP 7 XML" [ref=e925] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/fcp7
+            - link "EDL" [ref=e930] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/edl
+            - link "Edit sheet CSV" [ref=e935] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/edit-sheet
+            - link "Markers CSV" [ref=e940] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/markers
+            - link "Relink map" [ref=e945] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/relink-map
+            - link "Coverage report" [ref=e950] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/coverage-report
+            - link "Render manifest" [ref=e955] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/render-manifest
+            - link "Verification report" [ref=e960] [cursor=pointer]:
+              - /url: /api/mission-control/video/jobs/cce1fa1c-ca2a-41e6-8cd3-cd8f05c132c0/artifacts/verification-report

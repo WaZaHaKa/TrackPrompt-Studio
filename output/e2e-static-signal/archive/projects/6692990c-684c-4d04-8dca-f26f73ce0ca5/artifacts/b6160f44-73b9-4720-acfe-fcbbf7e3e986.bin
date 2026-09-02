@@ -1,0 +1,31 @@
+# TrackPrompt mastering comparison
+
+Batch: `779f551c-c1fa-4021-ad02-f3684920c19f`
+Generated: 2026-08-15T14:17:51.950223+00:00
+
+| # | Track | Range (s) | LUFS | Sample peak dBFS | Stereo | Phase | Outliers |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | Track 1 | 0.000-12.000 | -27.1 | -6.26 | 0.0 | 1.0 | none |
+
+## Set medians
+
+- bpm: 120.0
+- integratedLoudnessLufs: -27.1
+- loudnessRangeLu: 48.41
+- samplePeakDbfs: -6.26
+- macroDynamicRangeDb: 60.52
+- stereoWidth: 0.0
+- phaseCorrelation: 1.0
+- spectralCentroidHz: 0.0
+- onsetDensity: 1.917
+
+## Observations
+
+- No configured outlier rule fired.
+
+## Estimator limitations
+
+- This is an analytical comparison, not an automatic mastering decision or target prescription.
+- Sample peak is not true peak. No universal LUFS, tonal-balance, or stereo target is assumed.
+- Crossfaded material contains both tracks; TrackPrompt does not claim source separation.
+- Missing or low-confidence measurements remain withheld rather than manufactured.

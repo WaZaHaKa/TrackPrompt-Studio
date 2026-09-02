@@ -1,0 +1,755 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "shotCount": 16,
+  "provisionalDurationSeconds": 149.0,
+  "promptTarget": "Wan2.2 image-to-video; motion prompt kept below 100 words and static appearance supplied through the keyframe/reference assets",
+  "shots": [
+    {
+      "shotId": "shot-001",
+      "chapterId": "source",
+      "order": 1,
+      "title": "The Iron Seed",
+      "provisionalStartSeconds": 0.0,
+      "provisionalEndSeconds": 8.0,
+      "provisionalDurationSeconds": 8.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Introduce the source melody as something carefully built rather than merely played.",
+      "keyframePrompt": "The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos sits at a compact warm mechanical workbench before dawn, folding the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged from narrow metal strips that resemble guitar strings. Tiny amber gears glow inside the bird's chest; rain-dark windows and shelves of hand tools recede into watercolor shadow. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "A slow, deliberate dolly moves toward the workbench. The Architect folds one metal feather, the bird's amber heart begins to pulse, tiny gears turn, and a faint curl of steam drifts upward. The camera stays stable and the action unfolds as one continuous shot, ending on the bird opening one eye.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.1,
+        0.28
+      ],
+      "seed": 24081001,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "origami-bird-core",
+        "warm-workshop"
+      ],
+      "transitionIn": "fade-from-black",
+      "transitionOut": "the bird opens one wing toward lens; use its dark feather as a practical wipe",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.25,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "The bird silhouette and amber heart must be readable by 00:05.",
+        "No guitar brand marks or written notation."
+      ]
+    },
+    {
+      "shotId": "shot-002",
+      "chapterId": "source",
+      "order": 2,
+      "title": "Send",
+      "provisionalStartSeconds": 8.0,
+      "provisionalEndSeconds": 17.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Turn the original riff into a message traveling from one collaborator to the other.",
+      "keyframePrompt": "The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos releases the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged into a circular brass-and-glass conduit in the workshop wall. The bird hovers at the threshold, amber heart bright against a tunnel formed from curved cables and floating measure-like bars without any written symbols. Warm light falls behind it; the tunnel ahead shifts toward rain blue. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The bird launches forward and the camera follows directly behind through a spiraling cable tunnel. Metal ribs flex like wings, amber reflections streak along the curved walls, and the warm workshop light falls away into cool blue. Keep a smooth forward chase with no cuts and end as the tunnel becomes a round window.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.18,
+        0.34
+      ],
+      "seed": 24081002,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "origami-bird-core",
+        "warm-workshop",
+        "travel-conduit"
+      ],
+      "transitionIn": "dark-feather wipe from shot-001",
+      "transitionOut": "match the circular conduit to a rain-covered circular window",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Forward direction must remain consistent.",
+        "The bird cannot change size, shape, or heart position."
+      ]
+    },
+    {
+      "shotId": "shot-003",
+      "chapterId": "source",
+      "order": 3,
+      "title": "Rain Room",
+      "provisionalStartSeconds": 17.0,
+      "provisionalEndSeconds": 26.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Introduce the second collaborator and the quieter world where the remix will form.",
+      "keyframePrompt": "The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos stands in a small blue rain-lit studio as the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged arrives through an open circular window. A tape deck, compact keyboard shapes without labels, a ceramic cup, and hanging acoustic fabric sit in soft shadow. Rain beads on the glass; the amber scarf and the bird's heart create the only warm accents. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "Begin outside the rain-covered window and glide through it behind the arriving bird. The Listener turns, raises both hands, and gently receives the bird while rain curtains sway and the amber heart reflects in their eyes. Use a calm continuous move, finishing in a medium close view of bird and hands.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.16,
+        0.31
+      ],
+      "seed": 24081003,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "listener-identity",
+        "origami-bird-core",
+        "rain-room"
+      ],
+      "transitionIn": "circular-window match cut",
+      "transitionOut": "a lightning reflection creates a restrained one-frame white bridge into the old pulse",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Clearly adult fictional character.",
+        "Hands must remain anatomically stable while catching the bird."
+      ]
+    },
+    {
+      "shotId": "shot-004",
+      "chapterId": "source",
+      "order": 4,
+      "title": "Old Pulse",
+      "provisionalStartSeconds": 26.0,
+      "provisionalEndSeconds": 35.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Show the progressive-metal origin as precise, angular, and alive without turning the video aggressive.",
+      "keyframePrompt": "The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos watches the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged stand on the tape deck. Its brushed-metal wings are spread in sharp geometric angles, and thin amber afterimages trace a complex fast rhythm through the blue room. Rain hangs like diagonal strings beyond the window; the Listener remains calm but surprised. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The bird performs rapid but readable angular wing patterns in place while the camera makes a slow half orbit. Amber motion echoes mark the intricate pulse, desk objects tremble lightly, and rain flashes with each accent. Do not cut or shake the camera; end with the Listener reaching toward the tape reel.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.32,
+        0.58
+      ],
+      "seed": 24081004,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "listener-identity",
+        "origami-bird-metal",
+        "rain-room"
+      ],
+      "transitionIn": "restrained white reflection bridge",
+      "transitionOut": "match the final wing rotation to the rotation of a tape reel",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Fast subject motion, slow camera.",
+        "No combat imagery and no literal musical notation."
+      ]
+    },
+    {
+      "shotId": "shot-005",
+      "chapterId": "transformation",
+      "order": 5,
+      "title": "Turn the Tempo",
+      "provisionalStartSeconds": 35.0,
+      "provisionalEndSeconds": 44.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Make the tempo change visible as a compassionate act of listening.",
+      "keyframePrompt": "The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos turns a large unlabeled tape reel by hand beside the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged. The reel, the bird's wing, and suspended rain droplets share the same circular composition. Indigo shadows soften; a thin amber thread runs from the reel to the bird's mechanical heart. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The Listener slowly turns the reel counterclockwise. With each rotation, the bird's wingbeats relax, rain droplets descend more slowly, and the amber pulse widens into a breathing rhythm. The camera gently pushes closer to the shared circular motion, ending as one metal feather begins to soften.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.24,
+        0.44
+      ],
+      "seed": 24081005,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "listener-identity",
+        "origami-bird-core",
+        "rain-room",
+        "amber-thread"
+      ],
+      "transitionIn": "wing-to-reel rotational match",
+      "transitionOut": "the softened metal feather spreads into an ink-and-paper bleed",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Tempo change must read without text or clocks.",
+        "The scene should feel tender, not like equipment failure."
+      ]
+    },
+    {
+      "shotId": "shot-006",
+      "chapterId": "transformation",
+      "order": 6,
+      "title": "Armor to Paper",
+      "provisionalStartSeconds": 44.0,
+      "provisionalEndSeconds": 53.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Transform the arrangement's surface while preserving the composition's identity.",
+      "keyframePrompt": "Macro view of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged in the Listener's hands. Half of each feather remains brushed dark metal while the outer layers have become indigo paper and charcoal fabric, joined by fine amber stitching. The exact bird silhouette and amber mechanical heart remain stable; watercolor rain glows softly behind. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "In one slow macro move, metal feathers soften from their tips inward into layered paper and fabric. Fine amber stitches travel along each seam, the bird breathes once, and loose fibers lift in the room's air. Keep the heart unchanged and finish when the transformed wing settles into the Listener's palm.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.18,
+        0.38
+      ],
+      "seed": 24081006,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "listener-identity",
+        "origami-bird-core",
+        "origami-bird-hybrid",
+        "amber-thread"
+      ],
+      "transitionIn": "ink-and-paper bleed from the reel",
+      "transitionOut": "paper fibers lengthen into vertical rain streaks",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Transformation must preserve exact silhouette and heart.",
+        "Avoid body horror or melting anatomy."
+      ]
+    },
+    {
+      "shotId": "shot-007",
+      "chapterId": "transformation",
+      "order": 7,
+      "title": "New Drums",
+      "provisionalStartSeconds": 53.0,
+      "provisionalEndSeconds": 62.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Build the downtempo beat from the room itself and make the new groove feel handmade.",
+      "keyframePrompt": "The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos sits beside the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged on the desk. A rain droplet above a puddle, the ceramic cup, a loose pencil, a hanging fabric panel, and the tape reel form a visual percussion circle. Soft amber rings connect them without symbols; the hybrid bird watches. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "A calm lateral camera move follows a repeating chain: rain drop touches puddle, cup gives a tiny resonant hop, pencil taps once, fabric sways, tape reel turns, and the bird nods to the new downtempo pulse. Keep every motion subtle, synchronized, and continuous, ending on a widening water ripple.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.3,
+        0.52
+      ],
+      "seed": 24081007,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "listener-identity",
+        "origami-bird-hybrid",
+        "rain-room",
+        "amber-rhythm-rings"
+      ],
+      "transitionIn": "paper fibers become rain streaks",
+      "transitionOut": "the widening puddle ripple becomes a circular night sky",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Objects move minimally and rhythmically.",
+        "No visible brand names, letters, or DAW interface."
+      ]
+    },
+    {
+      "shotId": "shot-008",
+      "chapterId": "transformation",
+      "order": 8,
+      "title": "The Solo Becomes a Comet",
+      "provisionalStartSeconds": 62.0,
+      "provisionalEndSeconds": 71.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Translate the essence of the original solo into a lyrical new visual voice.",
+      "keyframePrompt": "the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged flies above a quiet watercolor city at night while a long warm amber ribbon streams from its heart, curling like a comet and a koi tail. The city is iron blue and indigo, with wet roofs and sparse window lights; no signs or text are visible. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The camera glides beside the bird as it arcs between rain clouds and rooftops. Its amber ribbon draws one expressive rising curve, briefly coils like a swimming koi, then releases into a descending phrase. Maintain smooth lyrical motion, stable character design, and one continuous flight ending as the ribbon divides toward two windows.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.42,
+        0.68
+      ],
+      "seed": 24081008,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "origami-bird-hybrid",
+        "night-city",
+        "amber-solo-ribbon"
+      ],
+      "transitionIn": "water ripple expands into the night sky",
+      "transitionOut": "the amber comet splits into two trails that lead into two separate windows",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": true
+      },
+      "reviewNotes": [
+        "This is the first hero visual; prioritize line stability.",
+        "No skyline signs or readable windows."
+      ]
+    },
+    {
+      "shotId": "shot-009",
+      "chapterId": "conflict-collaboration",
+      "order": 9,
+      "title": "Parallel Rooms",
+      "provisionalStartSeconds": 71.0,
+      "provisionalEndSeconds": 80.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Reveal both collaborators listening to the same transformed idea from different places.",
+      "keyframePrompt": "A balanced split composition with no border text: on the warm left, The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos pauses at the workbench; on the cool right, The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos sits in the rain room. The same amber ribbon crosses both spaces, and a small shadow of the hybrid bird passes through each window at the same height. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "Both rooms move in quiet synchronization: the Architect taps two fingers, the Listener turns the reel, and the amber ribbon pulses between them. The camera performs a very slow symmetrical push into both halves while the bird's shadow crosses each window. Keep the split stable until its center seam begins to strain.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.34,
+        0.55
+      ],
+      "seed": 24081009,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "listener-identity",
+        "warm-workshop",
+        "rain-room",
+        "amber-thread"
+      ],
+      "transitionIn": "two amber trails settle into a stable split composition",
+      "transitionOut": "the central split seam tears like paper",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Both character identities must remain stable.",
+        "No literal video-call interface."
+      ]
+    },
+    {
+      "shotId": "shot-010",
+      "chapterId": "conflict-collaboration",
+      "order": 10,
+      "title": "The Fracture",
+      "provisionalStartSeconds": 80.0,
+      "provisionalEndSeconds": 89.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Create a narrative conflict between preserving the source and embracing the remix.",
+      "keyframePrompt": "In an abstract dark paper space, two versions of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged pull apart: one rigid brushed-metal shadow and one soft indigo-paper shadow. A single amber heart remains between them, connected by a taut thread. The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos and The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos appear as distant silhouettes on opposite sides, both reaching but not fighting. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The metal and paper bird shadows pull in opposite directions while the amber thread stretches and vibrates. The camera slowly cranes upward to reveal both adult silhouettes reaching toward the shared heart. A small tear opens through the paper space, but the heart stays intact and the motion pauses at maximum tension.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.46,
+        0.7
+      ],
+      "seed": 24081010,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "listener-identity",
+        "origami-bird-duality",
+        "amber-heart"
+      ],
+      "transitionIn": "the split-screen seam tears into abstract paper space",
+      "transitionOut": "the tear folds inward around the amber heart for a macro match cut",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Conflict is artistic, not interpersonal violence.",
+        "The single heart must never duplicate."
+      ]
+    },
+    {
+      "shotId": "shot-011",
+      "chapterId": "conflict-collaboration",
+      "order": 11,
+      "title": "Keep the Heart",
+      "provisionalStartSeconds": 89.0,
+      "provisionalEndSeconds": 98.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Resolve the central question: change the form, keep the musical heart.",
+      "keyframePrompt": "Macro view of The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos carefully placing the original warm amber mechanical heart back inside the transformed paper-and-fabric body of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged. Fine metal ribs remain beneath the soft feathers. The Architect's rust-colored sleeve is visible at the edge of frame, helping steady the bird. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The Listener lowers the glowing heart into the bird while the Architect steadies one wing. The heart clicks gently into place, sends a slow amber pulse through metal ribs and paper feathers, and the bird takes one deep breath. Use a steady macro push and end as a circular pulse expands beyond frame.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.24,
+        0.48
+      ],
+      "seed": 24081011,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "listener-identity",
+        "origami-bird-hybrid",
+        "amber-heart"
+      ],
+      "transitionIn": "paper tear folds into a macro frame around the heart",
+      "transitionOut": "the expanding amber heartbeat becomes the arch of a floating bridge",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Both sleeves and hands should stay anatomically stable.",
+        "The original heart is explicitly preserved."
+      ]
+    },
+    {
+      "shotId": "shot-012",
+      "chapterId": "conflict-collaboration",
+      "order": 12,
+      "title": "Bridge of Measures",
+      "provisionalStartSeconds": 98.0,
+      "provisionalEndSeconds": 107.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Bring the collaborators into one shared creative space.",
+      "keyframePrompt": "The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos and The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos walk toward one another on a floating bridge made from unmarked translucent bars over a deep indigo void. The hybrid origami bird hovers between them with its amber heart glowing. Warm workshop fragments drift behind one side and rain-room fragments behind the other. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The camera travels sideways as both adults cross the bridge and meet at its center. The bird circles once, then settles across their open hands; warm workshop fragments and cool rain fragments align behind them. Keep the movement slow and continuous, ending when both touch the bird at the same moment.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.38,
+        0.6
+      ],
+      "seed": 24081012,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "listener-identity",
+        "origami-bird-hybrid",
+        "bridge-world"
+      ],
+      "transitionIn": "heartbeat arch expands into the bridge",
+      "transitionOut": "their simultaneous touch triggers a watercolor bloom",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Equal visual agency for both collaborators.",
+        "No handshake cliché or corporate imagery."
+      ]
+    },
+    {
+      "shotId": "shot-013",
+      "chapterId": "release-return",
+      "order": 13,
+      "title": "Co-Write the Sky",
+      "provisionalStartSeconds": 107.0,
+      "provisionalEndSeconds": 116.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Show collaboration as two distinct gestures combining into one new environment.",
+      "keyframePrompt": "The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos draws a precise rust-and-amber ribbon through the air while The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos draws a fluid indigo-and-amber ribbon. The ribbons weave above the floating bridge into clouds, stars, and the silhouette of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged without any symbols or text. Watercolor pigment blooms around their hands. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "One ribbon moves in measured angular arcs and the other in broad flowing curves. They cross, braid, and paint a living night sky while the camera makes a gentle orbit around both adults. The bird flies through the newly formed pattern and pulls the finished weave toward the city.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.48,
+        0.72
+      ],
+      "seed": 24081013,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "listener-identity",
+        "origami-bird-hybrid",
+        "coauthored-ribbons"
+      ],
+      "transitionIn": "watercolor bloom reveals the shared sky",
+      "transitionOut": "the woven ribbon sweeps across lens as a soft luma-and-pigment wipe",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": false
+      },
+      "reviewNotes": [
+        "Two distinct motion languages should remain visible.",
+        "Do not create written notes, glyphs, or constellations with text."
+      ]
+    },
+    {
+      "shotId": "shot-014",
+      "chapterId": "release-return",
+      "order": 14,
+      "title": "The City Learns the Groove",
+      "provisionalStartSeconds": 116.0,
+      "provisionalEndSeconds": 125.0,
+      "provisionalDurationSeconds": 9.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Deliver the visual climax: the transformed track becomes a shared pulse beyond the two rooms.",
+      "keyframePrompt": "the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged leads the woven amber-and-indigo ribbon through the quiet night city. Rooftop water tanks, laundry lines, puddles, tram cables, and many unmarked windows lean into one downtempo wave. The city remains hand-painted and intimate rather than futuristic. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "Follow the bird in a broad descending flight as the ribbon passes over rooftops. Window lights, puddle rings, laundry, cables, and distant trees answer in a slow synchronized groove. Use the largest camera move of the film but keep it smooth and readable, ending as the bird flies close across the lens.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.62,
+        0.88
+      ],
+      "seed": 24081014,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "origami-bird-hybrid",
+        "night-city",
+        "coauthored-ribbons"
+      ],
+      "transitionIn": "woven ribbon luma-and-pigment wipe",
+      "transitionOut": "the bird crosses close to lens and reveals the warm workshop behind its wing",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 1.5,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": true
+      },
+      "reviewNotes": [
+        "Primary climax and thumbnail candidate.",
+        "No billboards, signs, logos, or random crowd faces."
+      ]
+    },
+    {
+      "shotId": "shot-015",
+      "chapterId": "release-return",
+      "order": 15,
+      "title": "Return Signal",
+      "provisionalStartSeconds": 125.0,
+      "provisionalEndSeconds": 137.0,
+      "provisionalDurationSeconds": 12.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "Let the source composer recognize that the remix changed the surface without erasing the origin.",
+      "keyframePrompt": "Back in the warm workshop, The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos receives the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged, now with indigo paper-and-fabric feathers over visible metal ribs and the same amber heart. A tiny rain droplet clings to one feather. The Architect recognizes the heart and smiles subtly; no sentimental exaggeration. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "The bird enters from behind the camera and lands on the Architect's open hands. Its soft feathers unfold to reveal the original metal ribs and unchanged amber heart; one rain droplet falls onto the workbench and becomes a small glowing ring. The camera slowly pulls back as the Architect nods in recognition.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.36,
+        0.62
+      ],
+      "seed": 24081015,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "architect-identity",
+        "origami-bird-hybrid",
+        "warm-workshop",
+        "amber-heart"
+      ],
+      "transitionIn": "bird-wing lens reveal into the warm workshop",
+      "transitionOut": "match the glowing ring on the workbench to the glow of a distant dawn window",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 2.0,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": true
+      },
+      "reviewNotes": [
+        "Recognition should be subtle and adult.",
+        "Preserve the hybrid design established in shot-006."
+      ]
+    },
+    {
+      "shotId": "shot-016",
+      "chapterId": "release-return",
+      "order": 16,
+      "title": "Between Two Rooms",
+      "provisionalStartSeconds": 137.0,
+      "provisionalEndSeconds": 149.0,
+      "provisionalDurationSeconds": 12.0,
+      "timingConfidence": "provisional-until-audio-analysis",
+      "narrativeIntent": "End on durable connection rather than ownership: one transformed idea living between two creators.",
+      "keyframePrompt": "A wide dawn exterior of two distant upper-floor windows across a quiet hand-painted city: one window glows warm rust, the other cool indigo. A faint amber thread links them through the pale rose sky. The hybrid origami bird rests on a cable exactly between the windows, its tiny heart still visible. No people are foregrounded. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+      "prompt": "Begin close on the resting bird as its amber heart pulses once. The camera performs a long, steady pullback to reveal the two distant glowing windows connected by the fine thread. Morning light slowly rises, the bird folds its wings, and the thread remains visible as the image gently fades to black.",
+      "negativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+      "sourceSectionHints": [
+        "snap to the nearest matching TrackPrompt section and phrase boundary"
+      ],
+      "energyRange": [
+        0.12,
+        0.34
+      ],
+      "seed": 24081016,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "2.5d-parallax-hold",
+        "optical-flow-slowdown"
+      ],
+      "continuityTokens": [
+        "origami-bird-hybrid",
+        "night-to-dawn-city",
+        "amber-thread"
+      ],
+      "transitionIn": "workbench glow match-cuts to the warm dawn window",
+      "transitionOut": "slow fade-to-black on the final audio decay",
+      "assemblyRecipe": {
+        "startKeyframeParallaxSeconds": 2.0,
+        "generatedI2VCoreSeconds": 5.0625,
+        "remainderStrategy": "use end-frame 2.5D motion, restrained optical-flow slowdown, and the specified transition; do not duplicate whole clips",
+        "heroVariantAllowed": true
+      },
+      "reviewNotes": [
+        "Final frame must hold cleanly for at least 24 frames.",
+        "The connection remains; the bird does not fly away."
+      ]
+    }
+  ]
+}

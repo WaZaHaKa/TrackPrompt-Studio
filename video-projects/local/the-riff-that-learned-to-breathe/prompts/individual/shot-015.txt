@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-015 — Return Signal
+Provisional timing: 125.000–137.000 s
+Seed: 24081015
+
+NARRATIVE INTENT
+Let the source composer recognize that the remix changed the surface without erasing the origin.
+
+KEYFRAME PROMPT
+Back in the warm workshop, The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos receives the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged, now with indigo paper-and-fabric feathers over visible metal ribs and the same amber heart. A tiny rain droplet clings to one feather. The Architect recognizes the heart and smiles subtly; no sentimental exaggeration. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The bird enters from behind the camera and lands on the Architect's open hands. Its soft feathers unfold to reveal the original metal ribs and unchanged amber heart; one rain droplet falls onto the workbench and becomes a small glowing ring. The camera slowly pulls back as the Architect nods in recognition.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+architect-identity, origami-bird-hybrid, warm-workshop, amber-heart
+
+TRANSITION IN
+bird-wing lens reveal into the warm workshop
+
+TRANSITION OUT
+match the glowing ring on the workbench to the glow of a distant dawn window
+
+ACCEPTANCE NOTES
+- Recognition should be subtle and adult.
+- Preserve the hybrid design established in shot-006.

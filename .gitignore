@@ -23,6 +23,7 @@ __pycache__/
 venv/
 .pytest_cache/
 .pytest_*/
+.pytest-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -47,6 +48,9 @@ test-output/
 # Authorized production image sequences and final media stay local.
 final-output/
 
+# Explicit operator-start decisions are local control artifacts, never source.
+production/**/.operator-authorizations/
+
 # Provider-neutral remote render packages may contain the scene and assets.
 render-packages/
 
@@ -63,3 +67,7 @@ render-profiles/**/*.md
 Thumbs.db
 .idea/
 .vscode/
+# Local video project inputs and generated output views stay private/runtime-only.
+video-projects/local/*/audio/*
+!video-projects/local/*/audio/PUT_TRACK_HERE.txt
+video-projects/local/*/outputs/

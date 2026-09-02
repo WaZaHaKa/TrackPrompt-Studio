@@ -4,12 +4,16 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import subprocess
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, cast
 from uuid import UUID, uuid4
 
+from ..analysis_archive import AnalysisArchiveRepository
+from ..privacy import secure_private_directory, secure_private_file
 from .assembly import execute_assembly
 from .audio import AudioBindingError, StagedAudio, probe_audio, stage_audio_master
 from .authorization import BatchAuthorization, authorization_phrase
@@ -31,6 +35,8 @@ from .gcp_veo import (
 from .jsonio import atomic_write_json, read_json, sha256_file, sha256_json
 from .media import probe, verify_generated_clip
 from .mission_models import (
+    VideoAnalysisDependencyState,
+    VideoAnalysisDependencyView,
     VideoAnalysisSource,
     VideoArtifactSummary,
     VideoAudioBinding,
@@ -183,6 +189,7 @@ class VideoGenerationController:
         self.repository_root = repository_root.resolve()
         self.analysis_jobs_root = (state_root.parent / "jobs").resolve()
         self.runtime_root = (state_root.parent / "video-generation").resolve()
+        self.analysis_archive = AnalysisArchiveRepository(state_root.parent)
         self.store = store
         self.notify_event = notify_event
         self.provider_factory = provider_factory or (
@@ -240,18 +247,65 @@ class VideoGenerationController:
             )
         return normalized
 
-    def _analysis_directory(self, analysis_job_id: str) -> Path:
+    @staticmethod
+    def _analysis_id(analysis_job_id: str) -> str:
         try:
-            canonical = str(UUID(analysis_job_id))
+            return str(UUID(analysis_job_id))
         except ValueError as exc:
-            raise self._error(404, "analysis_not_found", "The selected analysis does not exist") from exc
+            raise VideoGenerationController._error(
+                404,
+                "analysis_not_found",
+                "The selected analysis does not exist",
+            ) from exc
+
+    def _live_analysis_directory(self, analysis_job_id: str) -> Path | None:
+        canonical = self._analysis_id(analysis_job_id)
         path = (self.analysis_jobs_root / canonical).resolve()
         if path.parent != self.analysis_jobs_root or not path.is_dir():
-            raise self._error(404, "analysis_not_found", "The selected analysis does not exist")
+            return None
         return path
 
+    def _analysis_artifact(self, analysis_job_id: str, artifact_kind: str) -> tuple[Path | None, str]:
+        archived = self.analysis_archive.resolve_artifact(analysis_job_id, artifact_kind)
+        if archived is not None:
+            return archived, VideoAnalysisDependencyState.ARCHIVED_ANALYSIS.value
+        live = self._live_analysis_directory(analysis_job_id)
+        filename = {
+            "story-plan": "story-plan.json",
+            "shot-plan": "shot-plan.json",
+            "analysis": "analysis.json",
+        }.get(artifact_kind)
+        if live is not None and filename is not None and (live / filename).is_file():
+            return (live / filename).resolve(), VideoAnalysisDependencyState.LIVE_ANALYSIS.value
+        return None, VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+
+    def _analysis_source(self, analysis_job_id: str) -> tuple[Path | None, str]:
+        archived = self.analysis_archive.resolve_source(analysis_job_id)
+        if archived is not None:
+            return archived, VideoAnalysisDependencyState.ARCHIVED_ANALYSIS.value
+        live = self._live_analysis_directory(analysis_job_id)
+        if live is not None and (live / "source.bin").is_file():
+            return (live / "source.bin").resolve(), VideoAnalysisDependencyState.LIVE_ANALYSIS.value
+        return None, VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+
     def catalog(self) -> VideoCatalog:
-        analyses: list[VideoAnalysisSource] = []
+        analyses_by_id: dict[str, VideoAnalysisSource] = {}
+        archived_entries, _ = self.analysis_archive.list(limit=200, sort="created_desc")
+        for entry in archived_entries:
+            if entry["status"] == "explicitly_deleted":
+                continue
+            analysis_id = str(entry["analysisId"])
+            analyses_by_id[analysis_id] = VideoAnalysisSource(
+                analysis_job_id=analysis_id,
+                display_name=str(entry["displayName"]),
+                story_plan_available=bool(entry["storyPlanAvailable"]),
+                shot_plan_available=bool(entry["shotPlanAvailable"]),
+                retained_audio_available=bool(entry["retainedAudioAvailable"]),
+                created_at=datetime.fromisoformat(str(entry["createdAt"])),
+                duration_seconds=entry["durationSeconds"],
+                archived=entry["archivedAt"] is not None,
+                archive_health=str(entry["archiveHealth"]),
+            )
         if self.analysis_jobs_root.is_dir():
             for path in sorted(
                 (item for item in self.analysis_jobs_root.iterdir() if item.is_dir()),
@@ -267,13 +321,16 @@ class VideoGenerationController:
                 analysis = (path / "analysis.json").is_file()
                 if not (story or shots or analysis):
                     continue
-                analyses.append(
+                if canonical in analyses_by_id:
+                    continue
+                analyses_by_id[canonical] = (
                     VideoAnalysisSource(
                         analysis_job_id=canonical,
                         display_name=f"Analysis {canonical[:8]}",
                         story_plan_available=story,
                         shot_plan_available=shots,
                         retained_audio_available=(path / "source.bin").is_file(),
+                        created_at=datetime.fromtimestamp(path.stat().st_mtime, tz=UTC),
                     )
                 )
 
@@ -332,26 +389,155 @@ class VideoGenerationController:
                 )
             )
         return VideoCatalog(
-            analyses=tuple(analyses),
+            analyses=tuple(analyses_by_id.values()),
             packages=tuple(packages),
             pricing_snapshot_date=PRICE_SNAPSHOT_DATE,
         )
 
+    def _publish_dependency_artifact(
+        self,
+        source: Path,
+        destination: Path,
+        *,
+        expected_sha256: str | None,
+    ) -> dict[str, Any]:
+        digest = sha256_file(source)
+        if expected_sha256 is not None and digest != expected_sha256:
+            raise self._error(
+                422,
+                "analysis_dependency_hash_mismatch",
+                "An analysis dependency no longer matches the exact compiled plan",
+            )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        secure_private_directory(destination.parent)
+        if destination.is_file():
+            if sha256_file(destination) != digest:
+                raise self._error(
+                    409,
+                    "analysis_dependency_conflict",
+                    "The video job already contains a conflicting dependency snapshot",
+                )
+        else:
+            temporary = destination.with_name(f".{destination.name}.partial-{uuid4().hex}")
+            try:
+                shutil.copyfile(source, temporary)
+                secure_private_file(temporary)
+                if sha256_file(temporary) != digest:
+                    raise self._error(
+                        500,
+                        "analysis_dependency_copy_failed",
+                        "The analysis dependency snapshot could not be verified",
+                    )
+                os.replace(temporary, destination)
+                secure_private_file(destination)
+            finally:
+                temporary.unlink(missing_ok=True)
+        return {
+            "available": True,
+            "relativePath": destination.name,
+            "sha256": digest,
+            "byteSize": destination.stat().st_size,
+        }
+
+    def _snapshot_analysis_dependencies(
+        self,
+        job: VideoJobRecord,
+        *,
+        story_path: Path | None,
+        shot_path: Path | None,
+        source_state: str,
+        audio_path: Path | None,
+    ) -> VideoJobRecord:
+        root = self._job_root(job) / "inputs" / "analysis"
+        root.mkdir(parents=True, exist_ok=True)
+        secure_private_directory(root)
+        source_artifacts = cast(dict[str, Any], job.plan.get("sourceArtifacts", {}))
+        story = (
+            self._publish_dependency_artifact(
+                story_path,
+                root / "story-plan.json",
+                expected_sha256=cast(str | None, source_artifacts.get("storyPlanSha256")),
+            )
+            if story_path is not None
+            else {"available": False}
+        )
+        shots = (
+            self._publish_dependency_artifact(
+                shot_path,
+                root / "shot-plan.json",
+                expected_sha256=cast(str | None, source_artifacts.get("shotPlanSha256")),
+            )
+            if shot_path is not None
+            else {"available": False}
+        )
+        audio = (
+            {
+                "available": True,
+                "sha256": sha256_file(audio_path),
+                "byteSize": audio_path.stat().st_size,
+            }
+            if audio_path is not None
+            else {"available": False}
+        )
+        manifest = {
+            "schemaVersion": "1.0.0",
+            "analysisId": job.analysis_job_id,
+            "providerPlanDigest": job.plan_digest,
+            "sourceState": source_state,
+            "createdAt": utc_now().isoformat(),
+            "artifacts": {"storyPlan": story, "shotPlan": shots},
+            "audioMaster": audio,
+            "optionalArtifactPolicy": "missing-shot-plan-uses-normalized-chapter-timing",
+        }
+        manifest_path = root / "analysis-dependency-manifest.json"
+        atomic_write_json(manifest_path, manifest)
+        self.analysis_archive.register_dependency(
+            job.analysis_job_id,
+            dependent_kind="video-generation",
+            dependent_id=job.id,
+            snapshot_complete=True,
+        )
+        return job.model_copy(
+            update={
+                "analysis_dependency_state": VideoAnalysisDependencyState.SNAPSHOTTED,
+                "dependency_manifest_path": str(manifest_path),
+            }
+        )
+
     async def create_plan(self, request: VideoPlanCreateRequest) -> VideoJobView:
-        analysis_directory = self._analysis_directory(request.analysis_job_id)
+        analysis_directory = self._live_analysis_directory(request.analysis_job_id)
+        analysis_entry = self.analysis_archive.get(request.analysis_job_id)
+        analysis_path, analysis_source_state = self._analysis_artifact(
+            request.analysis_job_id, "analysis"
+        )
+        if analysis_directory is None and analysis_entry is None and analysis_path is None:
+            raise self._error(404, "analysis_not_found", "The selected analysis does not exist")
         project_root = self._project_root(request.project_id)
         bucket = self._bucket(request.gcs_bucket)
         config_path = project_root / _PROFILE_FILES[request.profile_id]
-        story_path = analysis_directory / "story-plan.json"
-        shot_path = analysis_directory / "shot-plan.json"
+        story_path, story_source_state = self._analysis_artifact(
+            request.analysis_job_id, "story-plan"
+        )
+        shot_path, shot_source_state = self._analysis_artifact(
+            request.analysis_job_id, "shot-plan"
+        )
+        retained_source, audio_source_state = self._analysis_source(request.analysis_job_id)
+        source_state = next(
+            (
+                value
+                for value in (story_source_state, shot_source_state, audio_source_state, analysis_source_state)
+                if value != VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+            ),
+            VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value,
+        )
         initial_audio_path: Path | None = None
         initial_audio_source: str | None = None
         reference_image_path: Path | None = None
         if request.audio_path:
             initial_audio_path = Path(request.audio_path).expanduser().resolve()
             initial_audio_source = "local-selection"
-        elif (analysis_directory / "source.bin").is_file():
-            initial_audio_path = (analysis_directory / "source.bin").resolve()
+        elif retained_source is not None:
+            initial_audio_path = retained_source
             initial_audio_source = "analysis-retained"
         if initial_audio_path is not None and not initial_audio_path.is_file():
             raise self._error(422, "audio_master_missing", "The selected local audio master is unavailable")
@@ -374,8 +560,8 @@ class VideoGenerationController:
                 # Audio is a local finishing input. It must never alter the
                 # already-reviewed provider-generation digest.
                 audio_master_path=None,
-                story_plan_path=story_path if story_path.is_file() else None,
-                shot_plan_path=shot_path if shot_path.is_file() else None,
+                story_plan_path=story_path,
+                shot_plan_path=shot_path,
                 continuity_profile_path=project_root / "continuity-profile.json",
                 master_seed=request.master_seed,
                 seed_locked=request.seed_locked,
@@ -430,6 +616,13 @@ class VideoGenerationController:
         atomic_write_json(root / "plan.json", record.plan)
         for shot in plan.shots:
             atomic_write_json(root / "request-preview" / f"{shot.shot_id}.json", build_request_payload(shot))
+        record = self._snapshot_analysis_dependencies(
+            record,
+            story_path=story_path,
+            shot_path=shot_path,
+            source_state=source_state,
+            audio_path=initial_audio_path,
+        )
         await self._save(record)
         if initial_audio_path is not None and initial_audio_source is not None:
             selection = await self.bind_audio(
@@ -567,6 +760,30 @@ class VideoGenerationController:
             }
         )
 
+    def _expected_audio_identity(self, job: VideoJobRecord) -> tuple[str | None, float | None]:
+        expected_sha256: str | None = None
+        expected_duration: float | None = None
+        manifest_path = Path(job.dependency_manifest_path) if job.dependency_manifest_path else None
+        if manifest_path is not None and manifest_path.is_file():
+            value = read_json(manifest_path)
+            if isinstance(value, dict):
+                audio = value.get("audioMaster")
+                if isinstance(audio, dict):
+                    candidate = audio.get("sha256")
+                    if isinstance(candidate, str) and re.fullmatch(r"[0-9a-f]{64}", candidate):
+                        expected_sha256 = candidate
+                    duration = audio.get("durationSeconds")
+                    if isinstance(duration, (int, float)) and duration > 0:
+                        expected_duration = float(duration)
+        source_artifacts = cast(dict[str, Any], job.plan.get("sourceArtifacts", {}))
+        candidate = source_artifacts.get("audioMasterSha256")
+        if expected_sha256 is None and isinstance(candidate, str) and re.fullmatch(r"[0-9a-f]{64}", candidate):
+            expected_sha256 = candidate
+        if job.audio_binding is not None:
+            expected_sha256 = expected_sha256 or job.audio_binding.sha256
+            expected_duration = expected_duration or job.audio_binding.duration_seconds
+        return expected_sha256, expected_duration
+
     async def bind_audio(
         self,
         job_id: str,
@@ -574,6 +791,8 @@ class VideoGenerationController:
         *,
         source: Any,
         display_name: str | None = None,
+        accept_local_delivery_revision: bool = False,
+        confirmation: str | None = None,
     ) -> VideoAudioSelection:
         async with self._lock:
             job = self._record(job_id)
@@ -616,17 +835,62 @@ class VideoGenerationController:
                 and Path(job.audio_binding.finishing_path).is_file()
             ):
                 return self._audio_selection(job)
+            expected_sha256, expected_duration = self._expected_audio_identity(job)
+            mismatch = expected_sha256 is not None and expected_sha256 != binding.sha256
+            confirmation_phrase = (
+                f"CONFIRM LOCAL DELIVERY AUDIO {expected_sha256[:12]} TO {binding.sha256[:12]}"
+                if mismatch and expected_sha256 is not None
+                else None
+            )
+            if mismatch and (
+                not accept_local_delivery_revision
+                or confirmation_phrase is None
+                or confirmation != confirmation_phrase
+            ):
+                return VideoAudioSelection(
+                    selected=False,
+                    verified=False,
+                    error=VideoAudioSelectionError(
+                        code="audio_hash_mismatch_confirmation_required",
+                        message="The selected audio differs from the original local delivery identity. Confirm a local-only delivery revision to continue without changing the paid Veo plan.",
+                        expected_hash_prefix=expected_sha256[:12] if expected_sha256 else None,
+                        selected_hash_prefix=binding.sha256[:12],
+                        expected_duration_seconds=expected_duration,
+                        selected_duration_seconds=binding.duration_seconds,
+                        confirmation_phrase=confirmation_phrase,
+                    ),
+                )
             previous_plan_digest = job.plan_digest
             previous_authorization = job.authorization
+            previous_reserved = job.reserved_cost_usd
             self._archive_audio_binding(job)
+            delivery_revision = (
+                {
+                    "schemaVersion": "1.0.0",
+                    "kind": "local-delivery-audio-revision",
+                    "expectedSha256": expected_sha256,
+                    "selectedSha256": binding.sha256,
+                    "expectedDurationSeconds": expected_duration,
+                    "selectedDurationSeconds": binding.duration_seconds,
+                    "confirmedAt": utc_now().isoformat(),
+                    "providerPlanDigest": job.plan_digest,
+                }
+                if mismatch
+                else job.local_delivery_revision
+            )
             updated = self._invalidate_finishing_outputs(job).model_copy(
                 update={
                     "audio_path": binding.finishing_path,
                     "audio_binding": binding,
+                    "local_delivery_revision": delivery_revision,
                     "updated_at": utc_now(),
                 }
             )
-            if updated.plan_digest != previous_plan_digest or updated.authorization != previous_authorization:
+            if (
+                updated.plan_digest != previous_plan_digest
+                or updated.authorization != previous_authorization
+                or updated.reserved_cost_usd != previous_reserved
+            ):
                 raise RuntimeError("local audio binding altered provider generation identity")
             atomic_write_json(
                 self._job_root(updated) / "audio" / "audio-binding.json",
@@ -636,13 +900,31 @@ class VideoGenerationController:
                 self._job_root(updated) / "audio" / "audio-selection.json",
                 binding.model_dump(mode="json", by_alias=True),
             )
+            atomic_write_json(
+                self._job_root(updated)
+                / "repair"
+                / f"audio-rebind-{binding.sha256[:16]}.json",
+                {
+                    "schemaVersion": "1.0.0",
+                    "kind": "local-audio-rebind",
+                    "recordedAt": utc_now().isoformat(),
+                    "providerPlanDigest": updated.plan_digest,
+                    "expectedSha256": expected_sha256,
+                    "selectedSha256": binding.sha256,
+                    "exactHashMatch": not mismatch,
+                    "localDeliveryRevision": mismatch,
+                    "reservedCostUsdBefore": previous_reserved,
+                    "reservedCostUsdAfter": updated.reserved_cost_usd,
+                    "providerRequestSubmitted": False,
+                },
+            )
             saved = await self._save(updated)
             return self._audio_selection(saved)
 
     async def bind_retained_audio(self, job_id: str) -> VideoAudioSelection:
         job = self._record(job_id)
-        source = self._analysis_directory(job.analysis_job_id) / "source.bin"
-        if not source.is_file():
+        source, _ = self._analysis_source(job.analysis_job_id)
+        if source is None:
             return VideoAudioSelection(
                 selected=False,
                 verified=False,
@@ -896,6 +1178,154 @@ class VideoGenerationController:
                 }
             )
             return self._view(await self._save(self._replace_shot(job, updated_shot)))
+
+    def _optional_analysis_artifact_for_job(
+        self,
+        job: VideoJobRecord,
+        artifact_kind: str,
+    ) -> tuple[Path | None, str]:
+        filename = {
+            "story-plan": "story-plan.json",
+            "shot-plan": "shot-plan.json",
+        }[artifact_kind]
+        snapshot = self._job_root(job) / "inputs" / "analysis" / filename
+        if snapshot.is_file():
+            manifest_path = Path(job.dependency_manifest_path) if job.dependency_manifest_path else None
+            manifest = read_json(manifest_path) if manifest_path and manifest_path.is_file() else None
+            if isinstance(manifest, dict):
+                artifacts = manifest.get("artifacts")
+                key = "storyPlan" if artifact_kind == "story-plan" else "shotPlan"
+                identity = artifacts.get(key) if isinstance(artifacts, dict) else None
+                expected = identity.get("sha256") if isinstance(identity, dict) else None
+                if isinstance(expected, str) and sha256_file(snapshot) == expected:
+                    return snapshot, VideoAnalysisDependencyState.SNAPSHOTTED.value
+        archived = self.analysis_archive.resolve_artifact(job.analysis_job_id, artifact_kind)
+        if archived is not None:
+            return archived, VideoAnalysisDependencyState.ARCHIVED_ANALYSIS.value
+        live = self._live_analysis_directory(job.analysis_job_id)
+        if live is not None and (live / filename).is_file():
+            return (live / filename).resolve(), VideoAnalysisDependencyState.LIVE_ANALYSIS.value
+        return None, VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+
+    async def repair_legacy_dependency(self, job_id: str) -> VideoJobView:
+        async with self._lock:
+            job = self._record(job_id)
+            plan_digest = job.plan_digest
+            authorization = json.dumps(job.authorization, sort_keys=True)
+            reserved = job.reserved_cost_usd
+            attempt_identity = [
+                (
+                    shot.shot_id,
+                    attempt.id,
+                    attempt.state.value,
+                    attempt.clip_sha256,
+                    attempt.operation_name,
+                )
+                for shot in job.shots
+                for attempt in shot.attempts
+            ]
+            story_path, story_state = self._analysis_artifact(job.analysis_job_id, "story-plan")
+            shot_path, shot_state = self._analysis_artifact(job.analysis_job_id, "shot-plan")
+            live = self._live_analysis_directory(job.analysis_job_id)
+            archive_entry = self.analysis_archive.get(job.analysis_job_id)
+            legacy_missing = live is None and (
+                archive_entry is None or bool(archive_entry.get("legacyMissing"))
+            )
+            source_state = (
+                VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+                if legacy_missing
+                else next(
+                    (
+                        value
+                        for value in (story_state, shot_state)
+                        if value != VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING.value
+                    ),
+                    VideoAnalysisDependencyState.ARCHIVED_ANALYSIS.value,
+                )
+            )
+            audio_path = (
+                Path(job.audio_binding.artifact_path)
+                if job.audio_binding is not None and Path(job.audio_binding.artifact_path).is_file()
+                else None
+            )
+            repaired = self._snapshot_analysis_dependencies(
+                job,
+                story_path=story_path,
+                shot_path=shot_path,
+                source_state=source_state,
+                audio_path=audio_path,
+            )
+            if legacy_missing:
+                repaired = repaired.model_copy(
+                    update={
+                        "analysis_dependency_state": VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING
+                    }
+                )
+                self.analysis_archive.register_legacy_tombstone(
+                    job.analysis_job_id,
+                    video_job_id=job.id,
+                )
+            all_verified = all(
+                shot.latest_attempt is not None
+                and shot.latest_attempt.state is VideoShotState.VERIFIED
+                for shot in repaired.shots
+            )
+            target_state = repaired.state
+            if repaired.preview_path and Path(repaired.preview_path).is_file():
+                target_state = VideoJobState.COMPLETE
+            elif repaired.export_root and Path(repaired.export_root).is_dir():
+                target_state = VideoJobState.EXPORTED
+            elif repaired.timeline_path and Path(repaired.timeline_path).is_file():
+                target_state = VideoJobState.TIMELINE_READY
+            elif all_verified:
+                target_state = VideoJobState.REVIEW_READY
+            repaired = repaired.model_copy(
+                update={"state": target_state, "error": None, "updated_at": utc_now()}
+            )
+            if (
+                repaired.plan_digest != plan_digest
+                or json.dumps(repaired.authorization, sort_keys=True) != authorization
+                or repaired.reserved_cost_usd != reserved
+                or [
+                    (
+                        shot.shot_id,
+                        attempt.id,
+                        attempt.state.value,
+                        attempt.clip_sha256,
+                        attempt.operation_name,
+                    )
+                    for shot in repaired.shots
+                    for attempt in shot.attempts
+                ]
+                != attempt_identity
+            ):
+                raise RuntimeError("legacy dependency repair altered paid generation identity")
+            atomic_write_json(
+                self._job_root(repaired) / "repair" / "legacy-analysis-dependency.json",
+                {
+                    "schemaVersion": "1.0.0",
+                    "kind": "legacy-analysis-dependency-repair",
+                    "recordedAt": utc_now().isoformat(),
+                    "analysisId": repaired.analysis_job_id,
+                    "sourceState": source_state,
+                    "providerPlanDigest": repaired.plan_digest,
+                    "storyPlanAvailable": story_path is not None,
+                    "shotPlanAvailable": shot_path is not None,
+                    "optionalArtifactsUnavailable": [
+                        kind
+                        for kind, available in (
+                            ("story-plan", story_path is not None),
+                            ("shot-plan", shot_path is not None),
+                        )
+                        if not available
+                    ],
+                    "clipAttemptIdentityDigest": sha256_json(attempt_identity),
+                    "reservedCostUsdBefore": reserved,
+                    "reservedCostUsdAfter": repaired.reserved_cost_usd,
+                    "providerRequestSubmitted": False,
+                },
+            )
+            return self._view(await self._save(repaired))
 
     async def chain_reference(
         self,
@@ -1190,10 +1620,8 @@ class VideoGenerationController:
             job = await self._save(
                 job.model_copy(update={"state": VideoJobState.REVIEW_READY, "error": None})
             )
-            if job.audio_path:
-                job = await self._resolve(job)
-                job = await self._export(job)
-                await self._assemble(job)
+            # Technical verification and creative acceptance are distinct.
+            # Local finishing begins only through an explicit operator action.
         except asyncio.CancelledError:
             return
         except Exception as exc:
@@ -1675,7 +2103,9 @@ class VideoGenerationController:
             raise self._error(422, "video_edit_blueprint_invalid", str(exc)) from exc
         profile = cast(dict[str, Any], job.plan["profile"])
         width, height = (3840, 2160) if profile["resolution"] == "4k" else (1920, 1080)
-        shot_plan = self._analysis_directory(job.analysis_job_id) / "shot-plan.json"
+        shot_plan, shot_plan_source = self._optional_analysis_artifact_for_job(
+            job, "shot-plan"
+        )
         timeline_path = self._job_root(job) / "davinci" / str(profile["profileId"]) / "resolved-timeline.json"
         operation_items = sorted(
             (
@@ -1701,6 +2131,8 @@ class VideoGenerationController:
                 "acceptedAttempts": accepted_attempt_ids,
                 "clipSha256": clip_sha256,
                 "editBlueprintSha256": sha256_file(edit_blueprint_path),
+                "analysisShotPlanSha256": sha256_file(shot_plan) if shot_plan else None,
+                "analysisShotPlanSource": shot_plan_source,
                 "timelineTreatmentVersion": edit_blueprint["timelineTreatment"]["version"],
                 "delivery": {"width": width, "height": height, "fps": 24},
             }
@@ -1718,7 +2150,7 @@ class VideoGenerationController:
             output_height=height,
             fps=24,
             generated_clip_duration_seconds=int(profile["durationSeconds"]),
-            analysis_shot_plan_path=shot_plan if shot_plan.is_file() else None,
+            analysis_shot_plan_path=shot_plan,
             local_edit_digest=local_edit_digest,
             ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
         )
@@ -1738,6 +2170,12 @@ class VideoGenerationController:
                 },
             }
         )
+        if shot_plan is None:
+            warnings = value.setdefault("warnings", [])
+            if isinstance(warnings, list):
+                warnings.append(
+                    "Exact ShotPlan boundary snapping was unavailable; normalized chapter timing was used."
+                )
         atomic_write_json(timeline_path, value)
         return await self._save(
             job.model_copy(
@@ -2222,6 +2660,29 @@ class VideoGenerationController:
                 summary="This saved plan used the previous Veo request contract and cannot be resumed. Compile and authorize a fresh exact 1080p plan.",
             )
         audio_selection = self._audio_selection(job)
+        dependency_manifest = (
+            read_json(Path(job.dependency_manifest_path))
+            if job.dependency_manifest_path and Path(job.dependency_manifest_path).is_file()
+            else None
+        )
+        dependency_artifacts = (
+            dependency_manifest.get("artifacts")
+            if isinstance(dependency_manifest, dict)
+            else None
+        )
+        story_identity = (
+            dependency_artifacts.get("storyPlan")
+            if isinstance(dependency_artifacts, dict)
+            else None
+        )
+        shot_identity = (
+            dependency_artifacts.get("shotPlan")
+            if isinstance(dependency_artifacts, dict)
+            else None
+        )
+        legacy_missing = (
+            job.analysis_dependency_state is VideoAnalysisDependencyState.LEGACY_ANALYSIS_MISSING
+        )
         return VideoJobView(
             job_id=job.id,
             analysis_job_id=job.analysis_job_id,
@@ -2236,6 +2697,20 @@ class VideoGenerationController:
             authorization_expires_at=(str(job.authorization["expiresAt"]) if job.authorization else None),
             audio_master_bound=audio_selection.selected and audio_selection.verified,
             audio=audio_selection,
+            analysis_dependency=VideoAnalysisDependencyView(
+                source_state=job.analysis_dependency_state,
+                manifest_ready=isinstance(dependency_manifest, dict),
+                story_plan_available=isinstance(story_identity, dict)
+                and story_identity.get("available") is True,
+                shot_plan_available=isinstance(shot_identity, dict)
+                and shot_identity.get("available") is True,
+                legacy_analysis_missing=legacy_missing,
+                warning=(
+                    "Legacy analysis workspace is unavailable. Generated clips are safe; the compiled plan and local dependency manifest remain authoritative."
+                    if legacy_missing
+                    else None
+                ),
+            ),
             local_edit_digest=job.local_edit_digest,
             shots=tuple(shots),
             progress_percent=(verified / len(job.shots) * 100) if job.shots else 0,

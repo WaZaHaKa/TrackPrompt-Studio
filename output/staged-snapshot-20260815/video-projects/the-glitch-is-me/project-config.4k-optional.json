@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "title": "The Glitch Is Me",
+  "selectedProfileId": "final-quality-4k",
+  "generationProfiles": [
+    {
+      "profileId": "smoke-fast-720p",
+      "modelId": "veo-3.1-fast-generate-001",
+      "resolution": "720p",
+      "aspectRatio": "16:9",
+      "fps": 24,
+      "durationSeconds": 4,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": true,
+      "compressionQuality": "optimized",
+      "personGeneration": "allow_adult"
+    },
+    {
+      "profileId": "final-fast-1080p",
+      "modelId": "veo-3.1-fast-generate-001",
+      "resolution": "1080p",
+      "aspectRatio": "16:9",
+      "fps": 24,
+      "durationSeconds": 8,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": true,
+      "compressionQuality": "optimized",
+      "personGeneration": "allow_adult"
+    },
+    {
+      "profileId": "final-quality-1080p",
+      "modelId": "veo-3.1-generate-001",
+      "resolution": "1080p",
+      "aspectRatio": "16:9",
+      "fps": 24,
+      "durationSeconds": 8,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": true,
+      "compressionQuality": "optimized",
+      "personGeneration": "allow_adult"
+    },
+    {
+      "profileId": "final-quality-4k",
+      "modelId": "veo-3.1-generate-001",
+      "resolution": "4k",
+      "aspectRatio": "16:9",
+      "fps": 24,
+      "durationSeconds": 8,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": true,
+      "compressionQuality": "optimized",
+      "personGeneration": "allow_adult"
+    }
+  ],
+  "maxSpendUsd": 80.0,
+  "retryReserveFactor": 1.5,
+  "requiredShotIds": [
+    "shot-001",
+    "shot-002",
+    "shot-003",
+    "shot-004",
+    "shot-005",
+    "shot-006",
+    "shot-007",
+    "shot-008",
+    "shot-009",
+    "shot-010",
+    "shot-011",
+    "shot-012",
+    "shot-013",
+    "shot-014",
+    "shot-015",
+    "shot-016"
+  ],
+  "storagePrefix": "trackprompt-video-generation",
+  "localOutputRoot": ".trackprompt-data/video-generation",
+  "timeline": {
+    "clockSource": "original-audio",
+    "analysisBinding": "existing TrackPrompt StoryPlan/ShotPlan when available",
+    "fps": 24,
+    "width": 3840,
+    "height": 2160,
+    "targetEditSeconds": 6.0,
+    "generatedClipDurationSeconds": 8,
+    "autoAssembly": true,
+    "davinciExports": [
+      "fcpxml-1.11",
+      "fcp7-xml",
+      "cmx3600-edl",
+      "marker-csv",
+      "edit-sheet-csv"
+    ]
+  }
+}

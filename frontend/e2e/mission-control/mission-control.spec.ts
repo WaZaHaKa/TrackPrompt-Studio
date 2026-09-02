@@ -122,7 +122,7 @@ test('casual user can authorize, reconnect, safely stop, resume, and complete a 
   const preflightRequest = await preflightRequestPromise
   expect(preflightRequest.postDataJSON()).toMatchObject({ renderer: 'fake' })
   await expect(page.getByText('Ready to authorize', { exact: true })).toBeVisible()
-  await expect(page.getByText('Authorization is required before start.')).toBeVisible()
+  await expect(page.getByText('Authorization is required for the exact enabled output matrix.')).toBeVisible()
   await page.getByRole('button', { name: /continue/i }).click()
 
   await expect(page.getByText('Authorization required', { exact: true })).toBeVisible()

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "1.0.0",
+  "packageId": "andromeda-v2-foundation-v1",
+  "projectId": "trip-to-andromeda-v2",
+  "contentVersion": 1,
+  "status": "foundation-ready-production-gates-blocked",
+  "artifacts": [
+    {
+      "role": "owner-creative-acceptance",
+      "path": "production/andromeda-v2/creative-acceptance.json",
+      "sha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+      "immutable": true
+    },
+    {
+      "role": "final-look-profile",
+      "path": "production/andromeda-v2/final-look-profile.json",
+      "sha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "immutable": true
+    },
+    {
+      "role": "output-variant-contract",
+      "path": "production/andromeda-v2/output-variants.json",
+      "sha256": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+      "immutable": true
+    },
+    {
+      "role": "story-plan",
+      "path": "backend/app/cinematic/templates/trip_to_andromeda_story_v2.json",
+      "sha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+      "immutable": true
+    },
+    {
+      "role": "shot-plan",
+      "path": "backend/app/cinematic/templates/trip_to_andromeda_shots_v2.json",
+      "sha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+      "immutable": true
+    },
+    {
+      "role": "production-authorization",
+      "path": "production/andromeda-v2/production-authorization.json",
+      "sha256": "6a884475e87a4534f47267d60824160749104f3207b58225118504b361704ca9",
+      "immutable": true
+    },
+    {
+      "role": "typed-production-contracts",
+      "path": "backend/app/cinematic/production_contracts.py",
+      "sha256": "7a262654ac624021cc3fae16dda5a6d9cbba168eb73e7a06596d9a0e49cf01ec",
+      "immutable": true
+    },
+    {
+      "role": "authored-composition-profiles",
+      "path": "blender/trackprompt_visualizer/composition_profiles.py",
+      "sha256": "c8178ea2bc1d32ffc266b58a31b34d2b370f5414e45d91a028af6a4c028044d5",
+      "immutable": true
+    },
+    {
+      "role": "master-scene-builder",
+      "path": "blender/trackprompt_visualizer/andromeda_story_v2.py",
+      "sha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+      "immutable": true
+    },
+    {
+      "role": "foundation-documentation",
+      "path": "production/andromeda-v2/README.md",
+      "sha256": "2a3e47dd4a894a86b2dccccd24240269fc19f0ef3bc96344e2430989bee8d283",
+      "immutable": true
+    }
+  ],
+  "sourceBindings": [
+    {
+      "role": "source-audio",
+      "sha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+      "sizeBytes": 76608080,
+      "privateLocalArtifact": true,
+      "committed": false
+    },
+    {
+      "role": "source-cue",
+      "sha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+      "sizeBytes": 1276886,
+      "privateLocalArtifact": true,
+      "committed": false
+    }
+  ],
+  "defaultEnabledOutputVariants": [
+    "horizontal-16x9-1080p"
+  ],
+  "optionalDisabledOutputVariants": [
+    "vertical-9x16-1080p"
+  ],
+  "productionStartAllowed": false
+}

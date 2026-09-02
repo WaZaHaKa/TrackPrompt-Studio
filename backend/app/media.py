@@ -143,6 +143,10 @@ def probe_media(
     display_name: str,
     settings: Settings,
     cancel_requested: Callable[[], bool] | None = None,
+    *,
+    max_bytes: int | None = None,
+    max_duration_seconds: int | None = None,
+    source_kind: str = "track",
 ) -> MediaProbe:
     try:
         size = path.stat().st_size
@@ -150,10 +154,16 @@ def probe_media(
         raise MediaValidationError("upload_unavailable", "The uploaded file cannot be read.") from exc
     if size <= 0:
         raise MediaValidationError("empty_upload", "The uploaded file is empty.")
-    if size > settings.max_upload_bytes:
+    byte_limit = max_bytes if max_bytes is not None else settings.max_upload_bytes
+    duration_limit = (
+        max_duration_seconds
+        if max_duration_seconds is not None
+        else settings.max_duration_seconds
+    )
+    if size > byte_limit:
         raise MediaValidationError(
             "upload_too_large",
-            f"The upload exceeds the configured {settings.max_upload_mb} MB limit.",
+            f"The {source_kind} exceeds its configured source-size limit.",
             status_code=413,
         )
 
@@ -182,10 +192,10 @@ def probe_media(
 
     duration_raw = format_data.get("duration") or stream.get("duration")
     duration = _parse_positive_number(duration_raw, "duration")
-    if duration > settings.max_duration_seconds:
+    if duration > duration_limit:
         raise MediaValidationError(
             "duration_too_long",
-            f"The track exceeds the configured {settings.max_duration_seconds}-second duration limit.",
+            f"The {source_kind} exceeds the configured {duration_limit}-second duration limit.",
             status_code=413,
         )
     sample_rate = int(_parse_positive_number(stream.get("sample_rate"), "sample rate"))

@@ -19,6 +19,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import __version__
 from .adapters import get_capabilities
 from .analysis.sanity import validate_analysis_result
+from .analysis_archive import AnalysisArchiveError
+from .catalog.router import CatalogueAPIError
+from .catalog.router import router as catalogue_router
+from .catalog.scan_scheduler import LongformScanScheduler
+from .catalog.scheduler import CatalogueScheduler
+from .catalog.store import CatalogueStore
 from .cinematic.router import CinematicAPIError
 from .cinematic.router import router as cinematic_router
 from .config import Settings
@@ -38,7 +44,13 @@ from .media import MediaValidationError, probe_media, sanitize_display_name
 from .privacy import secure_private_file
 from .prompting import generate_prompt_package
 from .prompting.composer import _clean_user_text
+from .renderers.registry import create_renderer_registry
+from .renderers.router import RendererAPIError
+from .renderers.router import router as renderer_router
+from .renderers.wzhk_spectrum.preflight import SpectrumInspection
 from .schemas import (
+    AnalysisCatalogueItem,
+    AnalysisCataloguePage,
     AnalysisMode,
     AnalysisPatch,
     AnalysisResult,
@@ -103,7 +115,7 @@ def _state(request: Request) -> tuple[Settings, JobStore, JobManager]:
 
 
 def _not_found() -> APIError:
-    return APIError(404, "job_not_found", "Analysis job was not found or has expired.")
+    return APIError(404, "job_not_found", "Analysis job was not found.")
 
 
 def _synchronize_private_lyrics(
@@ -284,7 +296,12 @@ def _byte_iterator(path: Path, start: int, end: int, chunk_size: int = 1024 * 10
             yield chunk
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    renderer_repository_root: Path | None = None,
+    spectrum_inspection: SpectrumInspection | None = None,
+) -> FastAPI:
     configured = settings or Settings.from_env()
 
     @asynccontextmanager
@@ -292,13 +309,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         configured.ensure_directories()
         store = JobStore(configured)
         manager = JobManager(store, configured)
+        catalog_store = CatalogueStore(configured)
+        catalog_scheduler = CatalogueScheduler(catalog_store, store, manager)
+        scan_scheduler = LongformScanScheduler(catalog_store)
         application.state.settings = configured
         application.state.store = store
         application.state.manager = manager
+        application.state.catalog_store = catalog_store
+        application.state.catalog_scheduler = catalog_scheduler
+        application.state.scan_scheduler = scan_scheduler
+        application.state.renderer_registry = create_renderer_registry(
+            configured,
+            repository_root=renderer_repository_root,
+            spectrum_inspection=spectrum_inspection,
+        )
         await manager.startup()
+        await catalog_scheduler.startup()
+        await scan_scheduler.startup()
         try:
             yield
         finally:
+            await scan_scheduler.shutdown()
+            await catalog_scheduler.shutdown()
             await manager.shutdown()
 
     application = FastAPI(
@@ -312,13 +344,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=list(configured.cors_origins),
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Content-Type", "Range"],
-        expose_headers=["Content-Range", "Accept-Ranges", "Content-Disposition"],
+        allow_headers=[
+            "Content-Type",
+            "Range",
+            "Content-Range",
+            "Upload-Offset",
+            "X-Chunk-SHA256",
+            "Idempotency-Key",
+        ],
+        expose_headers=[
+            "Content-Range",
+            "Accept-Ranges",
+            "Content-Disposition",
+            "Upload-Offset",
+        ],
     )
     application.add_middleware(
         LocalRequestBoundaryMiddleware,
         max_upload_request_bytes=configured.max_upload_bytes + 1024 * 1024,
         max_api_request_bytes=256 * 1024,
+        max_chunk_request_bytes=configured.resumable_upload_chunk_bytes + 64 * 1024,
+        max_active_uploads=configured.max_active_uploads,
         allowed_origins=configured.cors_origins,
         allowed_hosts=configured.allowed_hosts,
     )
@@ -336,6 +382,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         payload = ErrorResponse(error=exc.detail).model_dump(mode="json", by_alias=True)
         return JSONResponse(status_code=exc.status_code, content=payload)
 
+    @application.exception_handler(CatalogueAPIError)
+    async def catalogue_api_error_handler(
+        _request: Request,
+        exc: CatalogueAPIError,
+    ) -> JSONResponse:
+        payload = ErrorResponse(
+            error=ErrorDetail(code=exc.code, message=exc.safe_message, details=exc.details)
+        ).model_dump(mode="json", by_alias=True)
+        return JSONResponse(status_code=exc.status_code, content=payload)
+
     @application.exception_handler(CinematicAPIError)
     async def cinematic_api_error_handler(
         _request: Request,
@@ -345,6 +401,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             error=ErrorDetail(code=exc.code, message=exc.safe_message, details=exc.details)
         ).model_dump(mode="json", by_alias=True)
         return JSONResponse(status_code=exc.status_code, content=payload)
+
+    @application.exception_handler(RendererAPIError)
+    async def renderer_api_error_handler(
+        _request: Request,
+        exc: RendererAPIError,
+    ) -> JSONResponse:
+        payload = ErrorResponse(
+            error=ErrorDetail(code=exc.code, message=exc.safe_message)
+        ).model_dump(mode="json", by_alias=True)
+        return JSONResponse(status_code=exc.status_code, content=payload)
+
+    @application.exception_handler(KeyError)
+    async def catalogue_not_found_handler(_request: Request, _exc: KeyError) -> JSONResponse:
+        payload = ErrorResponse(
+            error=ErrorDetail(
+                code="catalogue_entity_not_found",
+                message="The requested catalogue entity was not found.",
+            )
+        ).model_dump(mode="json", by_alias=True)
+        return JSONResponse(status_code=404, content=payload)
 
     @application.exception_handler(RequestValidationError)
     async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -421,7 +497,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             response.gpu_task_queue.waiting = manager.gpu_waiting
         return response
 
+    application.include_router(catalogue_router)
     application.include_router(cinematic_router)
+    application.include_router(renderer_router)
 
     @application.post(
         "/api/visualizer/config/resolve",
@@ -431,6 +509,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         config: VisualizerConfigRequest,
     ) -> ResolvedVisualizerConfig:
         return resolve_visualizer_config(config)
+
+    @application.get("/api/analyses", response_model=AnalysisCataloguePage)
+    async def list_analyses(
+        request: Request,
+        search: Annotated[str, Query(max_length=160)] = "",
+        status: Annotated[str | None, Query(max_length=80)] = None,
+        archive_health: Annotated[str | None, Query(alias="archiveHealth", max_length=80)] = None,
+        sort: Annotated[str, Query(max_length=40)] = "created_desc",
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    ) -> AnalysisCataloguePage:
+        _settings, store, _manager = _state(request)
+        items, total = await asyncio.to_thread(
+            store.archive.list,
+            search=search,
+            status=status,
+            archive_health=archive_health,
+            sort=sort,
+            offset=offset,
+            limit=limit,
+        )
+        return AnalysisCataloguePage(items=items, total=total, offset=offset, limit=limit)
 
     @application.post("/api/analyses", response_model=JobResponse, status_code=202)
     async def create_analysis(
@@ -525,6 +625,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await manager.response(job_id)
         except KeyError as exc:
             raise _not_found() from exc
+
+    @application.post(
+        "/api/analyses/{job_id}/reconcile",
+        response_model=AnalysisCatalogueItem,
+    )
+    async def reconcile_analysis_archive(
+        job_id: str,
+        request: Request,
+    ) -> AnalysisCatalogueItem:
+        _settings, store, _manager = _state(request)
+        try:
+            await asyncio.to_thread(store.archive_completed, job_id)
+        except KeyError as exc:
+            raise _not_found() from exc
+        except (AnalysisArchiveError, OSError, ValueError) as exc:
+            raise APIError(
+                409,
+                "analysis_archive_reconciliation_failed",
+                "The analysis catalogue entry could not be reconciled from available canonical artifacts.",
+            ) from exc
+        entry = await asyncio.to_thread(store.archive.get, job_id)
+        if entry is None:
+            raise _not_found()
+        return AnalysisCatalogueItem.model_validate(entry)
 
     async def compile_job_visual_cues(
         job_id: str,
@@ -1247,8 +1371,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if analysis_data is None:
             raise _not_found()
         analysis = AnalysisResult.model_validate(analysis_data)
-        path = store.job_dir(job_id) / "source.bin"
-        if not path.is_file():
+        path = await asyncio.to_thread(store.source_path, job_id)
+        if path is None or not path.is_file():
             raise _not_found()
         size = path.stat().st_size
         headers = {

@@ -1,0 +1,15 @@
+SHOT shot-001 — Suspended Droplet in the Digital Ocean
+
+NARRATIVE INTENT
+Open the film with a quiet impossible world that feels halfway between water and computation.
+
+SHOT PROMPT
+Extreme macro view of one heavy water droplet falling in near darkness, then slowing until it hangs motionless above a black reflective ocean. Inside the droplet, tiny violet signal patterns drift like plankton. The camera makes an almost imperceptible push forward while concentric ripples move below without an obvious source.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, person, face, city skyline, literal circuit board
+
+REVIEW NOTES
+- Droplet must remain coherent.
+- No text-like symbols inside the droplet.
+- Reserve empty space for the opening title added later in Resolve if desired.

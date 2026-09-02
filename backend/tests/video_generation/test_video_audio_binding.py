@@ -260,6 +260,18 @@ async def test_binding_persists_replaces_and_clears_without_provider_or_source_d
             source_two,
             source="local-selection",
         )
+        assert second.selected is False
+        assert second.error is not None
+        assert second.error.code == "audio_hash_mismatch_confirmation_required"
+        assert second.error.confirmation_phrase
+        second = await controller.bind_audio(
+            planned.job_id,
+            source_two,
+            source="local-selection",
+            accept_local_delivery_revision=True,
+            confirmation=second.error.confirmation_phrase,
+        )
+        assert second.selected is True
         assert second.sha256 != first.sha256
         replaced = store.get_video_job(planned.job_id)
         assert replaced is not None

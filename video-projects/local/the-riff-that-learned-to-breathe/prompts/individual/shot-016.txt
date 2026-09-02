@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-016 — Between Two Rooms
+Provisional timing: 137.000–149.000 s
+Seed: 24081016
+
+NARRATIVE INTENT
+End on durable connection rather than ownership: one transformed idea living between two creators.
+
+KEYFRAME PROMPT
+A wide dawn exterior of two distant upper-floor windows across a quiet hand-painted city: one window glows warm rust, the other cool indigo. A faint amber thread links them through the pale rose sky. The hybrid origami bird rests on a cable exactly between the windows, its tiny heart still visible. No people are foregrounded. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+Begin close on the resting bird as its amber heart pulses once. The camera performs a long, steady pullback to reveal the two distant glowing windows connected by the fine thread. Morning light slowly rises, the bird folds its wings, and the thread remains visible as the image gently fades to black.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+origami-bird-hybrid, night-to-dawn-city, amber-thread
+
+TRANSITION IN
+workbench glow match-cuts to the warm dawn window
+
+TRANSITION OUT
+slow fade-to-black on the final audio decay
+
+ACCEPTANCE NOTES
+- Final frame must hold cleanly for at least 24 frames.
+- The connection remains; the bird does not fly away.

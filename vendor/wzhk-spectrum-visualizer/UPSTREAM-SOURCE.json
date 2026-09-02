@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1.0.0",
+  "repository": "https://github.com/WaZaHaKa/monstercat-visualizer.git",
+  "ref": "master",
+  "commit": "553aa755ef0cc394259fb1a55560f1b31864d2e0",
+  "commitDate": "2020-10-23T17:34:40+02:00",
+  "installedAt": "2026-08-26T17:24:07.6956145+03:00",
+  "installerVersion": "0.1.0",
+  "vendoredWithoutGitMetadata": true
+}

@@ -1,0 +1,14 @@
+SHOT shot-012 — Satellite Pulse Behind the Mind
+
+NARRATIVE INTENT
+Introduce the satellite-pulse motif that can bridge the solo into the final chorus.
+
+SHOT PROMPT
+A translucent side silhouette of the Quantum Siren floats in a dark celestial-water space. Behind and within the back of her head, one small amber satellite-like pulse travels along a delicate orbit, sending slow concentric waves through her hair and the surrounding water. The camera orbits in the opposite direction, creating hypnotic counter-motion.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, medical brain scan, literal satellite hardware, exposed skull, science diagram, readable UI
+
+REVIEW NOTES
+- Pulse is beautiful but painful, never threatening.
+- Keep profile consistent with prior shots.

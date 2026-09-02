@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from .analysis.pipeline import AnalysisCancelled
 from .analysis.sanity import validate_analysis_result
+from .analysis_archive import AnalysisArchiveError
 from .config import Settings
 from .media import (
     MediaCancelled,
@@ -39,7 +40,7 @@ from .schemas import (
     PromptPackage,
     PromptPreferences,
 )
-from .store import DeletionError, JobRecord, JobStore, utc_now
+from .store import DeletionError, JobRecord, JobStore
 from .subprocess_utils import ProcessTimedOut, ProcessWasCancelled, run_process_bounded
 
 LOGGER = logging.getLogger("trackprompt.jobs")
@@ -54,7 +55,6 @@ class JobManager:
         self.subscribers: dict[str, set[asyncio.Queue[JobEvent]]] = defaultdict(set)
         self.sequences: dict[str, int] = defaultdict(int)
         self.deleted_jobs: set[str] = set()
-        self.ttl_task: asyncio.Task[None] | None = None
         self.admitted_jobs: set[str] = set()
         self.admission_lock = asyncio.Lock()
         self.worker_slots = asyncio.Semaphore(settings.analysis_workers)
@@ -99,6 +99,12 @@ class JobManager:
                 self.admitted_jobs.discard(canonical)
 
     async def startup(self) -> None:
+        reconciliation = await asyncio.to_thread(self.store.reconcile_archive)
+        if reconciliation["degraded"]:
+            LOGGER.warning(
+                "analysis_archive_reconciliation_degraded count=%s",
+                reconciliation["degraded"],
+            )
         # Audio left by an interrupted server run is not resumed implicitly.
         for job_id in self.store.active_job_ids():
             self._touch_cancel(job_id)
@@ -114,13 +120,8 @@ class JobManager:
                     error_message="Analysis was interrupted; upload the track again.",
                 )
             self._cancel_path(job_id).unlink(missing_ok=True)
-        self.ttl_task = asyncio.create_task(self._ttl_loop(), name="trackprompt-ttl-cleanup")
 
     async def shutdown(self) -> None:
-        if self.ttl_task is not None:
-            self.ttl_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self.ttl_task
         for job_id in list(self.tasks):
             self._touch_cancel(job_id)
         if self.tasks:
@@ -352,6 +353,8 @@ class JobManager:
                 "preferences.json",
                 preferences.model_dump(mode="json", by_alias=True),
             )
+            self._ensure_job_active(job_id)
+            await asyncio.to_thread(self.store.archive_completed, job_id)
             self._ensure_job_active(job_id)
             await self._transition(
                 job_id,
@@ -695,6 +698,26 @@ class JobManager:
                     error_code=exc.code,
                     error_message=exc.safe_message,
                 )
+        except AnalysisArchiveError as exc:
+            cleanup_complete = self._remove_private_media(job_id, keep_results=True)
+            LOGGER.error(
+                "analysis_archive_failed error_type=%s",
+                type(exc).__name__,
+                extra={"job_id": job_id},
+            )
+            if job_id not in self.deleted_jobs and self.store.get_job(job_id) is not None:
+                await self._terminal_transition(
+                    job_id,
+                    status=JobStatus.FAILED,
+                    stage="archive_failed",
+                    message=(
+                        "Analysis completed but its persistent archive could not be verified. Canonical local results were retained."
+                        if cleanup_complete
+                        else "Analysis completed; archive verification and temporary cleanup require repair."
+                    ),
+                    error_code="analysis_archive_failed",
+                    error_message="Persistent analysis archive verification failed; canonical local results were retained.",
+                )
         except (MediaProcessError, ValidationError, ValueError, OSError) as exc:
             cleanup_complete = self._remove_private_media(job_id, keep_results=False)
             LOGGER.error(
@@ -849,54 +872,3 @@ class JobManager:
             created_at=record.created_at,
             updated_at=record.updated_at,
         )
-
-    async def cleanup_expired_once(self) -> int:
-        removed = 0
-        for job_id in await asyncio.to_thread(self.store.expired_job_ids, utc_now()):
-            canonical = self.store.canonical_job_id(job_id)
-            async with self.job_lock(canonical):
-                record = await asyncio.to_thread(self.store.get_job, canonical)
-                if record is not None and record.status != JobStatus.EXPIRED:
-                    await self._transition(
-                        canonical,
-                        status=JobStatus.EXPIRED,
-                        stage="expired",
-                        message="The retention deadline expired; private data is being deleted",
-                        progress=0,
-                    )
-                self.deleted_jobs.add(canonical)
-                self._touch_cancel(canonical)
-                task = self.tasks.get(canonical)
-            if task is not None:
-                with suppress(TimeoutError, asyncio.CancelledError):
-                    await asyncio.wait_for(asyncio.shield(task), timeout=5)
-                if not task.done():
-                    continue
-            async with self.job_lock(canonical):
-                try:
-                    deleted = await asyncio.to_thread(self.store.delete_job, canonical)
-                except DeletionError:
-                    continue
-                self._cancel_path(canonical).unlink(missing_ok=True)
-                if task is not None:
-                    self.tasks.pop(canonical, None)
-                self.sequences.pop(canonical, None)
-                self.subscribers.pop(canonical, None)
-                self.deleted_jobs.discard(canonical)
-                await self.release_admission(canonical)
-                removed += int(deleted or record is not None)
-            self.job_locks.pop(canonical, None)
-        return removed
-
-    async def _ttl_loop(self) -> None:
-        while True:
-            await asyncio.sleep(min(30, max(5, self.settings.job_ttl_minutes * 10)))
-            try:
-                await self.cleanup_expired_once()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                LOGGER.error(
-                    "ttl_cleanup_failed error_type=%s; cleanup will retry",
-                    type(exc).__name__,
-                )

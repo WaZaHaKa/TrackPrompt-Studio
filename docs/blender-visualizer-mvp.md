@@ -1,21 +1,40 @@
 # Blender Visualizer MVP
 
+## Archived catalogue interaction
+
+Catalogue child analyses preserve the existing cue-sheet and visualizer
+contracts. An archived project may register cue sheets, Blender build manifests,
+scene manifests, and preview manifests as immutable artifacts, but source audio
+remains a separate explicit local input and is never copied into a cue sheet.
+The default `abstract-geometry` preset, additive `space-journey` preset, ten
+`TP_AUDIO_BUS` controls, and canonical `run-trackprompt-to-blender.ps1` runner
+are unchanged. Catalogue ingestion never launches Blender or a production
+render.
+
 The Blender Visualizer is a local vertical slice from TrackPrompt analysis to a
-saved, audio-reactive `.blend`. It provides one procedural preset,
-`abstract-geometry`; it does not generate narrative scenes, characters, lip
-sync, photoreal environments, or a final full-track render.
+saved, audio-reactive `.blend`. It provides the backward-compatible
+`abstract-geometry` preset and the cinematic `space-journey` preset. It does not
+generate characters, lip sync, a photoreal film, or an automatic full-track
+render.
 
 ## Workflow
 
 1. Complete a Fast or Deep analysis.
-2. In **Blender Visualizer**, select FPS, curve detail, and event/curve toggles,
-   then download the cue sheet.
+2. In **Blender Visualizer**, choose a preset, author or reset its bounded
+   controls, select FPS, curve detail, and event/curve toggles, then download the
+   validated visualizer configuration and cue sheet.
 3. Choose the original audio file separately. The cue sheet contains no audio
    path and the repository does not copy the audio into an export package.
 4. Run the headless builder or invoke the same narrow entrypoint through a
    Blender MCP server.
 5. Inspect the diagnostics and bounded preview artifacts before making a final
    rendering decision.
+
+Cue data and visual configuration remain separate. The cue sheet contains
+analysis-derived timing and normalized controls; the configuration contains only
+a preset, bounded visual parameters, a seed, and safe resolution metadata. See
+[space-journey-visualizer.md](space-journey-visualizer.md) for every parameter,
+range, default, palette, audio mapping, and manifest field.
 
 ## Canonical Windows runner
 
@@ -38,6 +57,23 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -ConfirmLyricsConsent `
   -BuildStack
 ```
+
+Build Space Journey with its validated defaults and a bounded preview:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\permitted-track.wav" `
+  -VisualizerPreset "space-journey" `
+  -ConfirmPermission `
+  -ConfirmLyricsConsent `
+  -BuildStack
+```
+
+Add `-VisualizerConfigPath C:\absolute\space-journey.json` to supply a partial
+or complete configuration. The runner rejects malformed, unknown, non-finite,
+out-of-range, or preset/seed-conflicting input and writes the complete
+`visualizer-config.resolved.json` artifact before scene construction.
 
 Reuse the current cached images. If their healthy backend is stale, the runner
 performs at most one least-destructive backend rebuild before upload:
@@ -76,9 +112,11 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 ```
 
 Every run writes `test-output\system-runs\<timestamp>\run-manifest.json`, the
-job response and exports, `visual-cues.json`, the `.blend`, its sibling build
-manifest, and (unless skipped) `preview\preview-manifest.json` plus preview
-media. The newest job UUID is also copied to
+job response and exports, `visual-cues.json`, `visualizer-config.resolved.json`,
+the `.blend`, its sibling build manifest, and (unless skipped)
+`preview\preview-manifest.json` plus preview media. Space Journey uses
+`trackprompt-space-journey.blend` and `space-journey-preview.mp4`; Abstract
+Geometry retains its historical filenames. The newest job UUID is also copied to
 `test-output\last-trackprompt-job-id.txt`. Inspect the preserved local job with:
 
 ```powershell
@@ -211,13 +249,17 @@ and diagnostics record every fallback rather than relabeling it as stem
 evidence. Timeline markers use `TP_SECTION_<id>` and
 `TP_TRANSITION_<id>`.
 
-The preset creates predictable collections:
+Both presets create predictable common collections:
 
 ```text
 TP_WORLD              TP_CAMERAS       TP_LIGHTS
 TP_PRIMARY_GEOMETRY   TP_RINGS         TP_SHARDS
 TP_VOCAL_ELEMENTS     TP_BACKGROUND    TP_DEBUG
 ```
+
+Those nine collections are the shared non-regression contract. Space Journey
+adds organized destination, starfield, nebula, travel-path, and environment
+collections and records their presence and counts in its manifest.
 
 Its bounded procedural system contains a displaced/emissive central core, four
 rings, a 42-shard field, a vocal-reactive wire element, procedural background,
@@ -228,29 +270,45 @@ vocals control the secondary element; and brightness/low band shape palette and
 depth. There is no per-beat object creation, rapid full-screen flash, severe
 camera shake, external asset, or unbounded particle system.
 
+Space Journey instead uses a layered destination, partial orbital arcs,
+deterministic parallax star meshes, bounded debris, shader-based atmosphere,
+spectral vocal ribbons, and a target-tracking section-aware camera. Macro
+keyframes follow section progression and transition energy; existing audio-bus
+drivers provide clamped bass breathing, ring/drum accents, vocal atmosphere,
+secondary environmental motion, and fine high-band glints. Foreground coverage
+is controlled by `ringOcclusion` rather than global opacity alone.
+
 The same cue sheet, preset, Blender version, seed, and preset parameters produce
-the same scene structure and animation plan. The seed drives shard/ring
-variation, palette ordering, and camera variation and is stored in scene custom
-properties, the manifest, and diagnostics.
+the same scene structure and animation plan. The seed drives ring variation,
+star/debris placement, travel accents, and material-noise variation; palette
+selection and the section-aware camera plan remain explicit parameter/cue
+decisions. The seed is stored in scene custom properties, the manifest, and
+diagnostics.
 
 Preview rendering defaults to Eevee and bounded material/geometry complexity.
 Diagnostics include the Blender version, timeline, FPS, camera, TrackPrompt
 collections, object/material/F-curve counts, control names, cue schema, preset,
 seed, audio-strip status, fallback use, approved output file, preview frames, and
-render engine.
+render engine. Space Journey diagnostics additionally include its complete
+resolved configuration, defaulted fields, deterministic plan, stable camera
+target, preset-specific collection checks, and role-labelled preview frames.
 
 The sibling build manifest contains boolean contract checks for the cue frame
 range and FPS, `TP_AUDIO_BUS`, its ten controls and F-curves, the nine required
 collections, the `TP_AUDIO` strip, camera, scene F-curves, and saved `.blend`.
-`preview-manifest.json` records planned and rendered still frames with byte
-sizes, the movie frame range, planned and probed duration, encoder, stream
-presence, mux status, and corresponding boolean checks. `ok: true` therefore
-means the artifacts were verified, not merely requested from Blender.
+`preview-manifest.json` records the preset/configuration, planned and rendered
+still roles/frames with byte sizes, the movie frame range, planned and probed
+duration, encoder, stream presence, mux status, and corresponding boolean
+checks. Space Journey selects six well-distributed section-aware stills and a
+representative interior clip rather than clustering review frames at the outro.
+`ok: true` therefore means the artifacts were verified, not merely requested
+from Blender.
 
 ## Tests
 
 Pure Python tests under `blender/tests/` validate cue compatibility, privacy,
-paths, fallbacks, deterministic preview planning, and seed planning without
-`bpy`. `blender/tests/headless_scene_check.py` opens a generated scene in real
-Blender, validates the required scene contract, and renders one sample frame.
-All committed audio fixtures remain generated and synthetic.
+paths, fallbacks, preset resolution, parameter bounds, deterministic section
+direction, preview planning, and seed planning without `bpy`.
+`blender/tests/headless_scene_check.py` opens a generated scene in real Blender,
+validates the selected preset and required scene contract, and renders one sample
+frame. All committed audio fixtures remain generated and synthetic.

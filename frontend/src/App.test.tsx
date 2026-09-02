@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   generatePrompt: vi.fn(),
   selectPromptCandidate: vi.fn(),
   exportVisualCues: vi.fn(),
+  resolveVisualizerConfig: vi.fn(),
   deleteAnalysis: vi.fn(),
   subscribeToAnalysisEvents: vi.fn(),
   callbacks: undefined as undefined | {
@@ -88,11 +89,16 @@ vi.mock('./api', () => ({
   generatePrompt: api.generatePrompt,
   selectPromptCandidate: api.selectPromptCandidate,
   exportVisualCues: api.exportVisualCues,
+  resolveVisualizerConfig: api.resolveVisualizerConfig,
   deleteAnalysis: api.deleteAnalysis,
   subscribeToAnalysisEvents: api.subscribeToAnalysisEvents,
   exportUrl: (_jobId: string, format: string) => `/api/export.${format}`,
   audioUrl: (jobId: string) => `/api/analyses/${jobId}/audio`,
   lyricsExportUrl: (jobId: string) => `/api/analyses/${jobId}/lyrics/export`,
+}))
+
+vi.mock('./components/CatalogueWorkspace', () => ({
+  CatalogueWorkspace: () => <div>Catalogue workspace</div>,
 }))
 
 vi.mock('wavesurfer.js', () => ({ default: { create: () => wave } }))

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>WZHK Generative Geometry</title>
+    <link rel="icon" href="/assets/logo" />
+    <link rel="stylesheet" href="./runtime.css" />
+  </head>
+  <body data-runtime-mode="production">
+    <main id="runtime" aria-label="WZHK generative geometry runtime">
+      <canvas id="geometry-canvas" aria-hidden="true"></canvas>
+      <canvas id="identity-canvas" aria-label="DJ WaZaHaKa — Scattered"></canvas>
+
+      <aside id="runtime-status" class="runtime-status" role="status" aria-live="polite" hidden>
+        <span class="runtime-status__dot" aria-hidden="true"></span>
+        <span id="runtime-status-text">Initializing geometry…</span>
+      </aside>
+
+      <section id="lab" class="lab" aria-labelledby="lab-heading" hidden>
+        <header class="lab__header">
+          <div>
+            <span class="lab__eyebrow">Developer preview</span>
+            <h1 id="lab-heading">Shape laboratory</h1>
+          </div>
+          <button id="lab-reset" type="button">Reset</button>
+        </header>
+
+        <div class="lab__grid">
+          <label>
+            <span>Shape A</span>
+            <select id="lab-source-shape"></select>
+          </label>
+          <label>
+            <span>Shape B</span>
+            <select id="lab-target-shape"></select>
+          </label>
+          <label class="lab__range">
+            <span>Morph <output id="lab-morph-output">0%</output></span>
+            <input id="lab-morph" type="range" min="0" max="1" step="0.001" value="0" />
+          </label>
+          <label>
+            <span>Audio response</span>
+            <select id="lab-audio-mode">
+              <option value="live">Live audio</option>
+              <option value="simulated">Deterministic simulation</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+        </div>
+        <p class="lab__note">Overrides are local to this preview and never modify the production configuration.</p>
+      </section>
+
+      <section id="fatal-error" class="fatal-error" role="alert" hidden>
+        <strong>Generative geometry unavailable</strong>
+        <span id="fatal-error-message">The runtime could not start.</span>
+      </section>
+    </main>
+    <script type="module" src="./runtime.js"></script>
+  </body>
+</html>

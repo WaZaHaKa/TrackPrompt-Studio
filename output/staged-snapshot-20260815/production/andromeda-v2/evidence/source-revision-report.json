@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-source-revision-report",
+  "projectId": "trip-to-andromeda-v2",
+  "branch": "feat/andromeda-story-v2",
+  "startingCommitSha": "7e3743f637fb413e10dbde3aff2da9c4a7bf2f44",
+  "implementationCommitSha": "61984132f05fd0a863687fedec58d34b4dd97019",
+  "sourceTreeSha256": "8e9bfef3f56caaaeede68b02100f01c3f793c190e192c177216d03ac0c266f3f",
+  "sourceTreeHashMethod": "sha256 of UTF-8 LF-terminated git ls-tree -r --full-tree output for implementationCommitSha",
+  "sourceTreeEntryCount": 417,
+  "boundSourceHashes": {
+    "builder": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "ownerCreativeAcceptance": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+    "encodingProfiles": "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8",
+    "lookProfile": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+    "storyPlan": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+    "shotPlan": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+    "outputVariantContract": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+    "horizontalRenderProfile": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b"
+  },
+  "privateSourceBindings": {
+    "audioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "cueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+    "absolutePathsCommitted": false
+  },
+  "productionRenderStarted": false
+}

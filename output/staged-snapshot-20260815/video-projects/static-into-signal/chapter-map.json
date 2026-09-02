@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "bindingMode": "normalized ranges snapped to nearest existing TrackPrompt StoryPlan or ShotPlan boundary within 3 seconds",
+  "chapters": [
+    {"chapterId": "chapter-01", "title": "01 — No Map", "startFraction": 0.000000, "endFraction": 0.064220, "shotIds": ["shot-001", "shot-002"], "transitionIn": "fade-from-black", "transitionOut": "cut"},
+    {"chapterId": "chapter-02", "title": "02 — Blue Room", "startFraction": 0.064220, "endFraction": 0.160550, "shotIds": ["shot-003", "shot-004"], "transitionIn": "cut", "transitionOut": "cut"},
+    {"chapterId": "chapter-03", "title": "03 — Red Lines", "startFraction": 0.160550, "endFraction": 0.311930, "shotIds": ["shot-005", "shot-006"], "transitionIn": "brief-darkness-4f", "transitionOut": "cut"},
+    {"chapterId": "chapter-04", "title": "04 — Static Staircase", "startFraction": 0.311930, "endFraction": 0.458720, "shotIds": ["shot-007", "shot-008"], "transitionIn": "cut-on-impact", "transitionOut": "cut"},
+    {"chapterId": "chapter-05", "title": "05 — Names Behind Numbers", "startFraction": 0.458720, "endFraction": 0.614680, "shotIds": ["shot-009", "shot-010"], "transitionIn": "brief-darkness-4f", "transitionOut": "cut"},
+    {"chapterId": "chapter-06", "title": "06 — Cost Unmeasured", "startFraction": 0.614680, "endFraction": 0.775230, "shotIds": ["shot-011", "shot-012"], "transitionIn": "cut", "transitionOut": "cut-on-beat-switch"},
+    {"chapterId": "chapter-07", "title": "07 — We Kept Building", "startFraction": 0.775230, "endFraction": 0.917430, "shotIds": ["shot-013", "shot-014"], "transitionIn": "cut-on-beat-switch", "transitionOut": "brief-darkness-4f"},
+    {"chapterId": "chapter-08", "title": "08 — Next Step", "startFraction": 0.917430, "endFraction": 1.000000, "shotIds": ["shot-015", "shot-016"], "transitionIn": "brief-darkness-4f", "transitionOut": "fade-to-black"}
+  ]
+}

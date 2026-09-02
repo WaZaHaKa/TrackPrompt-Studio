@@ -52,9 +52,10 @@ The browser experience has five working areas:
    restore findings.
 4. **Prompt:** choose intent and length, adjust overrides and exclusions, inspect
    phrase rationale, copy an editable prompt, or export JSON/Markdown.
-5. **Blender Visualizer:** choose an FPS and curve-detail budget, include or
-   exclude beats/onsets/curves, and download a minimized Blender-ready cue sheet.
-   This button does not launch Blender or expose the source audio path.
+5. **Blender Visualizer:** choose Abstract Geometry or Space Journey, author a
+   bounded preset configuration, choose the cue-sheet FPS/detail budget, and
+   download the minimized Blender inputs. These controls do not launch Blender,
+   start a full-track render, or expose the source audio path.
 
 **Accept** persists an explicit review decision on a fact. It does not change the
 detected value or analyzer confidence, but it lets an otherwise low-confidence
@@ -116,11 +117,47 @@ invalidate the stored prompt snapshot.
 - Likely lyric hallucinations remain reviewable only in the private transcript;
   they cannot drive themes or section activity. Generated abstract themes require
   explicit user approval before prompt use.
-- Delete removes one job's upload, derivatives, stored analysis, and live state.
-  Every job expires `JOB_TTL_MINUTES` after creation.
+- Completed analyses are copied into the private, content-addressed Analysis
+  Library and retained until the operator explicitly confirms deletion.
+- Delete removes one analysis's upload, archive source, revisions, derivatives,
+  stored metadata, and live state while retaining only a content-free audit
+  tombstone. TrackPrompt never deletes an analysis on a timer.
 - Docker storage is persistent until its named volume is explicitly removed.
 
-See [docs/privacy.md](docs/privacy.md) for the storage and deletion model.
+See [docs/privacy.md](docs/privacy.md) for the storage and deletion model and
+[docs/analysis-library-and-video-recovery.md](docs/analysis-library-and-video-recovery.md)
+for archive, dependency-snapshot, backup, and legacy video recovery details.
+
+## Professional catalogue, bulk ingest, and long-form sets
+
+The **Client catalogue** workspace adds retained client projects, batches/sets,
+resumable bulk ingestion, sources up to 12 hours, reviewable virtual track
+segments, durable child-analysis queues, set-level mastering comparisons,
+append-only provenance, and verified local backup/restore. The existing
+single-track workflow and `/api/analyses` contract remain unchanged.
+
+Long-form support is deliberately separate from ordinary analysis. A 12-hour
+source is ffprobed and scanned in bounded sequential PCM chunks; it is never
+passed as one waveform/STFT, Demucs job, CLAP tensor, or transcription call.
+Long-form scans run as persistent, cancellable jobs; interrupted `running` scans
+return to `queued` on backend restart and publish virtual segments atomically.
+Accepted virtual segments decode only their bounded range and retain original
+source offsets. Crossfades remain mixed transition evidence and are never
+described as source-separated masters.
+
+Bulk selection has no arbitrary item-count cap. Actual admission is governed by
+source size, archive quota, minimum free disk, and bounded upload/analysis/GPU
+concurrency. Archived projects and completed analyses survive ordinary restarts and remain local
+until explicit deletion, but verified backup is required for durable storage.
+
+See:
+
+- [Client/project catalogue](docs/client-project-catalogue.md)
+- [Bulk and resumable ingestion](docs/bulk-ingestion.md)
+- [Long-form segmentation](docs/long-form-set-segmentation.md)
+- [Mastering comparison](docs/mastering-comparison-report.md)
+- [Audit and provenance](docs/audit-and-provenance.md)
+- [Archive backup and restore](docs/archive-backup-restore.md)
 
 ## Blender Visualizer MVP
 
@@ -131,19 +168,22 @@ lyrics, server paths, full waveforms, stems, or prompt internals. Fast mode
 provides six full-mix curves; successful Deep mode adds shared-normalized drum,
 bass, vocal, and other curves before temporary stems are deleted.
 
-The repository includes a reusable Blender Python importer and one deterministic
-procedural `abstract-geometry` preset. It builds `TP_AUDIO_BUS` F-curves,
-timeline markers, nine predictable collections, an Eevee preview scene, a
-contract-checked build manifest, representative stills, and a short preview clip
-whose duration and mux status are verified with local ffprobe. Blender receives
-the original local audio as a separate explicit input; no audio is copied into
-the cue export. The documented smoke path uses only deterministic signals from
-`tools/generate_test_audio.py`.
+The repository includes a reusable Blender Python importer and two deterministic
+procedural presets. `abstract-geometry` remains the backward-compatible default.
+`space-journey` adds a cinematic destination, partial orbital architecture,
+parallax stars, bounded debris and fog, section-aware forward travel, named
+palettes, and eleven validated artistic controls. Both reuse the same
+`TP_AUDIO_BUS`, timeline markers, common collection contract, Eevee preview
+pipeline, and ffprobe-verified bounded clip. Blender receives the original local
+audio as a separate explicit input; no audio is copied into either the cue sheet
+or visualizer configuration. The documented smoke path uses only deterministic
+signals from `tools/generate_test_audio.py`.
 
 See:
 
 - [Cue-sheet schema and DSP methods](docs/blender-visual-cue-sheet.md)
 - [Blender build and preview guide](docs/blender-visualizer-mvp.md)
+- [Space Journey preset and parameter contract](docs/space-journey-visualizer.md)
 - [Codex/Blender-MCP workflow](docs/codex-blender-mcp-preview.md)
 
 On Windows, `run-trackprompt-to-blender.ps1` is the canonical whole-system
@@ -160,6 +200,13 @@ source images; it does not install or redownload model caches.
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\run-trackprompt-to-blender.ps1 `
   -AudioPath "C:\absolute\track.wav" `
+  -ConfirmPermission -ConfirmLyricsConsent -BuildStack
+
+# Build the Space Journey preset and its bounded preview.
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\run-trackprompt-to-blender.ps1 `
+  -AudioPath "C:\absolute\track.wav" `
+  -VisualizerPreset "space-journey" `
   -ConfirmPermission -ConfirmLyricsConsent -BuildStack
 
 # Reuse cached images; a healthy-but-stale backend is repaired at most once.
@@ -186,8 +233,9 @@ allowed; the runner then stops with source/live diagnostics if routes are stale.
 
 Artifacts live under `test-output\system-runs\<timestamp>\`; each folder has a
 `run-manifest.json`, job/export evidence, cue sheet, `.blend`, build manifest,
-and preview manifest/media unless preview was skipped. The newest preserved job
-ID is also in `test-output\last-trackprompt-job-id.txt` and can be inspected with:
+resolved `visualizer-config.resolved.json`, and preview manifest/media unless
+preview was skipped. The newest preserved job ID is also in
+`test-output\last-trackprompt-job-id.txt` and can be inspected with:
 
 ```powershell
 $jobId = (Get-Content test-output\last-trackprompt-job-id.txt -Raw).Trim()
@@ -545,7 +593,20 @@ executable names, never shell command fragments.
 | `MAX_UPLOAD_MB` | `200` | Maximum streamed upload size in MiB. |
 | `NGINX_UPLOAD_LIMIT` | `202m` | Production proxy body cap in nginx size syntax; includes multipart headroom and applies only to Compose/nginx. |
 | `MAX_DURATION_SECONDS` | `1200` | Maximum probed audio duration. |
-| `JOB_TTL_MINUTES` | `60` | Fixed lifetime from job creation before automatic removal. |
+| `MAX_SINGLE_TRACK_ANALYSIS_SECONDS` | `1200` | Ordinary and reviewed child-analysis duration bound; it does not govern source ingestion. |
+| `MAX_LONGFORM_DURATION_SECONDS` | `43200` | Long-form source-ingestion and segmentation limit (12 hours). |
+| `MAX_SOURCE_UPLOAD_GB` | `50` | Maximum one resumable source size before disk/quota admission. |
+| `UPLOAD_CHUNK_MB` | `32` | Browser/backend resumable chunk size and strict per-chunk body bound. |
+| `MAX_ACTIVE_UPLOADS` | `3` | Maximum simultaneous resumable chunk requests. |
+| `MAX_ACTIVE_ANALYSES` | `1` | Maximum durable catalogue child analyses dispatched concurrently. |
+| `MAX_ACTIVE_GPU_TASKS` | `1` | Maximum heavy GPU tasks; also governs the existing GPU task semaphore. |
+| `LONGFORM_SCAN_TIMEOUT_SECONDS` | `7200` | Independent timeout for the streaming long-form scan. |
+| `MIN_FREE_DISK_GB` | `10` | Free-space reserve that source admission and backup preflight preserve. |
+| `MAX_ARCHIVE_BYTES` | `1099511627776` | Local archive quota (1 TiB default); `0` disables only this quota, not disk safety. |
+| `DEFAULT_PROJECT_RETENTION` | `archive` | Default professional-project policy: `temporary`, `archive`, or `custom`. |
+| `ABANDONED_UPLOAD_TTL_HOURS` | `72` | Retention window for incomplete resumable sessions. |
+| `AUDIT_READ_EVENTS` | `false` | Optional read-event policy; state transitions are always audited. |
+| Analysis retention | explicit delete only | `JOB_TTL_MINUTES` is intentionally unsupported and ignored if inherited from an old environment. |
 | `ANALYSIS_WORKERS` | `1` | Maximum concurrent analysis workers. One is the safe default for peak decoded/STFT memory. |
 | `MAX_PENDING_JOBS` | `2` | Maximum admitted running plus waiting jobs. Direct startup defaults to twice the worker count when unset; Compose passes `2` unless overridden. |
 | `FFMPEG_PATH` | `ffmpeg` | FFmpeg executable name or path. |
@@ -790,3 +851,9 @@ separately.
 More detail is available in [docs/architecture.md](docs/architecture.md),
 [docs/analysis-methods.md](docs/analysis-methods.md), and
 [docs/model-licenses.md](docs/model-licenses.md).
+
+
+
+## Local ComfyUI music-video projects
+
+Mission Control's Video workspace now supports reusable `local-comfyui` project packages alongside the existing provider path. It can bind and archive a local track, compile a measured 16-scene timeline, register current API-format workflows by semantic role, qualify Wan2.2 tiers sequentially, and preserve resumable generation/QC state. Start with [the local provider guide](docs/local-comfyui-video-provider.md); the setup command is plan-only unless download mode and model-license acceptance are explicit.

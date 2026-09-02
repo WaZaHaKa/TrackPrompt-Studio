@@ -1,0 +1,30 @@
+[     173ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5183/node_modules/.vite/deps/chunk-NXESFFTV.js?v=679e7662:21608
+[     236ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/status:0
+[     250ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/paths:0
+[     251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/projects:0
+[     251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/scenes:0
+[     251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/profiles:0
+[     251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/jobs:0
+[     251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/status:0
+[     300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/paths:0
+[     300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/projects:0
+[     300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/scenes:0
+[     300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/profiles:0
+[     300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/jobs:0
+[   30843ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5183/@vite/client:963
+[   32868ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   35909ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   38952ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   41985ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   45019ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   48068ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   51102ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   54152ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   57186ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   60220ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   63267ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   66317ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   69353ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   72385ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   75434ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034
+[   78468ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5183/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5183/@vite/client:1034

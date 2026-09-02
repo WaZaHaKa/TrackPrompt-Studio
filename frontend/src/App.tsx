@@ -13,6 +13,8 @@ import {
   subscribeToAnalysisEvents,
 } from './api'
 import { ProgressPanel } from './components/ProgressPanel'
+import { AnalysisLibrary } from './components/AnalysisLibrary'
+import { CatalogueWorkspace } from './components/CatalogueWorkspace'
 import { ResultsWorkspace } from './components/ResultsWorkspace'
 import { UploadPanel } from './components/UploadPanel'
 import type {
@@ -49,6 +51,7 @@ export default function App() {
   const [savingPath, setSavingPath] = useState<string>()
   const [deleting, setDeleting] = useState(false)
   const [toast, setToast] = useState<string>()
+  const [workspace, setWorkspace] = useState<'single' | 'library' | 'catalogue'>('single')
   const recoveryTimer = useRef<number | undefined>(undefined)
   const coreToolsAvailable = capabilities.fastMode.available && capabilities.ffmpeg.available && capabilities.ffprobe.available
   const serviceProblem = capabilitiesError ?? (!capabilitiesLoading && !coreToolsAvailable ? 'Required local media tools are unavailable.' : undefined)
@@ -213,12 +216,25 @@ export default function App() {
     }
   }
 
+  const openLibraryAnalysis = async (analysisId: string): Promise<void> => {
+    const archived = await getAnalysis(analysisId)
+    setJob(archived)
+    setSourceFile(null)
+    setUploadError(undefined)
+    setWorkspace('single')
+  }
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className="site-header">
         <div className="brand"><span><AudioLines aria-hidden="true" /></span><div><strong>TrackPrompt</strong><small>STUDIO</small></div></div>
         <div className="site-header__status">
+          <nav className="workspace-switcher" aria-label="Workspace">
+            <button className={workspace === 'single' ? 'is-active' : ''} onClick={() => setWorkspace('single')}>Single track</button>
+            <button className={workspace === 'library' ? 'is-active' : ''} onClick={() => setWorkspace('library')}>Analysis Library</button>
+            <button className={workspace === 'catalogue' ? 'is-active' : ''} onClick={() => setWorkspace('catalogue')}>Client catalogue</button>
+          </nav>
           <span className={`service-chip ${serviceProblem ? 'service-chip--offline' : ''}`} title={serviceProblem}>
             {serviceProblem ? <WifiOff aria-hidden="true" /> : <Server aria-hidden="true" />}
             {capabilitiesLoading ? 'Checking local tools…' : capabilitiesError ? 'Service unavailable' : !coreToolsAvailable ? 'Analysis tools unavailable' : 'Local service ready'}
@@ -227,7 +243,11 @@ export default function App() {
         </div>
       </header>
 
-      {!job ? (
+      {workspace === 'library' ? (
+        <AnalysisLibrary onOpen={openLibraryAnalysis} />
+      ) : workspace === 'catalogue' ? (
+        <CatalogueWorkspace capabilities={capabilities} />
+      ) : !job ? (
         <UploadPanel
           capabilities={capabilities}
           capabilitiesLoading={capabilitiesLoading}

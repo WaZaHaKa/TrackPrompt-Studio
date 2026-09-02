@@ -64,7 +64,16 @@ const navItems: Array<{ id: MissionSection; label: string; icon: typeof Home }> 
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-const liveStates = new Set(['starting', 'running', 'stop_requested', 'finishing_current_chunk', 'encoding', 'verifying'])
+const liveStates = new Set([
+  'starting',
+  'running',
+  'stop_requested',
+  'retry_requested',
+  'cancel_requested',
+  'finishing_current_chunk',
+  'encoding',
+  'verifying',
+])
 const reconnectableStates = new Set([...liveStates, 'paused_safely', 'resumable'])
 
 function readAdvancedPreference(): boolean {
@@ -439,8 +448,12 @@ export function MissionControlApp({
     })
   }
 
-  const startEncode = (jobId: string, includeAudio: boolean): void => {
-    void runAction(`encode:${jobId}`, () => client.startEncode(jobId, includeAudio), (job) => {
+  const startEncode = (
+    jobId: string,
+    includeAudio: boolean,
+    outputKinds: Array<'delivery' | 'master'>,
+  ): void => {
+    void runAction(`encode:${jobId}`, () => client.startEncode(jobId, includeAudio, outputKinds), (job) => {
       setActiveEncode(job)
       setToast('Encode started in the local service.')
     })
@@ -489,6 +502,9 @@ export function MissionControlApp({
             onRefreshJob={(job) => runJobAction('refresh', () => client.getRenderJob(job.jobId))}
             onStopAfterChunk={(job) => runJobAction('stop', () => client.requestStopAfterChunk(job.jobId))}
             onCancelStop={(job) => runJobAction('cancel-stop', () => client.cancelStopRequest(job.jobId))}
+            onCancelRender={(job) => runJobAction('cancel-render', () => client.cancelRender(job.jobId))}
+            onRetryCurrentChunk={(job) => runJobAction('retry-current-chunk', () => client.retryCurrentChunk(job.jobId))}
+            onRetryFailedRender={(job) => runJobAction('retry-failed', () => client.retryFailedRender(job.jobId))}
             onResumeJob={(job) => runJobAction('resume', () => client.resumeRender(job.jobId))}
             onRefreshData={() => loadDashboard()}
             onOpenOutput={openPath}

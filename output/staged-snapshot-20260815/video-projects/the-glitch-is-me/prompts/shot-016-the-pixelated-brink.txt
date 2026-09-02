@@ -1,0 +1,14 @@
+SHOT shot-016 — The Pixelated Brink
+
+NARRATIVE INTENT
+End with the revelation that the glitch belongs to the protagonist herself.
+
+SHOT PROMPT
+Close rear three-quarter view of the Quantum Siren standing at the edge of a black reflective plane that ends in infinite darkness. Fine square fragments begin at her fingertips and travel slowly inward through her body, revealing that the signal failure originates within her. Just before she disappears, she turns her head slightly toward camera; one human eye remains clear as the final violet fragment fades.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, body horror, dismemberment, death scene, dramatic scream, direct lip sync, complete face melting
+
+REVIEW NOTES
+- Transformation remains poetic, not graphic.
+- Final eye should be stable enough for a held ending frame.

@@ -1,0 +1,58 @@
+name: trackprompt-studio
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      TRACKPROMPT_DATA_DIR: /data
+      MODEL_CACHE_DIR: /data/models
+      ENABLE_DEMUCS: "${ENABLE_DEMUCS:-false}"
+      DEMUCS_MODEL_NAME: "${DEMUCS_MODEL_NAME:-htdemucs}"
+      DEMUCS_DEVICE: "${DEMUCS_DEVICE:-auto}"
+      MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-200}"
+      MAX_DURATION_SECONDS: "${MAX_DURATION_SECONDS:-1200}"
+      JOB_TTL_MINUTES: "${JOB_TTL_MINUTES:-60}"
+      ANALYSIS_WORKERS: "${ANALYSIS_WORKERS:-1}"
+      MAX_PENDING_JOBS: "${MAX_PENDING_JOBS:-2}"
+      FFMPEG_PATH: "${FFMPEG_PATH:-ffmpeg}"
+      FFPROBE_PATH: "${FFPROBE_PATH:-ffprobe}"
+      SUBPROCESS_TIMEOUT_SECONDS: "${SUBPROCESS_TIMEOUT_SECONDS:-120}"
+      ANALYSIS_TIMEOUT_SECONDS: "${ANALYSIS_TIMEOUT_SECONDS:-600}"
+      CORS_ORIGINS: "http://localhost:${FRONTEND_PORT:-5173},http://127.0.0.1:${FRONTEND_PORT:-5173}"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,::1"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    volumes:
+      - trackprompt-data:/data
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json,urllib.request;
+          data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3));
+          raise SystemExit(0 if data.get('status') == 'ok' else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    init: true
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NGINX_UPLOAD_LIMIT: "${NGINX_UPLOAD_LIMIT:-202m}"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
+    init: true
+
+volumes:
+  trackprompt-data:

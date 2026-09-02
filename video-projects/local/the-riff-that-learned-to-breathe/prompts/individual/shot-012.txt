@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-012 — Bridge of Measures
+Provisional timing: 98.000–107.000 s
+Seed: 24081012
+
+NARRATIVE INTENT
+Bring the collaborators into one shared creative space.
+
+KEYFRAME PROMPT
+The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos and The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos walk toward one another on a floating bridge made from unmarked translucent bars over a deep indigo void. The hybrid origami bird hovers between them with its amber heart glowing. Warm workshop fragments drift behind one side and rain-room fragments behind the other. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The camera travels sideways as both adults cross the bridge and meet at its center. The bird circles once, then settles across their open hands; warm workshop fragments and cool rain fragments align behind them. Keep the movement slow and continuous, ending when both touch the bird at the same moment.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+architect-identity, listener-identity, origami-bird-hybrid, bridge-world
+
+TRANSITION IN
+heartbeat arch expands into the bridge
+
+TRANSITION OUT
+their simultaneous touch triggers a watercolor bloom
+
+ACCEPTANCE NOTES
+- Equal visual agency for both collaborators.
+- No handshake cliché or corporate imagery.

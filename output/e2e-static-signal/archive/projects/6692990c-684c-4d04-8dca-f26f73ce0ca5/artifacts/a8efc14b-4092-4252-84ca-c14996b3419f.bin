@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "batchId": "779f551c-c1fa-4021-ad02-f3684920c19f",
+  "generatedAt": "2026-08-15T14:17:51.950223Z",
+  "tracks": [
+    {
+      "segmentId": "decb4041-a7c1-5c66-b3e5-c286a5e3407d",
+      "order": 0,
+      "label": "Track 1",
+      "sourceStartSeconds": 0.0,
+      "sourceEndSeconds": 12.0,
+      "durationSeconds": 12.0,
+      "boundaryConfidence": "unknown",
+      "transitionType": "uncertain",
+      "stableCoreSeconds": 12.0,
+      "measurements": {
+        "bpm": 120.0,
+        "key": "A#",
+        "mode": "minor",
+        "integratedLoudnessLufs": -27.1,
+        "loudnessRangeLu": 48.41,
+        "samplePeakDbfs": -6.26,
+        "macroDynamicRangeDb": 60.52,
+        "stereoWidth": 0.0,
+        "phaseCorrelation": 1.0,
+        "spectralCentroidHz": 0.0,
+        "onsetDensity": 1.917,
+        "lowEndWeight": "lean",
+        "brightness": "soft",
+        "transientEmphasis": "emphasized",
+        "mixDensity": "sparse",
+        "monoCompatibility": "mono source",
+        "vocalPresence": "unknown"
+      },
+      "deviations": {
+        "bpm": 0.0,
+        "integratedLoudnessLufs": 0.0,
+        "loudnessRangeLu": 0.0,
+        "samplePeakDbfs": 0.0,
+        "macroDynamicRangeDb": 0.0,
+        "stereoWidth": 0.0,
+        "phaseCorrelation": 0.0,
+        "spectralCentroidHz": 0.0,
+        "onsetDensity": 0.0
+      },
+      "outliers": [],
+      "warnings": [
+        "No sufficiently long stable core was available for uncontaminated comparison.",
+        "No sufficiently long stable core was available; the bounded full segment includes transition evidence."
+      ]
+    }
+  ],
+  "medians": {
+    "bpm": 120.0,
+    "integratedLoudnessLufs": -27.1,
+    "loudnessRangeLu": 48.41,
+    "samplePeakDbfs": -6.26,
+    "macroDynamicRangeDb": 60.52,
+    "stereoWidth": 0.0,
+    "phaseCorrelation": 1.0,
+    "spectralCentroidHz": 0.0,
+    "onsetDensity": 1.917
+  },
+  "minima": {
+    "bpm": 120.0,
+    "integratedLoudnessLufs": -27.1,
+    "loudnessRangeLu": 48.41,
+    "samplePeakDbfs": -6.26,
+    "macroDynamicRangeDb": 60.52,
+    "stereoWidth": 0.0,
+    "phaseCorrelation": 1.0,
+    "spectralCentroidHz": 0.0,
+    "onsetDensity": 1.917
+  },
+  "maxima": {
+    "bpm": 120.0,
+    "integratedLoudnessLufs": -27.1,
+    "loudnessRangeLu": 48.41,
+    "samplePeakDbfs": -6.26,
+    "macroDynamicRangeDb": 60.52,
+    "stereoWidth": 0.0,
+    "phaseCorrelation": 1.0,
+    "spectralCentroidHz": 0.0,
+    "onsetDensity": 1.917
+  },
+  "withheldCounts": {
+    "bpm": 0,
+    "integratedLoudnessLufs": 0,
+    "loudnessRangeLu": 0,
+    "samplePeakDbfs": 0,
+    "macroDynamicRangeDb": 0,
+    "stereoWidth": 0,
+    "phaseCorrelation": 0,
+    "spectralCentroidHz": 0,
+    "onsetDensity": 0
+  },
+  "observations": [],
+  "estimatorLimitations": [
+    "This is an analytical comparison, not an automatic mastering decision or target prescription.",
+    "Sample peak is not true peak. No universal LUFS, tonal-balance, or stereo target is assumed.",
+    "Crossfaded material contains both tracks; TrackPrompt does not claim source separation.",
+    "Missing or low-confidence measurements remain withheld rather than manufactured."
+  ]
+}

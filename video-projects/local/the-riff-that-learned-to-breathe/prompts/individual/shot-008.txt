@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-008 — The Solo Becomes a Comet
+Provisional timing: 62.000–71.000 s
+Seed: 24081008
+
+NARRATIVE INTENT
+Translate the essence of the original solo into a lyrical new visual voice.
+
+KEYFRAME PROMPT
+the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged flies above a quiet watercolor city at night while a long warm amber ribbon streams from its heart, curling like a comet and a koi tail. The city is iron blue and indigo, with wet roofs and sparse window lights; no signs or text are visible. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The camera glides beside the bird as it arcs between rain clouds and rooftops. Its amber ribbon draws one expressive rising curve, briefly coils like a swimming koi, then releases into a descending phrase. Maintain smooth lyrical motion, stable character design, and one continuous flight ending as the ribbon divides toward two windows.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+origami-bird-hybrid, night-city, amber-solo-ribbon
+
+TRANSITION IN
+water ripple expands into the night sky
+
+TRANSITION OUT
+the amber comet splits into two trails that lead into two separate windows
+
+ACCEPTANCE NOTES
+- This is the first hero visual; prioritize line stability.
+- No skyline signs or readable windows.

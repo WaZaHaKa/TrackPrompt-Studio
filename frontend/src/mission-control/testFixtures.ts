@@ -40,6 +40,8 @@ export const testScene: SceneSummary = {
 
 export const testProfile: RenderProfileSummary = {
   id: 'TRIP-TO-ANDROMEDA-720P-HYPER-OPTIMIZED',
+  projectId: testProject.id,
+  sceneId: testScene.id,
   displayName: '720p Hyper Optimized',
   width: 1280,
   height: 720,
@@ -57,6 +59,7 @@ export const testProfile: RenderProfileSummary = {
   lastUsedAt: null,
   savedFileSha256: 'DB27AA9DE2939ACA78819B58BB08C7DB408EED7092E83FA327363EE094779BF0',
   path: 'C:\\repo\\profile.json',
+  outputVariants: [],
 }
 
 export const testSystem: SystemStatus = {
@@ -242,13 +245,16 @@ export function makeClient(overrides: Partial<MissionControlClient> = {}): Missi
     inspectOutput: () => resolved({ path: 'C:\\renders', classification: 'empty', usable: true, resumable: false, entries: [], message: 'Folder is empty.', suggestedChildName: null, conflictingIdentity: null }),
     createOutputChild: () => resolved({ path: 'C:\\renders\\trip-to-andromeda', classification: 'empty', usable: true, resumable: false, entries: [], message: 'Folder created.', suggestedChildName: null, conflictingIdentity: null }),
     preflight: () => resolved({ ready: true, authorizationRequired: false, checks: [], sceneSha256: testScene.sha256, profileSha256: testProfile.savedFileSha256, exactOperation: 'Full production render', rawDetails: null }),
-    authorize: () => resolved({ authorized: true, authorizationId: 'auth-test', authorizedAt: '2026-07-21T10:00:00Z', sceneSha256: testScene.sha256, profileSha256: testProfile.savedFileSha256, token: 'test-token' }),
+    authorize: () => resolved({ authorized: true, authorizationId: 'auth-test', authorizedAt: '2026-07-21T10:00:00Z', sceneSha256: testScene.sha256, profileSha256: testProfile.savedFileSha256, token: 'test-token', enabledOutputVariantIds: [] }),
     dryRun: () => resolved({ ok: true, projectId: testProject.id, sceneId: testScene.id, profileId: testProfile.id, outputPath: 'C:\\renders', plan: {}, logLines: [] }),
     startRender: () => resolved(makeRenderJob()),
     getRenderJob: () => resolved(makeRenderJob()),
     getRenderLogs: () => resolved([]),
     requestStopAfterChunk: () => resolved(makeRenderJob({ state: 'stop_requested', safeStopStatus: 'requested' })),
     cancelStopRequest: () => resolved(makeRenderJob()),
+    cancelRender: () => resolved(makeRenderJob({ state: 'cancel_requested', safeStopStatus: 'requested' })),
+    retryCurrentChunk: () => resolved(makeRenderJob({ state: 'starting', error: null })),
+    retryFailedRender: () => resolved(makeRenderJob({ state: 'starting', error: null })),
     resumeRender: () => resolved(makeRenderJob()),
     createCalibrationPlan: () => resolved({ id: 'cal-test', status: 'planned', completedAt: null, machineName: 'Test workstation', gpuName: null, cpuName: null, ramGiB: null, recommendedProfileId: null, verdict: null, candidates: [], recoverableError: null }),
     startCalibrationCandidate: () => resolved({ id: 'cal-test', status: 'running', completedAt: null, machineName: 'Test workstation', gpuName: null, cpuName: null, ramGiB: null, recommendedProfileId: null, verdict: null, candidates: [], recoverableError: null }),

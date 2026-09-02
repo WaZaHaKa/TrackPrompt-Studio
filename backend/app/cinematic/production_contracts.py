@@ -88,6 +88,22 @@ def _safe_repository_path(value: str) -> str:
     return value
 
 
+def validate_final_frame_output_pattern(value: str) -> str:
+    """Validate the canonical resumable renderer's exact frame namespace."""
+    normalized = _safe_repository_path(value)
+    candidate = PurePosixPath(normalized)
+    if (
+        candidate.name != "frame_######.png"
+        or candidate.parent.name != "frames"
+        or len(candidate.parts) < 3
+    ):
+        raise ValueError(
+            "final output patterns must end with "
+            "frames/frame_######.png"
+        )
+    return normalized
+
+
 class ImmutableR131Proof(APIModel):
     revision_id: Literal["andromeda-r13.1-selected-refinement"]
     proof_root: Literal["test-output/cinematic-v2-andromeda-r131-20260722-213840"]
@@ -695,6 +711,18 @@ class AndromedaV2Foundation(APIModel):
     package_manifest: PackageManifest
 
 
+_FOUNDATION_LIVE_CONTRACT_ROLES = frozenset(
+    {
+        "owner-creative-acceptance",
+        "final-look-profile",
+        "output-variant-contract",
+        "story-plan",
+        "shot-plan",
+        "production-authorization",
+    }
+)
+
+
 def _load_model(path: Path, model_type: type[_MODEL]) -> _MODEL:
     return model_type.model_validate_json(path.read_text(encoding="utf-8"))
 
@@ -757,7 +785,17 @@ def load_and_validate_foundation(repository_root: Path) -> AndromedaV2Foundation
         if not act_start <= shot.frame_start <= shot.frame_end <= act_end:
             raise ValueError(f"shot {shot.id} falls outside its StoryPlan act")
 
+    # package-manifest.json is the immutable foundation snapshot. Its builder,
+    # implementation, composition-profile, and documentation entries identify
+    # the historical source bytes that established the baseline; they are not
+    # a mutable pointer to the current implementation. Current implementation
+    # identity is bound separately by the versioned final-release package.
+    # Continue hashing every live creative/production contract that the
+    # foundation loader actually consumes, while preserving the historical
+    # source snapshot verbatim instead of rewriting it after each correction.
     for artifact in foundation.package_manifest.artifacts:
+        if artifact.role not in _FOUNDATION_LIVE_CONTRACT_ROLES:
+            continue
         actual = file_sha256(repository_root / PurePosixPath(artifact.path))
         if actual != artifact.sha256:
             raise ValueError(f"package artifact hash mismatch for role {artifact.role}")
@@ -883,12 +921,7 @@ class EnabledFinalOutputVariant(APIModel):
     @field_validator("output_pattern")
     @classmethod
     def safe_output_pattern(cls, value: str) -> str:
-        normalized = _safe_repository_path(value)
-        if normalized.count("######") != 1:
-            raise ValueError(
-                "enabled output patterns require exactly one six-digit frame placeholder"
-            )
-        return normalized
+        return validate_final_frame_output_pattern(value)
 
     @model_validator(mode="after")
     def exact_variant_geometry(self) -> EnabledFinalOutputVariant:

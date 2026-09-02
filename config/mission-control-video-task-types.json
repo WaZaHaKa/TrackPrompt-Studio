@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "taskTypes": [
+    {
+      "type": "video.plan.compile",
+      "network": false,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.provider.generate",
+      "network": true,
+      "billable": true,
+      "requiresBatchAuthorization": true,
+      "resumableBy": "providerOperationName"
+    },
+    {
+      "type": "video.provider.poll",
+      "network": true,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.provider.download",
+      "network": true,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.clip.verify",
+      "network": false,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.timeline.resolve",
+      "network": false,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.davinci.export",
+      "network": false,
+      "billable": false,
+      "resumable": true
+    },
+    {
+      "type": "video.preview.assemble",
+      "network": false,
+      "billable": false,
+      "resumable": true
+    }
+  ]
+}

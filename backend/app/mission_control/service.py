@@ -24,6 +24,7 @@ from ..cinematic.schemas import (
     StoryPlan,
 )
 from ..cinematic.validation import validate_cinematic_privacy, validate_plan_pair
+from ..local_video import LocalVideoController
 from ..video_generation.mission_controller import VideoGenerationController
 from ..video_generation.mission_models import (
     VideoAudioBrowseRequest,
@@ -39,11 +40,17 @@ from .discovery import (
 )
 from .errors import MissionControlError
 from .eta import EtaSample, EtaService, StageWorkload
+from .local_worker import (
+    LocalSubprocessRenderWorker,
+    LocalTaskCommandBuilder,
+    LocalWorkerRunResult,
+)
 from .models import (
     AuthorizationResult,
     CalibrationPlanRequest,
     CalibrationPlanResult,
     CalibrationSummary,
+    CancelRenderRequest,
     CancelStopRequest,
     CheckStatus,
     CloudReadiness,
@@ -80,6 +87,8 @@ from .models import (
     RenderEvent,
     RenderIdentity,
     ResumeRequest,
+    RetryCurrentChunkRequest,
+    RetryFailedRenderRequest,
     RuntimeIdentity,
     SafeStopStatus,
     SceneSummary,
@@ -100,16 +109,29 @@ from .render_contracts import (
     ProgressState,
     ProjectRef,
     RenderStage,
+    ShotRenderTask,
     StageProgress,
+    TaskState,
     TenantRef,
     WorkerCapabilities,
     WorkerKind,
+    WorkerLease,
 )
 from .renderers import (
     FakeRenderer,
     ProductionRenderer,
+    RendererTelemetryEvent,
     artifact_progress_changes,
     inspect_render_artifacts,
+)
+from .scheduler import (
+    LeaseGrant,
+    PersistentRenderScheduler,
+    ScheduledRenderTask,
+    SchedulerReapResult,
+    SchedulerWorker,
+    TaskResourceRequirements,
+    seal_task_identity,
 )
 from .store import MissionControlStore
 from .system_adapters import NativePicker, PerformanceAdapter
@@ -118,6 +140,8 @@ _ACTIVE_STATES = {
     JobState.STARTING,
     JobState.RUNNING,
     JobState.STOP_REQUESTED,
+    JobState.RETRY_REQUESTED,
+    JobState.CANCEL_REQUESTED,
     JobState.FINISHING_CURRENT_CHUNK,
     JobState.ENCODING,
     JobState.VERIFYING,
@@ -237,6 +261,8 @@ class MissionControlService:
             config.database_path,
             event_retention=config.event_retention,
         )
+        self.scheduler = PersistentRenderScheduler(config.database_path)
+        self.scheduler.reap_expired()
         self.production_renderer = ProductionRenderer(config)
         self.fake_renderer = FakeRenderer()
         self.native_picker = NativePicker(config)
@@ -257,7 +283,17 @@ class MissionControlService:
             ffmpeg_path=self._ffmpeg_path,
             ffprobe_path=self._video_ffprobe_path,
         )
+        self.local_video = LocalVideoController(
+            repository_root=config.repository_root,
+            state_root=config.state_root,
+            analysis_data_root=Path(
+                os.getenv("TRACKPROMPT_DATA_DIR", str(config.state_root.parent))
+            ),
+            ffmpeg_path=self._ffmpeg_path,
+            ffprobe_path=self._video_ffprobe_path,
+        )
         self._recover_jobs()
+        self._restore_scheduler_projections()
         self._event_generation = self.store.latest_event_sequence()
         self.start_background_tasks()
 
@@ -267,6 +303,7 @@ class MissionControlService:
             self._orphan_monitor_task.cancel()
             self._orphan_monitor_task = None
         self.video_generation.close()
+        self.scheduler.close()
         self.store.close()
 
     def start_background_tasks(self) -> None:
@@ -307,6 +344,40 @@ class MissionControlService:
             self.store.put_job(recovered)
             self.store.append_event(self._event_from_job(recovered))
 
+    def _restore_scheduler_projections(self) -> None:
+        now = datetime.now(UTC)
+        for job in self.store.list_jobs(limit=1_000):
+            tasks = self.scheduler.list_tasks(job_id=job.id)
+            if not tasks or all(
+                task.state is TaskState.PENDING and task.attempt == 1
+                for task in tasks
+            ):
+                # A pristine queue may coexist with the legacy local renderer
+                # until that adapter adopts leases. Never regress renderer-owned
+                # frame progress merely because unclaimed tasks were persisted.
+                continue
+            changes = self._scheduler_projection_changes(
+                job,
+                event_type="scheduler_restored",
+                now=now,
+            )
+            if not changes:
+                continue
+            changes["updated_at"] = now
+            restored = job.model_copy(update=changes)
+            self.store.put_job(restored)
+            canonical = self.store.get_media_render_job(job.id)
+            if canonical is not None:
+                self.store.put_media_render_job(
+                    canonical.model_copy(
+                        update={
+                            "output_variants": restored.output_variants,
+                            "updated_at": now,
+                        }
+                    )
+                )
+            self.store.append_event(self._event_from_job(restored))
+
     def _process_alive(self, process_id: int | None) -> bool:
         return process_is_alive(process_id)
 
@@ -315,6 +386,7 @@ class MissionControlService:
             while not self._closed:
                 await asyncio.sleep(1.0)
                 async with self._job_lock:
+                    await self._reap_render_scheduler_locked(datetime.now(UTC))
                     await self._reconcile_orphaned_jobs_locked()
         except asyncio.CancelledError:
             return
@@ -342,6 +414,18 @@ class MissionControlService:
             "current_frame_started_at": None,
         }
         if job.renderer == RendererKind.FAKE:
+            if job.state == JobState.CANCEL_REQUESTED:
+                base.update(
+                    state=JobState.CANCELLED,
+                    completed_at=now,
+                    safe_stop_status=SafeStopStatus.NONE,
+                    warning=(
+                        "The fake renderer stopped during the confirmed cancellation; "
+                        "only previously published frames remain safe."
+                    ),
+                    error=None,
+                )
+                return job.model_copy(update=base)
             base.update(
                 state=JobState.RESUMABLE,
                 warning="The fake renderer stopped with the prior Mission Control process; resume is available.",
@@ -365,6 +449,21 @@ class MissionControlService:
                 completed_at=now,
                 safe_stop_status=SafeStopStatus.NONE,
                 warning=None,
+                error=None,
+            )
+        elif (
+            job.state == JobState.CANCEL_REQUESTED
+            and snapshot.disposition in {"paused", "resumable"}
+        ):
+            base.update(
+                state=JobState.CANCELLED,
+                phase=JobPhase.PUBLISH_CHUNK,
+                completed_at=now,
+                safe_stop_status=SafeStopStatus.NONE,
+                warning=(
+                    "The confirmed cancellation completed; validated and published "
+                    "frames were preserved."
+                ),
                 error=None,
             )
         elif snapshot.disposition == "paused":
@@ -613,6 +712,8 @@ class MissionControlService:
             job_id,
             Path(selection.path),
             source="local-selection",
+            accept_local_delivery_revision=request.accept_local_delivery_revision,
+            confirmation=request.confirmation,
         )
 
     async def open_path(self, request: OpenPathRequest) -> OpenPathResult:
@@ -681,12 +782,14 @@ class MissionControlService:
         profile_id: str,
         scene_id: str,
         *,
+        enabled_output_variant_ids: list[str] | None = None,
         settings_and_hashes_reviewed: bool,
         production_render_authorized: bool,
     ) -> AuthorizationResult:
         return self.discovery.authorize_profile(
             profile_id,
             scene_id,
+            enabled_output_variant_ids=enabled_output_variant_ids,
             settings_and_hashes_reviewed=settings_and_hashes_reviewed,
             production_render_authorized=production_render_authorized,
         )
@@ -729,6 +832,8 @@ class MissionControlService:
         self,
         profile: ProfileSummary,
         payload: Mapping[str, Any],
+        *,
+        enabled_output_variant_ids: list[str] | None = None,
     ) -> tuple[_OutputVariantDefinition, ...]:
         raw_variants = payload.get("outputVariants")
         if raw_variants is None:
@@ -756,9 +861,13 @@ class MissionControlService:
 
         output_matrix = payload.get("outputMatrix")
         matrix = output_matrix if isinstance(output_matrix, dict) else {}
-        selected_value = payload.get(
-            "enabledOutputVariantIds",
-            matrix.get("enabledVariantIds"),
+        selected_value: object = (
+            enabled_output_variant_ids
+            if enabled_output_variant_ids is not None
+            else payload.get(
+                "enabledOutputVariantIds",
+                matrix.get("enabledVariantIds"),
+            )
         )
         selected_ids: set[str] | None = None
         if selected_value is not None:
@@ -1076,7 +1185,11 @@ class MissionControlService:
         _profile_path, profile_payload, _profile_hash = self.discovery.profile_source(
             profile.id
         )
-        definitions = self._output_variant_definitions(profile, profile_payload)
+        definitions = self._output_variant_definitions(
+            profile,
+            profile_payload,
+            enabled_output_variant_ids=request.enabled_output_variant_ids,
+        )
         active_variant = next(
             (definition for definition in definitions if definition.enabled),
             None,
@@ -1088,6 +1201,9 @@ class MissionControlService:
             profile_id=profile.id,
             profile_sha256=profile.saved_file_sha256,
             output_directory=str(path),
+            enabled_output_variant_ids=tuple(
+                definition.id for definition in definitions if definition.enabled
+            ),
             output_variant_id=(
                 active_variant.id
                 if active_variant is not None
@@ -1263,6 +1379,443 @@ class MissionControlService:
                 for complexity, units in distribution
             )
         return tuple(workloads)
+
+    def _scheduler_shot_ranges(
+        self,
+        job: JobRecord,
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+    ) -> tuple[tuple[str, str, int, int], ...]:
+        fallback = (("timeline", "default", job.frame_start, job.frame_end),)
+        shot_plan = self._shot_plan_payload(profile_payload, profile_path)
+        if shot_plan is None:
+            return fallback
+        raw_shots = shot_plan.get("shots")
+        if not isinstance(raw_shots, list):
+            return fallback
+        declared: list[tuple[str, str, int, int]] = []
+        for raw in raw_shots:
+            if not isinstance(raw, dict):
+                return fallback
+            shot_id = raw.get("id")
+            complexity = raw.get("complexityClass", "default")
+            frame_start = raw.get("frameStart")
+            frame_end = raw.get("frameEnd")
+            if (
+                not isinstance(shot_id, str)
+                or _IDENTIFIER_RE.fullmatch(shot_id.strip()) is None
+                or not isinstance(complexity, str)
+                or _IDENTIFIER_RE.fullmatch(complexity.strip()) is None
+                or isinstance(frame_start, bool)
+                or not isinstance(frame_start, int)
+                or isinstance(frame_end, bool)
+                or not isinstance(frame_end, int)
+                or frame_end < frame_start
+            ):
+                return fallback
+            clipped_start = max(job.frame_start, frame_start)
+            clipped_end = min(job.frame_end, frame_end)
+            if clipped_start <= clipped_end:
+                declared.append(
+                    (
+                        shot_id.strip(),
+                        complexity.strip(),
+                        clipped_start,
+                        clipped_end,
+                    )
+                )
+        if not declared:
+            return fallback
+        result: list[tuple[str, str, int, int]] = []
+        cursor = job.frame_start
+        for shot_id, complexity, frame_start, frame_end in sorted(
+            declared,
+            key=lambda value: (value[2], value[3], value[0]),
+        ):
+            if frame_start < cursor:
+                return fallback
+            if frame_start > cursor:
+                result.append(
+                    (
+                        f"timeline-{cursor:06d}-{frame_start - 1:06d}",
+                        "default",
+                        cursor,
+                        frame_start - 1,
+                    )
+                )
+            result.append((shot_id, complexity, frame_start, frame_end))
+            cursor = frame_end + 1
+        if cursor <= job.frame_end:
+            result.append(
+                (
+                    f"timeline-{cursor:06d}-{job.frame_end:06d}",
+                    "default",
+                    cursor,
+                    job.frame_end,
+                )
+            )
+        return tuple(result)
+
+    def _scheduler_resource_requirements(
+        self,
+        profile_payload: Mapping[str, Any],
+    ) -> tuple[TaskResourceRequirements, WorkerKind | None]:
+        scheduler_value = profile_payload.get("scheduler")
+        scheduler_payload = (
+            scheduler_value if isinstance(scheduler_value, dict) else {}
+        )
+        worker_value = scheduler_payload.get(
+            "workerRequirements",
+            profile_payload.get("workerRequirements"),
+        )
+        worker = worker_value if isinstance(worker_value, dict) else {}
+
+        memory_value = worker.get("minimumMemoryBytes", 0)
+        gpu_memory_value = worker.get("minimumGpuMemoryBytes", 0)
+        for label, value in (
+            ("minimumMemoryBytes", memory_value),
+            ("minimumGpuMemoryBytes", gpu_memory_value),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise self._output_variant_contract_error(
+                    f"Scheduler {label} must be a non-negative integer."
+                )
+
+        kind_value = worker.get("requiredWorkerKind")
+        required_kind: WorkerKind | None = None
+        if kind_value is not None:
+            try:
+                required_kind = WorkerKind(str(kind_value))
+            except ValueError as exc:
+                raise self._output_variant_contract_error(
+                    "Scheduler requiredWorkerKind is not supported."
+                ) from exc
+
+        frame_sequence_value = profile_payload.get("frameSequence")
+        frame_sequence = (
+            frame_sequence_value
+            if isinstance(frame_sequence_value, dict)
+            else {}
+        )
+        format_value = frame_sequence.get(
+            "format",
+            profile_payload.get("imageFormat", "png"),
+        )
+        normalized_format = str(format_value).strip().lower().replace("_", "-")
+        if normalized_format == "openexr":
+            normalized_format = "open-exr"
+        artifact_format = (
+            normalized_format
+            if _IDENTIFIER_RE.fullmatch(normalized_format) is not None
+            else "png"
+        )
+        return (
+            TaskResourceRequirements(
+                memory_bytes=memory_value,
+                gpu_memory_bytes=gpu_memory_value,
+                required_artifact_format=artifact_format,
+            ),
+            required_kind,
+        )
+
+    def _schedule_media_render_job(
+        self,
+        job: JobRecord,
+        media_job: MediaRenderJob,
+        profile_payload: Mapping[str, Any],
+        profile_path: Path,
+        *,
+        chunk_size: int,
+    ) -> tuple[ScheduledRenderTask, ...]:
+        requirements, required_worker_kind = (
+            self._scheduler_resource_requirements(profile_payload)
+        )
+        shot_ranges = self._scheduler_shot_ranges(
+            job,
+            profile_payload,
+            profile_path,
+        )
+        scheduled: list[ScheduledRenderTask] = []
+        for variant in media_job.output_variants:
+            if not variant.enabled:
+                continue
+            for shot_id, complexity, shot_start, shot_end in shot_ranges:
+                chunk_start = shot_start
+                while chunk_start <= shot_end:
+                    chunk_end = min(shot_end, chunk_start + chunk_size - 1)
+                    shot_digest = hashlib.sha256(
+                        shot_id.encode("utf-8")
+                    ).hexdigest()[:8]
+                    chunk_id = (
+                        f"chunk-{chunk_start:06d}-{chunk_end:06d}-{shot_digest}"
+                    )
+                    draft = ShotRenderTask(
+                        id="unsealed-task",
+                        job_id=media_job.id,
+                        output_variant_id=variant.id,
+                        shot_id=shot_id,
+                        chunk_id=chunk_id,
+                        frame_start=chunk_start,
+                        frame_end=chunk_end,
+                        width=variant.width,
+                        height=variant.height,
+                        fps=variant.fps,
+                        complexity_class=complexity,
+                        package_sha256=media_job.package.package_sha256,
+                        matrix_sha256=media_job.output_matrix.matrix_sha256,
+                        output_variant_sha256=variant.output_variant_sha256,
+                        scene_sha256=variant.composition_profile.scene_sha256,
+                        render_profile_sha256=variant.render_profile_sha256,
+                        composition_sha256=(
+                            variant.composition_profile.composition_sha256
+                        ),
+                        task_sha256="0" * 64,
+                        output_root=variant.frames_root,
+                        required_worker_kind=required_worker_kind,
+                        minimum_gpu_memory_bytes=(
+                            requirements.gpu_memory_bytes or None
+                        ),
+                    )
+                    scheduled.append(
+                        self.scheduler.submit_task(
+                            seal_task_identity(draft),
+                            requirements=requirements,
+                            now=job.updated_at,
+                        )
+                    )
+                    chunk_start = chunk_end + 1
+        return tuple(scheduled)
+
+    @staticmethod
+    def _scheduler_stage_state(
+        tasks: tuple[ScheduledRenderTask, ...],
+    ) -> ProgressState:
+        if tasks and all(task.state is TaskState.COMPLETE for task in tasks):
+            return ProgressState.COMPLETE
+        if any(
+            task.state in {TaskState.LEASED, TaskState.RUNNING}
+            for task in tasks
+        ):
+            return ProgressState.RUNNING
+        if any(task.state is TaskState.FAILED for task in tasks):
+            return ProgressState.FAILED
+        if any(task.attempt > 1 for task in tasks):
+            return ProgressState.PAUSED
+        return ProgressState.PENDING
+
+    def _scheduler_variant_projection(
+        self,
+        variant: OutputVariant,
+        tasks: tuple[ScheduledRenderTask, ...],
+        now: datetime,
+    ) -> OutputVariant:
+        if not variant.enabled or not tasks:
+            return variant
+        completed_units = sum(
+            task.task.frame_count
+            for task in tasks
+            if task.state is TaskState.COMPLETE
+        )
+        total_units = sum(task.task.frame_count for task in tasks)
+        active = tuple(
+            task
+            for task in tasks
+            if task.state in {TaskState.LEASED, TaskState.RUNNING}
+        )
+        retry_count = sum(max(0, task.attempt - 1) for task in tasks)
+        rendering_stage = StageProgress(
+            stage=RenderStage.RENDERING,
+            state=self._scheduler_stage_state(tasks),
+            completed_units=completed_units,
+            total_units=total_units,
+            unit="frames",
+            started_at=(
+                min(task.created_at for task in active) if active else None
+            ),
+            updated_at=now,
+        )
+        stages = tuple(
+            rendering_stage if stage.stage is RenderStage.RENDERING else stage
+            for stage in variant.progress.stages
+        )
+        progress = variant.progress.model_copy(
+            update={
+                "stages": stages,
+                "current_frame": (
+                    min(task.task.frame_start for task in active)
+                    if active
+                    else None
+                ),
+                "in_flight_frames": tuple(
+                    sorted({task.task.frame_start for task in active})
+                ),
+                "active_worker_ids": tuple(
+                    sorted(
+                        {
+                            task.leased_worker_id
+                            for task in active
+                            if task.leased_worker_id is not None
+                        }
+                    )
+                ),
+                "retry_count": max(
+                    variant.progress.retry_count,
+                    retry_count,
+                ),
+                "updated_at": now,
+            }
+        )
+        return variant.model_copy(update={"progress": progress})
+
+    def _scheduler_projection_changes(
+        self,
+        job: JobRecord,
+        *,
+        event_type: str,
+        now: datetime,
+    ) -> dict[str, object]:
+        tasks = self.scheduler.list_tasks(job_id=job.id)
+        if not tasks:
+            return {}
+        tasks_by_variant = {
+            variant.id: tuple(
+                task
+                for task in tasks
+                if task.task.output_variant_id == variant.id
+            )
+            for variant in job.output_variants
+        }
+        variants = tuple(
+            self._scheduler_variant_projection(
+                variant,
+                tasks_by_variant[variant.id],
+                now,
+            )
+            for variant in job.output_variants
+        )
+        active_tasks = tuple(
+            task
+            for task in tasks
+            if task.state in {TaskState.LEASED, TaskState.RUNNING}
+        )
+        failed_tasks = tuple(
+            task for task in tasks if task.state is TaskState.FAILED
+        )
+        active_task = active_tasks[0] if active_tasks else None
+        all_complete = all(task.state is TaskState.COMPLETE for task in tasks)
+        retry_count = sum(max(0, task.attempt - 1) for task in tasks)
+        workers = tuple(
+            worker.capabilities
+            for worker in self.scheduler.list_workers(
+                include_inactive=False,
+                now=now,
+            )
+        )
+        active_variant_id = (
+            active_task.task.output_variant_id
+            if active_task is not None
+            else job.active_variant_id
+        )
+        active_variant = next(
+            (
+                variant
+                for variant in variants
+                if variant.id == active_variant_id
+            ),
+            next((variant for variant in variants if variant.enabled), None),
+        )
+        changes: dict[str, object] = {
+            "output_variants": variants,
+            "active_variant_id": active_variant_id,
+            "stages": active_variant.progress.stages if active_variant else (),
+            "workers": workers,
+            "chunks_total": len(tasks),
+            "chunks_completed": sum(
+                task.state is TaskState.COMPLETE for task in tasks
+            ),
+            "retry_count": max(job.retry_count, retry_count),
+            "renderer_event_type": event_type,
+            "renderer_event_sequence": (job.renderer_event_sequence or 0) + 1,
+            "renderer_status": event_type,
+            "last_output_at": now,
+        }
+        if active_task is not None:
+            changes.update(
+                {
+                    "state": JobState.RUNNING,
+                    "phase": JobPhase.RENDER_FRAME,
+                    "renderer_active": True,
+                    "watcher_active": True,
+                    "started_at": job.started_at or now,
+                    "worker_id": active_task.leased_worker_id,
+                    "active_chunk_id": active_task.task.chunk_id,
+                    "current_shot_id": active_task.task.shot_id,
+                    "current_complexity_class": (
+                        active_task.task.complexity_class
+                    ),
+                    "current_frame": active_task.task.frame_start,
+                    "chunk_start": active_task.task.frame_start,
+                    "chunk_end": active_task.task.frame_end,
+                    "current_frame_started_at": now,
+                }
+            )
+        else:
+            changes.update(
+                {
+                    "renderer_active": False,
+                    "watcher_active": False,
+                    "worker_id": None,
+                    "active_chunk_id": None,
+                    "current_shot_id": None,
+                    "current_complexity_class": None,
+                    "current_frame": None,
+                    "chunk_start": None,
+                    "chunk_end": None,
+                    "current_frame_started_at": None,
+                }
+            )
+            if all_complete and job.state not in _TERMINAL_STATES:
+                changes.update(
+                    {
+                        "state": JobState.VERIFYING,
+                        "phase": JobPhase.FINAL_VERIFY,
+                    }
+                )
+            elif event_type == "scheduler_task_failed" and failed_tasks:
+                changes.update(
+                    {
+                        "state": JobState.FAILED,
+                        "phase": JobPhase.RENDER_FRAME,
+                        "completed_at": now,
+                        "error": StructuredError(
+                            code="scheduler_task_failed",
+                            title="Scheduled render task failed",
+                            summary=(
+                                "A render worker reported a terminal failure for "
+                                "an immutable render task."
+                            ),
+                            recommended_action=(
+                                "Inspect the task failure and explicitly retry "
+                                "only after its exact identity is still valid."
+                            ),
+                            retryable=False,
+                            timestamp=now,
+                            job_id=job.id,
+                        ),
+                    }
+                )
+            elif event_type in {"scheduler_worker_lost", "scheduler_task_failed"}:
+                changes.update(
+                    {
+                        "state": JobState.RESUMABLE,
+                        "phase": JobPhase.RENDER_FRAME,
+                        "warning": (
+                            "A render worker stopped reporting. Its immutable "
+                            "task was requeued without overwriting completed work."
+                        ),
+                    }
+                )
+        return changes
 
     def _materialize_media_render_job(
         self,
@@ -1475,6 +2028,30 @@ class MissionControlService:
         profile = self.discovery.get_profile(request.profile_id)
         scene = self.discovery.get_scene(request.scene_id)
         validation = self.discovery.validate_profile(request.profile_id)
+        _profile_path, profile_payload, _profile_hash = self.discovery.profile_source(
+            request.profile_id
+        )
+        variant_definitions = self._output_variant_definitions(
+            profile,
+            profile_payload,
+            enabled_output_variant_ids=request.enabled_output_variant_ids,
+        )
+        enabled_variants = tuple(
+            definition for definition in variant_definitions if definition.enabled
+        )
+        authorization_matrix = (
+            [variant.id for variant in enabled_variants]
+            if "outputVariants" in profile_payload or "outputVariant" in profile_payload
+            else None
+        )
+        matrix_authorized, matrix_authorization_issues, _matrix_token = (
+            validate_authorization_record(
+                Path(profile.path),
+                Path(scene.path),
+                profile_payload,
+                enabled_output_variant_ids=authorization_matrix,
+            )
+        )
         output = self.outputs.inspect(
             request.output_directory,
             profile_id=request.profile_id,
@@ -1521,6 +2098,19 @@ class MissionControlService:
                 summary=f"Frames {profile.frame_start}–{profile.frame_end} ({profile.total_frames:,} total).",
             ),
             PreflightCheck(
+                id="output-variants",
+                label="Output variants verified",
+                status=CheckStatus.PASS,
+                summary=(
+                    "Enabled output matrix: "
+                    + ", ".join(
+                        f"{variant.id} ({variant.width}x{variant.height})"
+                        for variant in enabled_variants
+                    )
+                    + "."
+                ),
+            ),
+            PreflightCheck(
                 id="output",
                 label="Output folder ready",
                 status=CheckStatus.PASS if output.usable else CheckStatus.FAIL,
@@ -1528,6 +2118,29 @@ class MissionControlService:
                 detail="; ".join(output.issues) or None,
             ),
         ]
+        if (
+            request.renderer == RendererKind.PRODUCTION
+            and any(not variant.required for variant in enabled_variants)
+        ):
+            checks.append(
+                PreflightCheck(
+                    id="optional-variant-calibration",
+                    label="Optional output calibrated",
+                    status=(
+                        CheckStatus.PASS
+                        if profile.calibrated
+                        else CheckStatus.FAIL
+                    ),
+                    summary=(
+                        "The selected optional output has a measured local calibration."
+                        if profile.calibrated
+                        else (
+                            "This optional output remains disabled until its own "
+                            "final-resolution calibration and aggregate SLA gate pass."
+                        )
+                    ),
+                )
+            )
         required_bytes = (
             0
             if request.renderer == RendererKind.FAKE
@@ -1572,9 +2185,13 @@ class MissionControlService:
             PreflightCheck(
                 id="authorization",
                 label="Authorization",
-                status=CheckStatus.PASS if validation.authorized else CheckStatus.WARNING,
-                summary="Exact scene and profile are authorized." if validation.authorized else "Authorization is required before start.",
-                detail="; ".join(validation.authorization_issues) or None,
+                status=CheckStatus.PASS if matrix_authorized else CheckStatus.WARNING,
+                summary=(
+                    "Exact scene, profile, and enabled output matrix are authorized."
+                    if matrix_authorized
+                    else "Authorization is required for the exact enabled output matrix."
+                ),
+                detail="; ".join(matrix_authorization_issues) or None,
             )
         )
         raw_engine_result = None
@@ -1597,10 +2214,10 @@ class MissionControlService:
                     detail=None if engine.ok else "\n".join(engine.lines[-10:]),
                 )
             )
-        ready = all(check.status != CheckStatus.FAIL for check in checks) and validation.authorized
+        ready = all(check.status != CheckStatus.FAIL for check in checks) and matrix_authorized
         return PreflightResult(
             ready=ready,
-            authorization_required=not validation.authorized,
+            authorization_required=not matrix_authorized,
             identity=identity,
             checks=checks,
             expected_hours=profile.expected_hours,
@@ -1711,6 +2328,11 @@ class MissionControlService:
                 profile_path,
                 scene_path,
                 profile_payload,
+                enabled_output_variant_ids=(
+                    list(identity.enabled_output_variant_ids)
+                    if identity.enabled_output_variant_ids
+                    else None
+                ),
             )
             if not valid:
                 raise MissionControlError(
@@ -1751,8 +2373,13 @@ class MissionControlService:
                 ),
                 free_storage_bytes=preflight.available_bytes,
             )
-            definitions = self._output_variant_definitions(profile, profile_payload)
+            definitions = self._output_variant_definitions(
+                profile,
+                profile_payload,
+                enabled_output_variant_ids=request.enabled_output_variant_ids,
+            )
             media_job: MediaRenderJob | None = None
+            scheduled_tasks: tuple[ScheduledRenderTask, ...] = ()
             if definitions:
                 media_job, _workers = self._materialize_media_render_job(
                     job,
@@ -1762,6 +2389,15 @@ class MissionControlService:
                     definitions,
                     authorization_token_value=token,
                 )
+                scheduled_tasks = self._schedule_media_render_job(
+                    job,
+                    media_job,
+                    profile_payload,
+                    profile_path,
+                    chunk_size=max(1, chunk_size),
+                )
+                if scheduled_tasks:
+                    job.chunks_total = len(scheduled_tasks)
             self.store.put_job(job)
             if media_job is not None:
                 self.store.put_media_render_job(media_job)
@@ -1829,6 +2465,234 @@ class MissionControlService:
 
     def jobs(self) -> list[JobRecord]:
         return self.store.list_jobs()
+
+    def scheduled_render_tasks(
+        self,
+        job_id: str,
+    ) -> tuple[ScheduledRenderTask, ...]:
+        self.get_job(job_id)
+        return self.scheduler.list_tasks(job_id=job_id)
+
+    def register_render_worker(
+        self,
+        capabilities: WorkerCapabilities,
+        *,
+        now: datetime | None = None,
+        heartbeat_timeout: timedelta | None = None,
+    ) -> SchedulerWorker:
+        return self.scheduler.register_worker(
+            capabilities,
+            now=now,
+            heartbeat_timeout=heartbeat_timeout,
+        )
+
+    def local_subprocess_worker(
+        self,
+        capabilities: WorkerCapabilities,
+        command_builder: LocalTaskCommandBuilder,
+    ) -> LocalSubprocessRenderWorker:
+        """Bind the required local subprocess adapter to this persistent control plane."""
+        return LocalSubprocessRenderWorker(
+            self,
+            capabilities,
+            command_builder,
+        )
+
+    async def run_local_subprocess_task_once(
+        self,
+        capabilities: WorkerCapabilities,
+        command_builder: LocalTaskCommandBuilder,
+        *,
+        job_id: str | None = None,
+    ) -> LocalWorkerRunResult | None:
+        """Run one scheduler-owned local task; callers control any worker loop."""
+        return await self.local_subprocess_worker(
+            capabilities,
+            command_builder,
+        ).run_once(job_id=job_id)
+
+    def heartbeat_render_worker(
+        self,
+        worker_id: str,
+        *,
+        now: datetime | None = None,
+        heartbeat_timeout: timedelta | None = None,
+    ) -> SchedulerWorker:
+        return self.scheduler.heartbeat_worker(
+            worker_id,
+            now=now,
+            heartbeat_timeout=heartbeat_timeout,
+        )
+
+    async def _synchronize_scheduler_job(
+        self,
+        job_id: str,
+        *,
+        event_type: str,
+        now: datetime,
+    ) -> JobRecord:
+        job = self.get_job(job_id)
+        changes = self._scheduler_projection_changes(
+            job,
+            event_type=event_type,
+            now=now,
+        )
+        if not changes:
+            return job
+        return await self.update_job(job_id, **changes)
+
+    async def claim_render_task(
+        self,
+        worker_id: str,
+        *,
+        job_id: str | None = None,
+        now: datetime | None = None,
+        lease_duration: timedelta | None = None,
+    ) -> LeaseGrant | None:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            if job_id is not None:
+                self.get_job(job_id)
+            grant = self.scheduler.claim_next_task(
+                worker_id,
+                job_id=job_id,
+                now=timestamp,
+                lease_duration=lease_duration,
+            )
+            if grant is not None:
+                await self._synchronize_scheduler_job(
+                    grant.task.job_id,
+                    event_type="scheduler_task_leased",
+                    now=timestamp,
+                )
+            return grant
+
+    async def start_scheduled_render_task(
+        self,
+        lease_id: str,
+        worker_id: str,
+        lease_token: str,
+        *,
+        now: datetime | None = None,
+    ) -> ScheduledRenderTask:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            task = self.scheduler.start_task(
+                lease_id,
+                worker_id,
+                lease_token,
+                now=timestamp,
+            )
+            await self._synchronize_scheduler_job(
+                task.task.job_id,
+                event_type="scheduler_task_started",
+                now=timestamp,
+            )
+            return task
+
+    async def heartbeat_scheduled_render_task(
+        self,
+        lease_id: str,
+        worker_id: str,
+        lease_token: str,
+        *,
+        now: datetime | None = None,
+        lease_duration: timedelta | None = None,
+        worker_timeout: timedelta | None = None,
+    ) -> WorkerLease:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            lease = self.scheduler.heartbeat_lease(
+                lease_id,
+                worker_id,
+                lease_token,
+                now=timestamp,
+                lease_duration=lease_duration,
+                worker_timeout=worker_timeout,
+            )
+            await self._synchronize_scheduler_job(
+                lease.job_id,
+                event_type="scheduler_heartbeat",
+                now=timestamp,
+            )
+            return lease
+
+    async def complete_scheduled_render_task(
+        self,
+        lease_id: str,
+        worker_id: str,
+        lease_token: str,
+        *,
+        now: datetime | None = None,
+    ) -> ScheduledRenderTask:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            task = self.scheduler.complete_task(
+                lease_id,
+                worker_id,
+                lease_token,
+                now=timestamp,
+            )
+            await self._synchronize_scheduler_job(
+                task.task.job_id,
+                event_type="scheduler_task_completed",
+                now=timestamp,
+            )
+            return task
+
+    async def fail_scheduled_render_task(
+        self,
+        lease_id: str,
+        worker_id: str,
+        lease_token: str,
+        *,
+        retry: bool = True,
+        reason: str = "worker-reported-failure",
+        now: datetime | None = None,
+    ) -> ScheduledRenderTask:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            task = self.scheduler.fail_task(
+                lease_id,
+                worker_id,
+                lease_token,
+                retry=retry,
+                reason=reason,
+                now=timestamp,
+            )
+            await self._synchronize_scheduler_job(
+                task.task.job_id,
+                event_type="scheduler_task_failed",
+                now=timestamp,
+            )
+            return task
+
+    async def reap_render_scheduler(
+        self,
+        *,
+        now: datetime | None = None,
+    ) -> SchedulerReapResult:
+        timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+        async with self._job_lock:
+            return await self._reap_render_scheduler_locked(timestamp)
+
+    async def _reap_render_scheduler_locked(
+        self,
+        timestamp: datetime,
+    ) -> SchedulerReapResult:
+        result = self.scheduler.reap_expired(now=timestamp)
+        affected_job_ids = {
+            task.task.job_id
+            for task_id in result.requeued_task_ids
+            if (task := self.scheduler.get_task(task_id)) is not None
+        }
+        for job_id in sorted(affected_job_ids):
+            await self._synchronize_scheduler_job(
+                job_id,
+                event_type="scheduler_worker_lost",
+                now=timestamp,
+            )
+        return result
 
     @property
     def _analysis_jobs_root(self) -> Path:
@@ -1965,8 +2829,64 @@ class MissionControlService:
         atomic_write_json(directory / "art-direction-reviews.json", payload)
         return self._load_director_workspace(directory)
 
+    @staticmethod
+    def _increment_attempt_telemetry(
+        job: JobRecord,
+        *,
+        retry_delta: int = 0,
+        failure_delta: int = 0,
+    ) -> tuple[OutputVariant, ...]:
+        if not job.output_variants or (retry_delta == 0 and failure_delta == 0):
+            return job.output_variants
+        target_id = job.active_variant_id
+        if target_id is None:
+            target_id = next(
+                (variant.id for variant in job.output_variants if variant.enabled),
+                None,
+            )
+        variants: list[OutputVariant] = []
+        for variant in job.output_variants:
+            if not variant.enabled or variant.id != target_id:
+                variants.append(variant)
+                continue
+            progress = variant.progress.model_copy(
+                update={
+                    "retry_count": variant.progress.retry_count + retry_delta,
+                    "failure_count": (
+                        variant.progress.failure_count + failure_delta
+                    ),
+                    "updated_at": datetime.now(UTC),
+                }
+            )
+            variants.append(variant.model_copy(update={"progress": progress}))
+        return tuple(variants)
+
     async def update_job(self, job_id: str, **changes: object) -> JobRecord:
         job = self.get_job(job_id)
+        allow_retry_restart = bool(changes.pop("_allow_retry_restart", False))
+        if (
+            job.state == JobState.CANCEL_REQUESTED
+            and changes.get("state")
+            in {
+                JobState.STARTING,
+                JobState.RUNNING,
+                JobState.STOP_REQUESTED,
+                JobState.FINISHING_CURRENT_CHUNK,
+            }
+        ):
+            changes["state"] = JobState.CANCEL_REQUESTED
+        if (
+            job.state == JobState.RETRY_REQUESTED
+            and not allow_retry_restart
+            and changes.get("state")
+            in {
+                JobState.STARTING,
+                JobState.RUNNING,
+                JobState.STOP_REQUESTED,
+                JobState.FINISHING_CURRENT_CHUNK,
+            }
+        ):
+            changes["state"] = JobState.RETRY_REQUESTED
         routed_variant = changes.get("output_variant_id")
         if routed_variant is not None:
             enabled_ids = {
@@ -1994,7 +2914,28 @@ class MissionControlService:
         updated_at = datetime.now(UTC)
         changes["updated_at"] = updated_at
         changes.update(self._persistent_render_eta_changes(job, changes, updated_at))
-        changes.update(self._output_variant_progress_changes(job, changes, updated_at))
+        if "output_variants" not in changes:
+            changes.update(
+                self._output_variant_progress_changes(job, changes, updated_at)
+            )
+        if changes.get("state") == JobState.FAILED and job.state != JobState.FAILED:
+            changes.setdefault("failure_count", job.failure_count + 1)
+            telemetry_job = job.model_copy(
+                update={
+                    "output_variants": changes.get(
+                        "output_variants",
+                        job.output_variants,
+                    ),
+                    "active_variant_id": changes.get(
+                        "active_variant_id",
+                        job.active_variant_id,
+                    ),
+                }
+            )
+            changes["output_variants"] = self._increment_attempt_telemetry(
+                telemetry_job,
+                failure_delta=1,
+            )
         changes.pop("output_variant_id", None)
         updated = job.model_copy(update=changes)
         self.store.put_job(updated)
@@ -2454,6 +3395,8 @@ class MissionControlService:
             latest_log_line=job.latest_log_line,
             warning=job.warning,
             error=job.error,
+            retry_count=job.retry_count,
+            failure_count=job.failure_count,
             safe_stop_status=job.safe_stop_status,
             output_variants=job.output_variants,
             active_variant_id=job.active_variant_id,
@@ -2505,34 +3448,44 @@ class MissionControlService:
         )
 
     async def request_stop_after_chunk(self, job_id: str) -> JobRecord:
-        job = self.get_job(job_id)
-        if job.state not in {JobState.RUNNING, JobState.STOP_REQUESTED}:
-            raise MissionControlError(
-                409,
-                "render_not_running",
-                "Render is not running",
-                "Stop after current chunk is available only while rendering is active.",
-                "Resume the job before requesting a safe stop.",
-                job_id=job.id,
+        async with self._job_lock:
+            job = self.get_job(job_id)
+            if job.state not in {JobState.RUNNING, JobState.STOP_REQUESTED}:
+                raise MissionControlError(
+                    409,
+                    "render_not_running",
+                    "Render is not running",
+                    "Stop after current chunk is available only while rendering is active.",
+                    "Resume the job before requesting a safe stop.",
+                    job_id=job.id,
+                )
+            if job.safe_stop_status == SafeStopStatus.REQUESTED:
+                return job
+            if job.renderer == RendererKind.FAKE:
+                self.fake_renderer.request_stop(job)
+            else:
+                profile_path, _payload, _hash = self.discovery.profile_source(
+                    job.identity.profile_id
+                )
+                scene_path = Path(
+                    self.discovery.get_scene(job.identity.scene_id).path
+                )
+                self.production_renderer.request_stop(
+                    job,
+                    profile_path=profile_path,
+                    scene_path=scene_path,
+                )
+            await self.update_job(
+                job.id,
+                state=JobState.STOP_REQUESTED,
+                safe_stop_status=SafeStopStatus.REQUESTED,
             )
-        if job.safe_stop_status == SafeStopStatus.REQUESTED:
-            return job
-        if job.renderer == RendererKind.FAKE:
-            self.fake_renderer.request_stop(job)
-        else:
-            profile_path, _payload, _hash = self.discovery.profile_source(job.identity.profile_id)
-            scene_path = Path(self.discovery.get_scene(job.identity.scene_id).path)
-            self.production_renderer.request_stop(
-                job,
-                profile_path=profile_path,
-                scene_path=scene_path,
+            await self.add_log(
+                job.id,
+                "warning",
+                "Stop after the current chunk was requested.",
             )
-        await self.add_log(job.id, "warning", "Stop after the current chunk was requested.")
-        return await self.update_job(
-            job.id,
-            state=JobState.STOP_REQUESTED,
-            safe_stop_status=SafeStopStatus.REQUESTED,
-        )
+            return self.get_job(job.id)
 
     async def cancel_stop(self, job_id: str, request: CancelStopRequest) -> JobRecord:
         if not request.operator_confirmed:
@@ -2544,128 +3497,644 @@ class MissionControlService:
                 "Confirm the cancellation before continuing.",
                 job_id=job_id,
             )
-        job = self.get_job(job_id)
-        if job.safe_stop_status != SafeStopStatus.REQUESTED:
-            raise MissionControlError(
-                409,
-                "stop_not_requested",
-                "No stop request is pending",
-                "This render does not have a pending stop-after-chunk request.",
-                "Return to live progress.",
-                job_id=job_id,
-            )
-        if job.renderer == RendererKind.FAKE:
-            self.fake_renderer.cancel_stop(job)
-        else:
-            self.production_renderer.cancel_stop(job)
-        await self.add_log(job.id, "info", "Pending safe-stop request was cancelled.")
-        return await self.update_job(
-            job.id,
-            state=JobState.RUNNING,
-            safe_stop_status=SafeStopStatus.NONE,
-        )
-
-    async def resume(self, job_id: str, request: ResumeRequest) -> JobRecord:
         async with self._job_lock:
             job = self.get_job(job_id)
-            if job.state not in {JobState.PAUSED_SAFELY, JobState.RESUMABLE, JobState.FAILED}:
+            if (
+                job.state != JobState.STOP_REQUESTED
+                or job.safe_stop_status != SafeStopStatus.REQUESTED
+            ):
                 raise MissionControlError(
                     409,
-                    "render_not_resumable",
-                    "Render cannot be resumed",
-                    "Only safely paused, resumable, or failed exact-identity jobs can resume.",
-                    "Return to job history and choose a resumable job.",
-                    job_id=job.id,
+                    "stop_not_requested",
+                    "No stop request is pending",
+                    "This render does not have a pending stop-after-chunk request.",
+                    "Return to live progress.",
+                    job_id=job_id,
                 )
+            if job.renderer == RendererKind.FAKE:
+                self.fake_renderer.cancel_stop(job)
+            else:
+                self.production_renderer.cancel_stop(job)
+            await self.update_job(
+                job.id,
+                state=JobState.RUNNING,
+                safe_stop_status=SafeStopStatus.NONE,
+            )
+            await self.add_log(
+                job.id,
+                "info",
+                "Pending safe-stop request was cancelled.",
+            )
+            return self.get_job(job.id)
+
+    async def cancel_render(
+        self,
+        job_id: str,
+        request: CancelRenderRequest,
+    ) -> JobRecord:
+        if not request.operator_confirmed:
+            raise MissionControlError(
+                422,
+                "cancel_render_confirmation_required",
+                "Confirmation required",
+                "Cancelling a render stops after the current chunk is validated and published.",
+                "Confirm cancellation for this exact render identity.",
+                job_id=job_id,
+            )
+        async with self._job_lock:
+            job = self.get_job(job_id)
             if (
                 request.scene_sha256 != job.identity.scene_sha256
                 or request.profile_sha256 != job.identity.profile_sha256
             ):
                 raise MissionControlError(
                     409,
-                    "resume_identity_mismatch",
-                    "Resume identity does not match",
-                    "Resume requires the exact original saved scene and profile hashes.",
-                    "Refresh job details and restore the original identity files.",
+                    "cancel_render_identity_mismatch",
+                    "Cancel identity does not match",
+                    "Cancellation requires the exact original saved scene and profile hashes.",
+                    "Refresh job details and confirm cancellation for the active identity.",
                     job_id=job.id,
                 )
-            profile_path, profile_payload, profile_hash = self.discovery.profile_source(
-                job.identity.profile_id
+            if job.state == JobState.CANCEL_REQUESTED:
+                return job
+            if job.state not in {
+                JobState.RUNNING,
+                JobState.STOP_REQUESTED,
+                JobState.FINISHING_CURRENT_CHUNK,
+            }:
+                raise MissionControlError(
+                    409,
+                    "render_not_cancellable",
+                    "Render cannot be cancelled",
+                    "Only an active render can be cancelled at its safe chunk boundary.",
+                    "Return to the active render or inspect its terminal state.",
+                    job_id=job.id,
+                )
+            if job.safe_stop_status != SafeStopStatus.REQUESTED:
+                if job.renderer == RendererKind.FAKE:
+                    self.fake_renderer.request_stop(job)
+                else:
+                    profile_path, _payload, _hash = self.discovery.profile_source(
+                        job.identity.profile_id
+                    )
+                    scene_path = Path(
+                        self.discovery.get_scene(job.identity.scene_id).path
+                    )
+                    self.production_renderer.request_stop(
+                        job,
+                        profile_path=profile_path,
+                        scene_path=scene_path,
+                    )
+            await self.update_job(
+                job.id,
+                state=JobState.CANCEL_REQUESTED,
+                safe_stop_status=SafeStopStatus.REQUESTED,
+                warning=(
+                    "Cancellation is pending at the current chunk boundary; "
+                    "validated and published frames will be preserved."
+                ),
             )
-            scene_path = Path(self.discovery.get_scene(job.identity.scene_id).path)
-            if profile_hash != job.identity.profile_sha256:
-                raise MissionControlError(
-                    409,
-                    "resume_profile_changed",
-                    "Saved profile changed",
-                    "The profile file bytes no longer match this render job.",
-                    "Restore the exact authorized saved profile before resuming.",
-                    job_id=job.id,
-                )
-            if self.discovery.get_scene(job.identity.scene_id).sha256 != job.identity.scene_sha256:
-                raise MissionControlError(
-                    409,
-                    "resume_scene_changed",
-                    "Approved scene changed",
-                    "The scene file bytes no longer match this render job.",
-                    "Restore the exact approved scene before resuming.",
-                    job_id=job.id,
-                )
-            authorized, issues, token = validate_authorization_record(
-                profile_path,
-                scene_path,
-                profile_payload,
+            await self.add_log(
+                job.id,
+                "warning",
+                (
+                    "Confirmed render cancellation requested; the active chunk "
+                    "will be validated and published before termination."
+                ),
             )
-            if not authorized:
+            return self.get_job(job.id)
+
+    async def resume(self, job_id: str, request: ResumeRequest) -> JobRecord:
+        async with self._job_lock:
+            job = self.get_job(job_id)
+            if job.state not in {JobState.PAUSED_SAFELY, JobState.RESUMABLE}:
                 raise MissionControlError(
                     409,
-                    "resume_authorization_invalid",
-                    "Authorization is invalid",
-                    "The exact authorization record no longer validates.",
-                    "Authorize the exact scene and profile again.",
-                    context={"issues": issues},
+                    "render_not_resumable",
+                    "Render cannot be resumed",
+                    "Only safely paused or resumable exact-identity jobs can resume.",
+                    "Use failed-render retry for a failed job.",
                     job_id=job.id,
                 )
-            if job.renderer == RendererKind.PRODUCTION:
-                output = self.outputs.inspect(
-                    job.identity.output_directory,
-                    profile_id=job.identity.profile_id,
-                    scene_id=job.identity.scene_id,
+            return await self._restart_exact_job_locked(
+                job,
+                request,
+                retry_failed=False,
+            )
+
+    async def retry_failed(
+        self,
+        job_id: str,
+        request: RetryFailedRenderRequest,
+    ) -> JobRecord:
+        if not request.operator_confirmed:
+            raise MissionControlError(
+                422,
+                "retry_failed_confirmation_required",
+                "Confirmation required",
+                "Retry reuses the exact render identity and only fills missing or invalid work.",
+                "Confirm retry for the failed render.",
+                job_id=job_id,
+            )
+        async with self._job_lock:
+            job = self.get_job(job_id)
+            if job.state != JobState.FAILED:
+                raise MissionControlError(
+                    409,
+                    "render_not_failed",
+                    "Render cannot be retried",
+                    "Only a failed exact-identity render can use failed-render retry.",
+                    "Return to the active job or use exact resume for a safely paused job.",
+                    job_id=job.id,
                 )
-                if not output.usable:
+            if job.error is not None and not job.error.retryable:
+                raise MissionControlError(
+                    409,
+                    "render_failure_not_retryable",
+                    "Render failure is not retryable",
+                    "The saved failure indicates an identity or artifact condition that cannot be retried safely.",
+                    "Resolve the saved failure and create a new exact render package if required.",
+                    job_id=job.id,
+                )
+            return await self._restart_exact_job_locked(
+                job,
+                request,
+                retry_failed=True,
+            )
+
+    async def retry_current_chunk(
+        self,
+        job_id: str,
+        request: RetryCurrentChunkRequest,
+    ) -> JobRecord:
+        if not request.operator_confirmed:
+            raise MissionControlError(
+                422,
+                "retry_current_chunk_confirmation_required",
+                "Confirmation required",
+                (
+                    "Retrying stops only the isolated current-chunk attempt and "
+                    "requeues that exact saved chunk identity."
+                ),
+                "Confirm retry for the current chunk.",
+                job_id=job_id,
+            )
+        async with self._job_lock:
+            job = self.get_job(job_id)
+            if (
+                request.scene_sha256 != job.identity.scene_sha256
+                or request.profile_sha256 != job.identity.profile_sha256
+            ):
+                raise MissionControlError(
+                    409,
+                    "retry_current_chunk_identity_mismatch",
+                    "Retry identity does not match",
+                    (
+                        "Current-chunk retry requires the exact original saved "
+                        "scene and profile hashes."
+                    ),
+                    "Refresh job details before confirming this retry.",
+                    job_id=job.id,
+                )
+            if job.state == JobState.FAILED:
+                if job.error is not None and not job.error.retryable:
                     raise MissionControlError(
                         409,
-                        "resume_output_incompatible",
-                        "Output cannot be resumed",
-                        "The existing output manifest no longer matches this exact render identity.",
-                        "Inspect the conflicting output details and choose the matching output.",
-                        context={"issues": output.issues},
+                        "render_failure_not_retryable",
+                        "Render failure is not retryable",
+                        (
+                            "The saved failure indicates an identity or artifact "
+                            "condition that cannot be retried safely."
+                        ),
+                        (
+                            "Resolve the saved failure and create a new exact render "
+                            "package if required."
+                        ),
                         job_id=job.id,
                     )
-                self.production_renderer.cancel_stop(job)
-            resumed = await self.update_job(
-                job.id,
-                state=JobState.STARTING,
-                safe_stop_status=SafeStopStatus.NONE,
-                error=None,
-                warning=None,
-                completed_at=None,
+                return await self._restart_exact_job_locked(
+                    job,
+                    request,
+                    retry_failed=True,
+                )
+            if job.state == JobState.RETRY_REQUESTED:
+                return job
+            if job.state != JobState.RUNNING:
+                raise MissionControlError(
+                    409,
+                    "current_chunk_not_active",
+                    "Current chunk is not retryable",
+                    (
+                        "An active current-chunk attempt is required. Stop, cancel, "
+                        "and retry requests cannot overlap."
+                    ),
+                    "Return to a running render or retry its saved failed chunk.",
+                    job_id=job.id,
+                )
+            if (
+                job.chunk_start is None
+                or job.chunk_end is None
+                or job.chunk_end < job.chunk_start
+                or job.renderer_active is False
+                or job.watcher_active is False
+            ):
+                raise MissionControlError(
+                    409,
+                    "current_chunk_identity_unavailable",
+                    "Current chunk identity is unavailable",
+                    (
+                        "The renderer has not reported a watched active chunk with "
+                        "exact frame bounds."
+                    ),
+                    "Wait for the current chunk to begin, then retry it.",
+                    retryable=True,
+                    job_id=job.id,
+                )
+            latest_safe_frame = (
+                job.frame_start + job.published_frame_count - 1
+                if job.published_frame_count > 0
+                else job.frame_start - 1
             )
-            if job.renderer == RendererKind.FAKE:
-                self.fake_renderer.start(
-                    self,
-                    resumed,
-                    FakeRenderOptions(total_frames=job.total_frame_count),
+            if job.chunk_end <= latest_safe_frame:
+                raise MissionControlError(
+                    409,
+                    "current_chunk_already_published",
+                    "Current chunk is already safe",
+                    (
+                        "The displayed chunk was already validated and published "
+                        "before this retry request."
+                    ),
+                    "Wait for the next active chunk before requesting a retry.",
+                    job_id=job.id,
                 )
-            else:
-                self.production_renderer.start(
-                    self,
-                    resumed,
-                    scene_path=scene_path,
-                    profile_path=profile_path,
-                    authorization_token=token,
+            pending = await self.update_job(
+                job.id,
+                state=JobState.RETRY_REQUESTED,
+                safe_stop_status=SafeStopStatus.NONE,
+                warning=(
+                    f"Retry requested for exact chunk {job.chunk_start}-"
+                    f"{job.chunk_end}. Validated prior chunks remain untouched "
+                    "while the isolated active attempt stops."
+                ),
+            )
+            await self.add_log(
+                job.id,
+                "warning",
+                (
+                    f"Retry current chunk requested for frames {job.chunk_start}-"
+                    f"{job.chunk_end}; stopping only the isolated in-flight attempt."
+                ),
+            )
+            try:
+                if job.renderer == RendererKind.FAKE:
+                    await self.fake_renderer.request_retry_current_chunk(job)
+                    return await self._restart_exact_job_locked(
+                        pending,
+                        request,
+                        retry_failed=True,
+                    )
+                await self.production_renderer.request_retry_current_chunk(job)
+            except MissionControlError:
+                current = self.get_job(job.id)
+                if (
+                    current.state == JobState.RETRY_REQUESTED
+                    and process_is_alive(current.process_id)
+                ):
+                    await self.update_job(
+                        job.id,
+                        state=JobState.RUNNING,
+                        warning=None,
+                        _allow_retry_restart=True,
+                    )
+                raise
+            return self.get_job(job.id)
+
+    async def restart_retry_current_chunk(self, job_id: str) -> JobRecord:
+        """Continue a confirmed active retry after its isolated attempt exits."""
+        async with self._job_lock:
+            job = self.get_job(job_id)
+            if job.state != JobState.RETRY_REQUESTED:
+                return job
+            if job.chunk_start is None or job.chunk_end is None:
+                raise MissionControlError(
+                    409,
+                    "retry_current_chunk_identity_lost",
+                    "Current chunk identity was lost",
+                    "The saved retry no longer has exact chunk frame bounds.",
+                    "Inspect the persisted job before attempting another retry.",
+                    job_id=job.id,
                 )
-            return resumed
+            latest_safe_frame = (
+                job.frame_start + job.published_frame_count - 1
+                if job.published_frame_count > 0
+                else job.frame_start - 1
+            )
+            if job.chunk_end <= latest_safe_frame:
+                return await self.update_job(
+                    job.id,
+                    state=JobState.RESUMABLE,
+                    safe_stop_status=SafeStopStatus.NONE,
+                    renderer_active=False,
+                    watcher_active=False,
+                    warning=(
+                        "The requested chunk became validated and published before "
+                        "its attempt stopped. Mission Control preserved it and did "
+                        "not manufacture a retry by deleting authoritative frames."
+                    ),
+                    _allow_retry_restart=True,
+                )
+            await self.add_log(
+                job.id,
+                "info",
+                (
+                    f"Requeueing exact current chunk {job.chunk_start}-"
+                    f"{job.chunk_end}; prior published chunks remain authoritative."
+                ),
+            )
+            return await self._restart_exact_job_locked(
+                job,
+                RetryCurrentChunkRequest(
+                    scene_sha256=job.identity.scene_sha256,
+                    profile_sha256=job.identity.profile_sha256,
+                    operator_confirmed=True,
+                ),
+                retry_failed=True,
+            )
+
+    async def _restart_exact_job_locked(
+        self,
+        job: JobRecord,
+        request: (
+            ResumeRequest
+            | RetryFailedRenderRequest
+            | RetryCurrentChunkRequest
+        ),
+        *,
+        retry_failed: bool,
+    ) -> JobRecord:
+        operation = "retry" if retry_failed else "resume"
+        if (
+            request.scene_sha256 != job.identity.scene_sha256
+            or request.profile_sha256 != job.identity.profile_sha256
+        ):
+            raise MissionControlError(
+                409,
+                f"{operation}_identity_mismatch",
+                f"{operation.title()} identity does not match",
+                f"{operation.title()} requires the exact original saved scene and profile hashes.",
+                "Refresh job details and restore the original identity files.",
+                job_id=job.id,
+            )
+        profile_path, profile_payload, profile_hash = self.discovery.profile_source(
+            job.identity.profile_id
+        )
+        scene_path = Path(self.discovery.get_scene(job.identity.scene_id).path)
+        if profile_hash != job.identity.profile_sha256:
+            raise MissionControlError(
+                409,
+                f"{operation}_profile_changed",
+                "Saved profile changed",
+                "The profile file bytes no longer match this render job.",
+                "Restore the exact authorized saved profile before continuing.",
+                job_id=job.id,
+            )
+        if (
+            self.discovery.get_scene(job.identity.scene_id).sha256
+            != job.identity.scene_sha256
+        ):
+            raise MissionControlError(
+                409,
+                f"{operation}_scene_changed",
+                "Approved scene changed",
+                "The scene file bytes no longer match this render job.",
+                "Restore the exact approved scene before continuing.",
+                job_id=job.id,
+            )
+        authorized, issues, token = validate_authorization_record(
+            profile_path,
+            scene_path,
+            profile_payload,
+            enabled_output_variant_ids=(
+                list(job.identity.enabled_output_variant_ids)
+                if job.identity.enabled_output_variant_ids
+                else None
+            ),
+        )
+        if not authorized:
+            raise MissionControlError(
+                409,
+                f"{operation}_authorization_invalid",
+                "Authorization is invalid",
+                "The exact authorization record no longer validates.",
+                "Authorize the exact scene and profile again.",
+                context={"issues": issues},
+                job_id=job.id,
+            )
+        restart_changes: dict[str, object] = {}
+        if job.renderer == RendererKind.PRODUCTION:
+            output = self.outputs.inspect(
+                job.identity.output_directory,
+                profile_id=job.identity.profile_id,
+                scene_id=job.identity.scene_id,
+            )
+            if not output.usable:
+                raise MissionControlError(
+                    409,
+                    f"{operation}_output_incompatible",
+                    "Output cannot be restarted",
+                    "The existing output manifest no longer matches this exact render identity.",
+                    "Inspect the conflicting output details and choose the matching output.",
+                    context={"issues": output.issues},
+                    job_id=job.id,
+                )
+            snapshot = inspect_render_artifacts(job)
+            if retry_failed and snapshot.disposition not in {"resumable", "missing"}:
+                raise MissionControlError(
+                    409,
+                    "retry_output_not_resumable",
+                    "Failed output cannot be retried",
+                    "The authoritative artifacts are not a deterministic missing-frame resume set.",
+                    "Inspect the manifest and create a new exact output when identity or frame indexes are invalid.",
+                    context={
+                        "artifactState": snapshot.disposition,
+                        "reason": snapshot.reason,
+                    },
+                    job_id=job.id,
+                )
+            restart_changes.update(artifact_progress_changes(job, snapshot))
+            self.production_renderer.cancel_stop(job)
+        if retry_failed:
+            telemetry_job = job
+            if restart_changes and job.output_variants:
+                routed_progress = self._output_variant_progress_changes(
+                    job,
+                    restart_changes,
+                    datetime.now(UTC),
+                )
+                restart_changes.update(routed_progress)
+                telemetry_job = job.model_copy(update=routed_progress)
+            restart_changes.update(
+                retry_count=job.retry_count + 1,
+                output_variants=self._increment_attempt_telemetry(
+                    telemetry_job,
+                    retry_delta=1,
+                ),
+            )
+        restarted = await self.update_job(
+            job.id,
+            **restart_changes,
+            state=JobState.STARTING,
+            process_id=None,
+            orphaned=False,
+            renderer_active=False,
+            watcher_active=False,
+            current_frame_started_at=None,
+            safe_stop_status=SafeStopStatus.NONE,
+            error=None,
+            warning=None,
+            completed_at=None,
+            _allow_retry_restart=job.state == JobState.RETRY_REQUESTED,
+        )
+        if job.renderer == RendererKind.FAKE:
+            self.fake_renderer.start(
+                self,
+                restarted,
+                FakeRenderOptions(total_frames=job.total_frame_count),
+            )
+        else:
+            self.production_renderer.start(
+                self,
+                restarted,
+                scene_path=scene_path,
+                profile_path=profile_path,
+                authorization_token=token,
+            )
+        return restarted
+
+    def _validated_relative_frame_path(
+        self,
+        job: JobRecord,
+        *,
+        relative: str,
+        expected_frame: int,
+        output_variant_id: str | None,
+        written_at: datetime | None,
+    ) -> Path | None:
+        variant = next(
+            (
+                item
+                for item in job.output_variants
+                if item.enabled and item.id == output_variant_id
+            ),
+            None,
+        )
+        if job.output_variants and variant is None:
+            return None
+        expected_width = (
+            variant.width if variant is not None else job.identity.output_width
+        )
+        expected_height = (
+            variant.height if variant is not None else job.identity.output_height
+        )
+        frames_root_relative = variant.frames_root if variant is not None else "frames"
+        relative_parts = tuple(relative.split("/"))
+        frames_root_parts = tuple(frames_root_relative.split("/"))
+        if (
+            "\\" in relative
+            or relative.startswith("/")
+            or any(part in {"", ".", ".."} for part in relative_parts)
+            or any(part in {"", ".", ".."} for part in frames_root_parts)
+            or expected_frame < job.frame_start
+            or expected_frame > job.frame_end
+            or Path(relative).suffix.casefold() != ".png"
+            or Path(relative).name != f"frame_{expected_frame:06d}.png"
+        ):
+            return None
+        published_parent = relative_parts[:-1]
+        checkpoint_parent = relative_parts[:-1]
+        variant_root_parts = frames_root_parts[:-1]
+        is_published_frame = published_parent == frames_root_parts
+        is_inflight_frame = (
+            len(checkpoint_parent) == len(variant_root_parts) + 3
+            and checkpoint_parent[: len(variant_root_parts)] == variant_root_parts
+            and checkpoint_parent[len(variant_root_parts)] == "checkpoints"
+            and checkpoint_parent[len(variant_root_parts) + 1].startswith(
+                ".inflight-"
+            )
+            and len(checkpoint_parent[len(variant_root_parts) + 1])
+            > len(".inflight-")
+            and checkpoint_parent[len(variant_root_parts) + 2] == "frames"
+        )
+        if not is_published_frame and not is_inflight_frame:
+            return None
+        root = Path(job.identity.output_directory)
+        try:
+            resolved_root = root.resolve(strict=True)
+            unresolved_source = root / Path(*relative_parts)
+            if unresolved_source.is_symlink():
+                return None
+            source = unresolved_source.resolve(strict=True)
+            source.relative_to(resolved_root)
+            if not source.is_file():
+                return None
+            before = source.stat()
+            dimensions = self._png_dimensions(source)
+            if not self._valid_png(source):
+                return None
+            after = source.stat()
+            source_timestamp = datetime.fromtimestamp(before.st_mtime, tz=UTC)
+            if (
+                before.st_size != after.st_size
+                or before.st_mtime_ns != after.st_mtime_ns
+                or before.st_size < 20
+                or (
+                    expected_width is not None
+                    and dimensions[0] != expected_width
+                )
+                or (
+                    expected_height is not None
+                    and dimensions[1] != expected_height
+                )
+                or (
+                    written_at is not None
+                    and source_timestamp + timedelta(minutes=5) < written_at
+                )
+            ):
+                return None
+            return source
+        except (OSError, ValueError):
+            return None
+
+    def validate_and_prepare_frame_event(
+        self,
+        job: JobRecord,
+        event: RendererTelemetryEvent,
+    ) -> bool:
+        """Validate the exact completed frame before progress or preview publication."""
+
+        if (
+            event.event_type != "frame_written"
+            or event.frame is None
+            or event.artifact_relative_path is None
+        ):
+            return event.event_type != "frame_written"
+        source = self._validated_relative_frame_path(
+            job,
+            relative=event.artifact_relative_path,
+            expected_frame=event.frame,
+            output_variant_id=event.output_variant_id,
+            written_at=event.emitted_at,
+        )
+        if source is None:
+            return False
+        # Thumbnail publication is deliberately best-effort. The source frame remains
+        # authoritative and a thumbnailer failure must never fail production.
+        preview = self._preview_thumbnail(job, source)
+        now = time.monotonic()
+        variant_key = event.output_variant_id or "legacy"
+        self._preview_cache[f"{job.id}:{variant_key}:{event.frame}"] = (now, preview)
+        self._preview_cache[f"{job.id}:{variant_key}:latest"] = (now, preview)
+        return True
 
     def _telemetry_artifact_path(
         self,
@@ -2687,57 +4156,27 @@ class MissionControlService:
         )
         if job.output_variants and variant is None:
             return None
-        expected_width: int | None
-        expected_height: int | None
         if variant is not None:
             relative = variant.progress.latest_frame_artifact
             expected_frame = variant.progress.latest_frame_artifact_frame
-            expected_width = variant.width
-            expected_height = variant.height
             written_at = variant.progress.latest_frame_written_at
         else:
             relative = job.latest_frame_artifact
             expected_frame = job.latest_preview_frame
-            expected_width = job.identity.output_width
-            expected_height = job.identity.output_height
             written_at = job.latest_preview_at
-        if relative is None or "\\" in relative or relative.startswith("/"):
-            return None
-        parts = relative.split("/")
-        if any(part in {"", ".", ".."} for part in parts):
+        if relative is None:
             return None
         if frame is not None and expected_frame != frame:
             return None
-        if expected_frame is None or Path(relative).name != f"frame_{expected_frame:06d}.png":
+        if expected_frame is None:
             return None
-        root = Path(job.identity.output_directory)
-        try:
-            resolved_root = root.resolve(strict=True)
-            source = (root / Path(*parts)).resolve(strict=True)
-            source.relative_to(resolved_root)
-            if source.is_symlink() or not source.is_file():
-                return None
-            before = source.stat()
-            dimensions = self._png_dimensions(source)
-            if not self._valid_png(source):
-                return None
-            after = source.stat()
-            source_timestamp = datetime.fromtimestamp(before.st_mtime, tz=UTC)
-            if (
-                before.st_size != after.st_size
-                or before.st_mtime_ns != after.st_mtime_ns
-                or before.st_size < 20
-                or (expected_width is not None and dimensions[0] != expected_width)
-                or (expected_height is not None and dimensions[1] != expected_height)
-                or (
-                    written_at is not None
-                    and source_timestamp + timedelta(minutes=5) < written_at
-                )
-            ):
-                return None
-            return source
-        except (OSError, ValueError):
-            return None
+        return self._validated_relative_frame_path(
+            job,
+            relative=relative,
+            expected_frame=expected_frame,
+            output_variant_id=variant_id,
+            written_at=written_at,
+        )
 
     def _variant_frame_path(
         self,
@@ -2929,7 +4368,7 @@ class MissionControlService:
 
         if job.renderer != RendererKind.PRODUCTION:
             return source
-        ffmpeg = shutil.which("ffmpeg")
+        ffmpeg = self._ffmpeg_path()
         if ffmpeg is None:
             return source
         target_root = self.config.state_root / "preview-thumbnails" / job.id
@@ -2947,7 +4386,7 @@ class MissionControlService:
             temporary = target_root / f".{source.stem}.{uuid4().hex}.png"
             result = subprocess.run(
                 [
-                    ffmpeg,
+                    str(ffmpeg),
                     "-hide_banner",
                     "-loglevel",
                     "error",
@@ -3076,6 +4515,18 @@ class MissionControlService:
 
     def encode_readiness(self, job_id: str) -> EncodeReadiness:
         job = self.get_job(job_id)
+        _profile_path, profile_payload, profile_hash = self.discovery.profile_source(
+            job.identity.profile_id
+        )
+        encoding = profile_payload.get("encoding")
+        enabled_output_kinds: list[Literal["delivery", "master"]] = []
+        if profile_hash == job.identity.profile_sha256 and isinstance(encoding, dict):
+            delivery = encoding.get("delivery")
+            master = encoding.get("master")
+            if isinstance(delivery, dict) and delivery.get("enabled") is True:
+                enabled_output_kinds.append("delivery")
+            if isinstance(master, dict) and master.get("enabled") is True:
+                enabled_output_kinds.append("master")
         if job.renderer == RendererKind.PRODUCTION:
             artifact_state = inspect_render_artifacts(job)
             complete = (
@@ -3091,17 +4542,23 @@ class MissionControlService:
             )
             published_frames = job.published_frame_count
         ffmpeg = self._ffmpeg_path() is not None
+        encode_contract_ready = bool(enabled_output_kinds)
         return EncodeReadiness(
             job_id=job.id,
-            ready=complete and ffmpeg,
+            ready=complete and ffmpeg and encode_contract_ready,
             frame_sequence_complete=complete,
             published_frames=published_frames,
             total_frames=job.total_frame_count,
             ffmpeg_available=ffmpeg,
+            enabled_output_kinds=enabled_output_kinds,
             detail=(
                 "The verified frame sequence is ready for local encode."
-                if complete and ffmpeg
-                else "Encoding requires a complete published frame sequence and FFmpeg."
+                if complete and ffmpeg and encode_contract_ready
+                else (
+                    "Encoding requires at least one enabled reviewed output kind."
+                    if complete and ffmpeg
+                    else "Encoding requires a complete published frame sequence and FFmpeg."
+                )
             ),
         )
 

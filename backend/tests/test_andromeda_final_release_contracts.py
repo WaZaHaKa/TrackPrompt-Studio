@@ -117,7 +117,8 @@ def _identity_payload() -> dict[str, object]:
                     "renderProfileSha256": "6" * 64,
                     "workerRequirementId": "local-rtx3060-eevee-v2",
                     "outputPattern": (
-                        "test-output/andromeda-v2/final-horizontal/frame_######.png"
+                        "test-output/andromeda-v2/final-horizontal/"
+                        "frames/frame_######.png"
                     ),
                 }
             ],

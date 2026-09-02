@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "title": "The Signal Bearer",
+  "visualIdentity": "Photoreal cinematic urban surrealism in a non-specific British city at night. Brutalist housing, narrow stairwells, modest rooms, wet concrete, underpasses, rooftops, industrial lights and winter air. Graphite black, cold blue and concrete grey dominate. Warning red is rare and controlled. Muted amber and natural dawn enter only near the ending. Realistic human movement and physics, restrained handheld camera, slow dolly movement, 35mm and 50mm cinematic compositions, shallow depth of field, subtle film grain, detailed natural surfaces. One impossible visual event per shot, surrounded by believable reality. Emotionally serious, intimate and grounded rather than flashy.",
+  "protagonist": "The same clearly adult anonymous Signal Bearer, average build, charcoal hooded coat, dark grey trousers, worn black trainers, no visible brand or logo, face usually obscured by shadow, profile, reflection or framing, with a thin pale cyan-white light filament loosely wrapped around the left wrist. Continuity is best effort across independent generations and is never described as a perfect character lock.",
+  "palette": ["graphite black", "cold blue", "concrete grey", "rare controlled warning red", "pale cyan-white signal filament", "muted amber and natural dawn only near the ending"],
+  "cameraLanguage": ["restrained handheld camera", "slow dolly movement", "35mm and 50mm cinematic compositions", "stable readable opening composition", "one dominant action", "controlled movement", "usable closing frame"],
+  "lightingLanguage": ["winter night practical light", "cold blue street light", "industrial floodlights", "deep but detailed shadow", "gradual muted amber near the ending", "natural early dawn for the final image"],
+  "textureLanguage": ["rain on concrete and glass", "brutalist surfaces", "winter air", "subtle film grain", "realistic metal timber smoke and dark glass", "one restrained impossible event inside believable reality"],
+  "globalNegativePrompt": "visible words, subtitles, captions, signs with readable text, logos, watermarks, dialogue, singing, lip-sync, celebrity likeness, child, minor, weapons, knives, guns, gang signs, drug use, police confrontation, luxury car flex, jewellery flex, generic cyberpunk armour, excessive neon, superhero costume, cartoon, anime, glossy commercial fashion campaign, malformed hands, extra fingers, duplicate limbs, distorted face, identity flicker, body horror, gore, aggressive violence, chaotic camera, rapid spinning, full-frame strobe, unreadable generated typography",
+  "privacyRules": [
+    "Never insert source audio, stems, lyrics, transcript text, filenames, physical paths, account identifiers or credentials into provider requests.",
+    "Provider requests contain only reviewed visual concepts, exact generation parameters and optional operator-approved visual references.",
+    "The original local master remains the sole timeline clock and is muxed only on the local machine."
+  ]
+}

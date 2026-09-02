@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-local-render-hardware-report",
+  "measuredAt": "2026-07-23T07:52:51+03:00",
+  "operatingSystem": {
+    "name": "Microsoft Windows 11 Pro",
+    "version": "10.0.26200",
+    "build": "26200"
+  },
+  "cpu": {
+    "model": "AMD Ryzen 7 3700X 8-Core Processor",
+    "physicalCores": 8,
+    "logicalCores": 16
+  },
+  "memory": {
+    "physicalBytes": 34282479616
+  },
+  "gpu": [
+    {
+      "model": "NVIDIA GeForce RTX 3060",
+      "vramMiB": 12288,
+      "driverVersion": "610.62",
+      "temperatureCAtInspection": 48,
+      "powerStateAtInspection": "P8"
+    }
+  ],
+  "software": {
+    "blender": {
+      "version": "5.2.0 LTS",
+      "buildDate": "2026-07-14",
+      "buildCommitDate": "2026-07-13"
+    },
+    "ffmpeg": {
+      "version": "8.1.1-full_build-www.gyan.dev"
+    },
+    "ffprobe": {
+      "version": "8.1.1-full_build-www.gyan.dev"
+    }
+  },
+  "targetStorage": {
+    "kind": "local-fixed-volume",
+    "capacityBytes": 999089500160,
+    "freeBytesAtInspection": 382478393344,
+    "benchmark": {
+      "kind": "bounded-sequential-read-write",
+      "sizeBytes": 268435456,
+      "writeSeconds": 0.469344,
+      "writeMiBPerSecond": 545.442,
+      "readSeconds": 0.31915,
+      "readMiBPerSecond": 802.131,
+      "readBackSha256": "7e36dba156da8a6b36b48ed16680299cc3b53247feb8583744a35bf7ad673530",
+      "temporaryArtifactRetained": false
+    }
+  },
+  "power": {
+    "activeScheme": "Balanced",
+    "acSleepTimeoutSeconds": 0,
+    "dcSleepTimeoutSeconds": 600,
+    "settingsChangedBySprint": false,
+    "productionRequirement": "Use AC power; DC sleep remains a render-interruption risk."
+  },
+  "inspection": {
+    "remoteOrCloudWorkersProvisioned": false,
+    "productionRenderStarted": false
+  }
+}

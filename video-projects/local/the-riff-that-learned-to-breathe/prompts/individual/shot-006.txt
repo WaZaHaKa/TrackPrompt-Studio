@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-006 — Armor to Paper
+Provisional timing: 44.000–53.000 s
+Seed: 24081006
+
+NARRATIVE INTENT
+Transform the arrangement's surface while preserving the composition's identity.
+
+KEYFRAME PROMPT
+Macro view of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged in the Listener's hands. Half of each feather remains brushed dark metal while the outer layers have become indigo paper and charcoal fabric, joined by fine amber stitching. The exact bird silhouette and amber mechanical heart remain stable; watercolor rain glows softly behind. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+In one slow macro move, metal feathers soften from their tips inward into layered paper and fabric. Fine amber stitches travel along each seam, the bird breathes once, and loose fibers lift in the room's air. Keep the heart unchanged and finish when the transformed wing settles into the Listener's palm.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+listener-identity, origami-bird-core, origami-bird-hybrid, amber-thread
+
+TRANSITION IN
+ink-and-paper bleed from the reel
+
+TRANSITION OUT
+paper fibers lengthen into vertical rain streaks
+
+ACCEPTANCE NOTES
+- Transformation must preserve exact silhouette and heart.
+- Avoid body horror or melting anatomy.

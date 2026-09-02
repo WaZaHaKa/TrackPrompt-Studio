@@ -1,0 +1,18 @@
+time_seconds,marker_type,confidence,source,notes
+0.000,track_start,high,provisional,Replace or augment from TrackPrompt audio analysis
+8.000,scene_boundary_provisional,low,package,Send
+17.000,scene_boundary_provisional,low,package,Rain Room
+26.000,scene_boundary_provisional,low,package,Old Pulse
+35.000,scene_boundary_provisional,low,package,Turn the Tempo
+44.000,scene_boundary_provisional,low,package,Armor to Paper
+53.000,scene_boundary_provisional,low,package,New Drums
+62.000,scene_boundary_provisional,low,package,The Solo Becomes a Comet
+71.000,scene_boundary_provisional,low,package,Parallel Rooms
+80.000,scene_boundary_provisional,low,package,The Fracture
+89.000,scene_boundary_provisional,low,package,Keep the Heart
+98.000,scene_boundary_provisional,low,package,Bridge of Measures
+107.000,scene_boundary_provisional,low,package,Co-Write the Sky
+116.000,scene_boundary_provisional,low,package,The City Learns the Groove
+125.000,scene_boundary_provisional,low,package,Return Signal
+137.000,scene_boundary_provisional,low,package,Between Two Rooms
+149.000,track_end,low,provisional,Replace with exact ffprobe duration

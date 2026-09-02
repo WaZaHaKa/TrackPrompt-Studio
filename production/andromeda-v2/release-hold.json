@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-andromeda-v2-release-hold",
+  "holdId": "andromeda-v2-visual-equivalence-hold-20260723",
+  "recordedAt": "2026-07-23",
+  "status": "blocked",
+  "releaseId": "andromeda-v2-final-release-v2",
+  "releaseIdentitySha256": "dd3036eb00baec5f4ab921bea0a7a1565e15fea9fcc5be752e69d114d3c58c56",
+  "packageManifestSha256": "4b775894ad9f73ad62f72adee3b16d45ac6e079b8ad9e809765a2f64394052b5",
+  "calibrationSha256": "31afac2cf80dfb37ba25125d68beb04c364486d30800947477d8ecb755e9d10f",
+  "technicalAuthorizationSha256": "3e5d6c93b5530fc677638e1213db2ec2d94fce8935157e520511d58d137f1e78",
+  "productionStartEligible": false,
+  "finishLineSprintComplete": false,
+  "artisticEquivalenceToR131Proven": false,
+  "evidenceSource": "human-visual-audit-of-seven-final-resolution-calibration-frames",
+  "findings": [
+    "The seven calibration frames establish measured render time but remain sparse and blockout-like relative to the preserved R13.1 contact sheets.",
+    "Awakening retains floating or isolated visual elements.",
+    "Arrival lacks an unmistakable destination."
+  ],
+  "requiredResolution": [
+    "Produce corrected bounded final-quality visual proof across the affected acts and expensive effect classes.",
+    "Obtain human review of the corrected proof against the preserved R13.1 contact sheets.",
+    "For every corrective source, scene, profile, or package change, create a new exact identity, calibration, package manifest, and technical authorization."
+  ],
+  "existingImmutableEvidenceUnmodified": true,
+  "operatorStartArtifactMustNotBeCreatedOrUsed": true,
+  "fullProductionRenderStarted": false
+}

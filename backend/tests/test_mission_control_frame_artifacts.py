@@ -241,3 +241,22 @@ def test_v2_inflight_endpoint_rejects_partial_stale_and_cross_geometry_png(
         frame=7,
         output_variant_id="unknown",
     ) is None
+
+
+def test_v2_inflight_endpoint_rejects_frame_outside_exact_variant_namespaces(
+    tmp_path: Path,
+) -> None:
+    relative = "variants/wide/unmanaged/frame_000007.png"
+    source = tmp_path.joinpath(*relative.split("/"))
+    source.parent.mkdir(parents=True)
+    source.write_bytes(_png(16, 16))
+    job = _v2_job(tmp_path, relative)
+    service = object.__new__(MissionControlService)
+    service._preview_cache = {}
+    service.get_job = lambda _job_id: job  # type: ignore[method-assign]
+
+    assert service.full_frame_path(
+        job.id,
+        frame=7,
+        output_variant_id="wide",
+    ) is None

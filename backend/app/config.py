@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from .privacy import secure_private_directory
+
+LOGGER = logging.getLogger("trackprompt.config")
 
 
 def _positive_int(name: str, default: int) -> int:
@@ -18,6 +21,19 @@ def _positive_int(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer") from exc
     if value <= 0:
         raise ValueError(f"{name} must be greater than zero")
+    return value
+
+
+def _nonnegative_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be zero or greater")
     return value
 
 
@@ -75,7 +91,6 @@ class Settings:
     data_dir: Path
     max_upload_mb: int
     max_duration_seconds: int
-    job_ttl_minutes: int
     analysis_workers: int
     max_pending_jobs: int
     model_cache_dir: Path
@@ -109,6 +124,23 @@ class Settings:
     prompt_writer_device: str = "cuda"
     upload_chunk_bytes: int = 1024 * 1024
     decoded_sample_rate: int = 16_000
+    max_single_track_analysis_seconds: int = 1_200
+    max_longform_duration_seconds: int = 43_200
+    max_source_upload_gb: int = 50
+    resumable_upload_chunk_mb: int = 32
+    max_active_uploads: int = 3
+    max_active_analyses: int = 1
+    max_active_gpu_tasks: int = 1
+    longform_scan_timeout_seconds: int = 7_200
+    min_free_disk_gb: int = 10
+    max_archive_bytes: int = 1_099_511_627_776
+    default_project_retention: str = "archive"
+    abandoned_upload_ttl_hours: int = 72
+    audit_read_events: bool = False
+    longform_scan_cadence_seconds: int = 1
+    longform_scan_chunk_seconds: int = 300
+    minimum_expected_track_seconds: int = 45
+    maximum_expected_track_seconds: int = 1_200
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -129,11 +161,22 @@ class Settings:
         lyrics_compute_type = os.getenv("LYRICS_COMPUTE_TYPE", "float16").strip().lower()
         if lyrics_compute_type not in {"float16", "int8_float16", "int8", "float32"}:
             raise ValueError("LYRICS_COMPUTE_TYPE is not supported")
+        max_duration_seconds = _positive_int("MAX_DURATION_SECONDS", 1200)
+        retention = os.getenv("DEFAULT_PROJECT_RETENTION", "archive").strip().lower()
+        if retention not in {"temporary", "archive", "custom"}:
+            raise ValueError("DEFAULT_PROJECT_RETENTION must be temporary, archive, or custom")
+        gpu_workers = _positive_int(
+            "MAX_ACTIVE_GPU_TASKS",
+            _positive_int("GPU_TASK_WORKERS", 1),
+        )
+        if os.getenv("JOB_TTL_MINUTES") is not None:
+            LOGGER.warning(
+                "JOB_TTL_MINUTES is ignored; automatic analysis deletion is disabled and analyses are retained until explicit deletion"
+            )
         return cls(
             data_dir=data_dir,
             max_upload_mb=_positive_int("MAX_UPLOAD_MB", 200),
-            max_duration_seconds=_positive_int("MAX_DURATION_SECONDS", 1200),
-            job_ttl_minutes=_positive_int("JOB_TTL_MINUTES", 60),
+            max_duration_seconds=max_duration_seconds,
             analysis_workers=workers,
             max_pending_jobs=_positive_int("MAX_PENDING_JOBS", workers * 2),
             model_cache_dir=Path(os.getenv("MODEL_CACHE_DIR", str(data_dir / "models"))).resolve(),
@@ -147,7 +190,7 @@ class Settings:
             enable_demucs=_boolean("ENABLE_DEMUCS", False),
             demucs_model_name=demucs_model_name,
             demucs_device=demucs_device,
-            gpu_task_workers=_positive_int("GPU_TASK_WORKERS", 1),
+            gpu_task_workers=gpu_workers,
             enable_genre_tagger=_boolean("ENABLE_GENRE_TAGGER", False),
             genre_model_id=_safe_identifier("GENRE_MODEL_ID", "laion/clap-htsat-unfused"),
             genre_model_revision=_safe_identifier(
@@ -169,6 +212,41 @@ class Settings:
             local_llm_timeout_seconds=_positive_int("LOCAL_LLM_TIMEOUT_SECONDS", 90),
             local_llm_keep_loaded=_boolean("LOCAL_LLM_KEEP_LOADED", False),
             prompt_writer_device=_device("PROMPT_WRITER_DEVICE", "cuda"),
+            max_single_track_analysis_seconds=_positive_int(
+                "MAX_SINGLE_TRACK_ANALYSIS_SECONDS", max_duration_seconds
+            ),
+            max_longform_duration_seconds=_positive_int(
+                "MAX_LONGFORM_DURATION_SECONDS", 43_200
+            ),
+            max_source_upload_gb=_positive_int("MAX_SOURCE_UPLOAD_GB", 50),
+            resumable_upload_chunk_mb=_positive_int("UPLOAD_CHUNK_MB", 32),
+            max_active_uploads=_positive_int("MAX_ACTIVE_UPLOADS", 3),
+            max_active_analyses=_positive_int("MAX_ACTIVE_ANALYSES", workers),
+            max_active_gpu_tasks=gpu_workers,
+            longform_scan_timeout_seconds=_positive_int(
+                "LONGFORM_SCAN_TIMEOUT_SECONDS", 7_200
+            ),
+            min_free_disk_gb=_nonnegative_int("MIN_FREE_DISK_GB", 10),
+            max_archive_bytes=_nonnegative_int(
+                "MAX_ARCHIVE_BYTES", 1_099_511_627_776
+            ),
+            default_project_retention=retention,
+            abandoned_upload_ttl_hours=_positive_int(
+                "ABANDONED_UPLOAD_TTL_HOURS", 72
+            ),
+            audit_read_events=_boolean("AUDIT_READ_EVENTS", False),
+            longform_scan_cadence_seconds=_positive_int(
+                "LONGFORM_SCAN_CADENCE_SECONDS", 1
+            ),
+            longform_scan_chunk_seconds=_positive_int(
+                "LONGFORM_SCAN_CHUNK_SECONDS", 300
+            ),
+            minimum_expected_track_seconds=_positive_int(
+                "MINIMUM_EXPECTED_TRACK_SECONDS", 45
+            ),
+            maximum_expected_track_seconds=_positive_int(
+                "MAXIMUM_EXPECTED_TRACK_SECONDS", 1_200
+            ),
         )
 
     @property
@@ -189,6 +267,18 @@ class Settings:
         return self.max_upload_mb * 1024 * 1024
 
     @property
+    def max_source_upload_bytes(self) -> int:
+        return self.max_source_upload_gb * 1024 * 1024 * 1024
+
+    @property
+    def resumable_upload_chunk_bytes(self) -> int:
+        return self.resumable_upload_chunk_mb * 1024 * 1024
+
+    @property
+    def minimum_free_disk_bytes(self) -> int:
+        return self.min_free_disk_gb * 1024 * 1024 * 1024
+
+    @property
     def jobs_dir(self) -> Path:
         return self.data_dir / "jobs"
 
@@ -200,12 +290,27 @@ class Settings:
     def cancellations_dir(self) -> Path:
         return self.data_dir / ".cancellations"
 
+    @property
+    def archive_dir(self) -> Path:
+        return self.data_dir / "archive"
+
+    @property
+    def uploads_dir(self) -> Path:
+        return self.data_dir / "uploads"
+
+    @property
+    def backups_dir(self) -> Path:
+        return self.data_dir / "backups"
+
     def ensure_directories(self) -> None:
         for directory in (
             self.data_dir,
             self.jobs_dir,
             self.model_cache_dir,
             self.cancellations_dir,
+            self.archive_dir,
+            self.uploads_dir,
+            self.backups_dir,
         ):
             directory.mkdir(parents=True, exist_ok=True)
             secure_private_directory(directory)

@@ -57,10 +57,11 @@ Double-click WZHK-Media-Launcher.cmd
 ```
 
 After a complete sequence, **Encode video** opens an honest readiness view. The
-React encode/mux adapter is not connected in this increment, so the production
-encode action stays disabled and the legacy interface remains the path for the
-reviewed encoder. Calibration candidate run/review and cloud package mutations
-have the same explicit unavailable boundary.
+React encode/mux adapter runs the reviewed local workflow: H.264 Delivery first,
+then ProRes 422 HQ Master, both with the approved local audio and final media
+verification. The page reports live frame/rate/ETA progress and persisted
+completion paths. Calibration candidate run/review and cloud package mutations
+retain their explicit unavailable boundary.
 
 Simple mode hides file hashes, local paths, JSON, authorization token, process
 identity, and raw logs. Advanced details makes those available without changing
@@ -89,11 +90,16 @@ only after both confirmations; the user never types the token.
 ## Primary sections
 
 - **Home:** readiness, current work, recommendation, time, and storage.
+- **Analysis Library:** persistent explicit-delete-only analyses, retained audio
+  and planning-artifact health, dependency visibility, and bounded archive repair.
+- **Video:** exact plan/cost review, resumable provider clips, legacy dependency
+  repair, local audio binding, deterministic rough cut, Resolve exports, and
+  verified full-preview assembly.
 - **Render:** guided setup and live progress.
 - **Profiles:** discovered saved JSON profiles and authorization state.
 - **Calibration:** measured evidence and bounded offline plan creation; candidate run/review unavailable in React.
 - **Jobs:** persisted history, safe stop, and exact resume.
-- **Encode:** verified sequence/readiness view; production encode/mux disabled until its adapter is connected.
+- **Encode:** verified sequence, reviewed Delivery-plus-Master encoding, private-audio mux, verification, and live progress.
 - **Cloud:** honest offline readiness; package and live actions disabled until connected and verified.
 - **Settings:** local paths, diagnostics, theme, and reversible performance mode.
 
@@ -117,8 +123,8 @@ launcher suite covers unusable-Python fallback and content-addressed rebuild
 invalidation for source deletion, root entry files, and public assets. The fake
 renderer covers heartbeat, atomic preview publication, safe stop, browser
 reload, exact resume, and completion without launching a complete Blender
-timeline; the browser test also verifies that unsupported encode is labelled
-and disabled honestly.
+timeline. Mission Control tests also cover local encode confirmation, managed
+output paths, persistent status, and UI capability reporting.
 
 Relevant commands:
 
@@ -150,3 +156,4 @@ the full production frame range.
 - [Calibration results](docs/render-calibration-results-20260720.md)
 - [Local performance mode](docs/local-performance-mode.md)
 - [NVIDIA Brev boundary](docs/nvidia-brev-rendering.md)
+- [Persistent Analysis Library and local video recovery](docs/analysis-library-and-video-recovery.md)

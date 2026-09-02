@@ -1,0 +1,21 @@
+{
+  "instances": [
+    {
+      "prompt": "Cinematic music-video shot with no dialogue and no visible text. Persistent visual identity: A melancholic, psychedelic digital afterlife where organic water, bone, glass and fabric merge with restrained computational artifacts. The world feels haunted rather than technological: tactile, wet, slow, elegant and emotionally human. Persistent protagonist: The Quantum Siren: one consistent adult woman with an ageless but clearly adult presence, expressive dark eyes, translucent pale skin with subtle signal fractures, long black hair moving as if underwater, and flowing charcoal fabric. She is never a celebrity, never a real person, and never presented as a literal robot. Narrative intent: Make the loss of self literal while preserving a refined dream-pop image.. Shot action and environment: The Quantum Siren stands before a tall sheet of wet black glass in an empty violet chamber. Her body is reflected accurately, but where her reflected face should be there is only deep moving water and faint static. She slowly raises one hand; the reflection responds a fraction of a second late. The camera slides from profile toward the mirror without crossing the axis. Palette: midnight black, cold cobalt blue, deep violet, wet silver, rare restrained amber highlights. Camera language: slow deliberate dolly or orbital movement, macro detail alternating with wide negative space, deep parallax, 24 FPS cinematic motion, stable horizon unless the narrative explicitly fractures. Lighting: soft volumetric shafts, underwater caustics, flickering practical light, rim light around translucent edges, controlled highlights with rich shadow detail. Texture and atmosphere: wet glass, fine film grain, subtle analog static, liquid diffraction, bone-white organic architecture, precise but sparse pixel fragmentation. Single continuous shot, coherent anatomy, controlled motion, cinematic depth, no cuts inside the generated clip. Continuity anchors: Quantum Siren, wet black mirror, violet chamber."
+    }
+  ],
+  "parameters": {
+    "aspectRatio": "16:9",
+    "compressionQuality": "optimized",
+    "durationSeconds": 8,
+    "enhancePrompt": true,
+    "generateAudio": false,
+    "negativePrompt": "visible words, captions, subtitles, interface text, logos, watermarks, generic neon cyberpunk city, cyberpunk armor, chrome robot, literal computer monitor UI, singing mouth close-up, lip synchronization, dialogue, microphones with brand marks, extra limbs, malformed hands, duplicated face, face morphing, child, teenager, nudity, sexualized framing, gore, horror monster, jump scare, frantic handheld camera, rapid montage, low resolution, muddy exposure, oversaturated neon, comedy, anime, cartoon, camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, horror face, eyeless monster, broken mirror shards, aggressive jump scare",
+    "personGeneration": "allow_adult",
+    "resolution": "1080p",
+    "sampleCount": 1,
+    "seed": 18031007,
+    "storageUri": "gs://example-trackprompt-video/trackprompt-video-generation/the-glitch-is-me/shot-007/",
+    "task": "textToVideo"
+  }
+}

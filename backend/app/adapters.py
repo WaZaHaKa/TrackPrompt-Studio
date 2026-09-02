@@ -16,6 +16,7 @@ from .privacy import secure_private_directory
 from .prompting.local_writer import create_prompt_writer
 from .schemas import (
     CapabilitiesResponse,
+    CatalogueCapability,
     DeepAdapterCapability,
     FFmpegCapability,
     GPUTaskQueueCapability,
@@ -152,6 +153,18 @@ def get_capabilities(settings: Settings) -> CapabilitiesResponse:
     genre = create_music_tagger(settings).capability()
     lyrics = create_lyrics_adapter(settings).capability()
     prompt_writer = create_prompt_writer(settings).capability()
+    try:
+        free_storage_bytes = int(shutil.disk_usage(settings.data_dir).free)
+    except OSError:
+        free_storage_bytes = 0
+    try:
+        archive_storage_used_bytes = sum(
+            path.stat().st_size
+            for path in settings.archive_dir.rglob("*")
+            if path.is_file()
+        )
+    except OSError:
+        archive_storage_used_bytes = 0
     return CapabilitiesResponse(
         fast_mode=ModeCapability(
             available=ffmpeg.available and ffprobe.available,
@@ -178,8 +191,21 @@ def get_capabilities(settings: Settings) -> CapabilitiesResponse:
         limits=LimitsCapability(
             max_upload_mb=settings.max_upload_mb,
             max_duration_seconds=settings.max_duration_seconds,
-            job_ttl_minutes=settings.job_ttl_minutes,
             max_pending_jobs=settings.max_pending_jobs,
+            max_single_track_analysis_seconds=settings.max_single_track_analysis_seconds,
+            max_longform_duration_seconds=settings.max_longform_duration_seconds,
+            max_source_upload_bytes=settings.max_source_upload_bytes,
+            upload_chunk_bytes=settings.resumable_upload_chunk_bytes,
+            max_active_uploads=settings.max_active_uploads,
+            max_active_analyses=settings.max_active_analyses,
+            max_active_gpu_tasks=settings.max_active_gpu_tasks,
+            longform_scan_timeout_seconds=settings.longform_scan_timeout_seconds,
+            minimum_free_disk_bytes=settings.minimum_free_disk_bytes,
+        ),
+        catalogue=CatalogueCapability(
+            free_storage_bytes=free_storage_bytes,
+            archive_storage_used_bytes=archive_storage_used_bytes,
+            archive_quota_bytes=settings.max_archive_bytes,
         ),
         optional_analyzers=[
             OptionalAnalyzerCapability(

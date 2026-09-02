@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "authorizationId": "andromeda-v2-production-authorization-v1",
+  "projectId": "trip-to-andromeda-v2",
+  "status": "blocked",
+  "enabledOutputVariants": [
+    "horizontal-16x9-1080p"
+  ],
+  "productionStartAllowed": false,
+  "finalRenderStarted": false,
+  "gates": [
+    {
+      "id": "owner-creative-acceptance",
+      "status": "satisfied",
+      "evidenceRequired": "Owner-attested acceptance binds the immutable R13.1 proof hashes."
+    },
+    {
+      "id": "final-look-profile-lock",
+      "status": "satisfied",
+      "evidenceRequired": "Typed aspect-neutral look profile is locked to the accepted R13.1 language."
+    },
+    {
+      "id": "seven-act-shot-compile",
+      "status": "satisfied",
+      "evidenceRequired": "Exactly 35 authored shots cover frames 1 through 13029 without gaps."
+    },
+    {
+      "id": "full-audio-animatic",
+      "status": "blocked",
+      "evidenceRequired": "A full 434.286-second horizontal animatic must bind and audibly use the preserved source audio."
+    },
+    {
+      "id": "representative-visual-qa",
+      "status": "blocked",
+      "evidenceRequired": "Human visual QA must approve every act, transition class, protagonist state, and final environment."
+    },
+    {
+      "id": "horizontal-calibration",
+      "status": "blocked",
+      "evidenceRequired": "V2 horizontal calibration must bind the final scene, profile, representative frame matrix, and measured P90."
+    },
+    {
+      "id": "vertical-calibration",
+      "status": "not-required-while-disabled",
+      "evidenceRequired": "Required only if vertical-9x16-1080p is explicitly enabled in the authorized output matrix."
+    },
+    {
+      "id": "enabled-matrix-24h-sla",
+      "status": "blocked",
+      "evidenceRequired": "Measured aggregate P90 render and encode forecast for the exact enabled output matrix must not exceed 24 hours."
+    },
+    {
+      "id": "deterministic-effects-and-disk",
+      "status": "blocked",
+      "evidenceRequired": "All simulations must be deterministic or baked and disk headroom must be measured before authorization."
+    },
+    {
+      "id": "exact-operator-production-authorization",
+      "status": "blocked",
+      "evidenceRequired": "A separate operator action must authorize the exact package hashes and enabled output variants."
+    }
+  ]
+}

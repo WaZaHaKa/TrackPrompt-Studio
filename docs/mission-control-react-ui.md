@@ -11,8 +11,8 @@ production tooling; it does not reimplement render safety in the browser.
 - Authorization remains bound to the exact saved-file and scene SHA-256 values.
 - Production preflight, the GPU mutex, resumable chunks, atomic publication,
   validation, safe stop, encoding, and local audio mux remain backend-owned.
-  This React adapter currently drives the render controls; encode/mux remain in
-  the preserved production tooling until a dedicated API adapter is connected.
+  The React adapter starts the reviewed local encoder through the backend and
+  only displays persisted backend progress.
 - Closing or refreshing the browser does not stop a render.
 - Cloud pages report offline preparation honestly and do not expose an
   unverified provisioning action.
@@ -31,7 +31,7 @@ The application has eight primary destinations:
 | Profiles | Discovered saved profiles with calibration and authorization status |
 | Calibration | Measured machine evidence, finalist comparison, and offline plan creation; run/review adapters are explicitly unavailable |
 | Jobs | Persistent running, stopped, resumable, failed, and complete jobs |
-| Encode | Verified-sequence/readiness view; encoder and private-audio mux actions remain disabled in React |
+| Encode | Verified sequence, Delivery-then-Master encode, private-audio mux, verification, and live progress |
 | Cloud | Offline readiness inspection and explicit unavailable package/live actions |
 | Settings | Local tool paths, theme, output defaults, diagnostics, and reversible performance mode |
 
@@ -56,9 +56,9 @@ The Render workspace uses six steps:
 An unauthorized but otherwise valid profile is a recoverable state. The UI
 offers **Authorize now** in place and continues directly to Start after success.
 
-The current React production boundary ends after a verified frame sequence.
-Encode/mux, calibration candidate execution/review, and cloud package mutation
-are presented honestly as unavailable rather than calling unverified adapters.
+The current React production boundary includes verified frame-sequence encode
+and local private-audio mux. Calibration candidate execution/review and cloud
+package mutation remain unavailable rather than calling unverified adapters.
 
 ## Visual and accessibility system
 

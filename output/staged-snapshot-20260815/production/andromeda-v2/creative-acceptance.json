@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-project-creative-acceptance",
+  "approvalKind": "operator-confirmed-audience-avatar-acceptance",
+  "acceptanceId": "andromeda-r13.1-owner-creative-acceptance-v1",
+  "projectId": "trip-to-andromeda-v2",
+  "acceptedBaseline": "andromeda-r13.1-selected-refinement",
+  "revision": "andromeda-r13.1-selected-refinement",
+  "attestationKind": "owner-attested",
+  "attestedByRole": "project-owner-operator",
+  "attestedAt": "2026-07-23T00:00:00+03:00",
+  "decision": "approved-as-project-creative-baseline",
+  "humanApproval": "approved",
+  "humanApprovalSource": "operator-attested-audience-avatar-review",
+  "operatorCreativeDirectionApproved": true,
+  "styleLockStatus": "approved-for-this-project",
+  "scope": "overall visual and motion quality target for Trip to Andromeda V2",
+  "source": "andromeda-finish-line-codex-sprint-dual-format",
+  "attestationSource": "user-supplied-finish-line-brief",
+  "recordedBy": "codex-recording-user-supplied-attestation",
+  "proof": {
+    "revisionId": "andromeda-r13.1-selected-refinement",
+    "proofRoot": "test-output/cinematic-v2-andromeda-r131-20260722-213840",
+    "proofManifestSha256": "acb896e9d445e2d0f7a187c3667dc22b01e91d9056644b510861e8b555685140",
+    "authoritativeSceneSha256": "9b58fe8e3a98c8b6a7b4e7a2bdb4ead72b1fc7e7de1d3cc7602e6fe623f4f1a6",
+    "renderManifestSha256": "13712629fa6cce15f5ae2b764f476023777e30ced55a94df48e076c392e3a086",
+    "motionPreviewSha256": "1b1a02a52c241552e0b4a6c3b3490a04168fdd954b19f17d47e90332997a72c0",
+    "historicalReviewSha256": "8843cecbe55ff6a6a7bb1f69da36b1305e8632504ea2e56f9bb98b72c9136d3e",
+    "historicalProofRemainsImmutable": true
+  },
+  "doesNotRewriteHistoricalReview": true,
+  "doesNotByItselfAuthorize": [
+    "skipping technical QA",
+    "using stale scene or render profiles",
+    "cloud provisioning",
+    "starting the full render before the final technical gates"
+  ],
+  "doesNotAuthorizeProduction": true
+}

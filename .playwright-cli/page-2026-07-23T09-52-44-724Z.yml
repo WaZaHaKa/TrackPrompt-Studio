@@ -1,0 +1,92 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#mission-control-main"
+  - complementary "Mission Control navigation" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e10]:
+        - strong [ref=e11]: WZHK
+        - generic [ref=e12]: MEDIA · MISSION CONTROL
+      - button "Close navigation" [ref=e13] [cursor=pointer]
+    - navigation [ref=e17]:
+      - button "Home" [ref=e18] [cursor=pointer]
+      - button "Render" [active] [ref=e23] [cursor=pointer]
+      - button "Profiles" [ref=e27] [cursor=pointer]
+      - button "Calibration" [ref=e30] [cursor=pointer]
+      - button "Jobs" [ref=e34] [cursor=pointer]
+      - button "Director" [ref=e40] [cursor=pointer]
+      - button "Encode" [ref=e47] [cursor=pointer]
+      - button "Cloud" [ref=e51] [cursor=pointer]
+      - button "Settings" [ref=e55] [cursor=pointer]
+    - generic [ref=e60]:
+      - generic [ref=e69]:
+        - strong [ref=e70]: Connected
+        - generic [ref=e71]: Local service
+      - generic [ref=e77]:
+        - text: Local & private
+        - generic [ref=e78]: No telemetry
+  - generic [ref=e79]:
+    - banner [ref=e80]:
+      - generic [ref=e81]: Render
+      - generic [ref=e83]:
+        - generic "Show exact hashes, paths, and metrics" [ref=e84] [cursor=pointer]:
+          - generic [ref=e85]: Simple
+          - switch "Simple" [ref=e86]
+        - button "Use light theme" [ref=e119] [cursor=pointer]
+        - generic "Backend connected" [ref=e126]
+    - main [ref=e98]:
+      - generic [ref=e244]:
+        - generic [ref=e246]:
+          - generic [ref=e247]: Guided local workflow
+          - heading "New render" [level=1] [ref=e248]
+          - paragraph [ref=e249]: Mission Control keeps the approved scene, measured profile, authorization, and output identity bound together.
+        - navigation "New render progress" [ref=e250]:
+          - list [ref=e251]:
+            - listitem [ref=e252]:
+              - button "1 Project" [ref=e253] [cursor=pointer]:
+                - generic [ref=e254]: "1"
+                - generic [ref=e255]: Project
+            - listitem [ref=e258]:
+              - button "2 Profile" [disabled] [ref=e259]:
+                - generic [ref=e260]: "2"
+                - generic [ref=e261]: Profile
+            - listitem [ref=e264]:
+              - button "3 Output" [disabled] [ref=e265]:
+                - generic [ref=e266]: "3"
+                - generic [ref=e267]: Output
+            - listitem [ref=e270]:
+              - button "4 Preflight" [disabled] [ref=e271]:
+                - generic [ref=e272]: "4"
+                - generic [ref=e273]: Preflight
+            - listitem [ref=e276]:
+              - button "5 Authorize" [disabled] [ref=e277]:
+                - generic [ref=e278]: "5"
+                - generic [ref=e279]: Authorize
+            - listitem [ref=e282]:
+              - button "6 Start" [disabled] [ref=e283]:
+                - generic [ref=e284]: "6"
+                - generic [ref=e285]: Start
+        - generic [ref=e286]:
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: "1"
+              - generic [ref=e290]:
+                - heading "Choose a project and approved scene" [level=2] [ref=e291]
+                - paragraph [ref=e292]: The current approved scene is selected automatically when available.
+            - generic [ref=e293]:
+              - generic [ref=e294]: Project
+              - combobox "Project" [ref=e295]:
+                - option "Trip to Andromeda" [selected]
+                - option "Trip To Andromeda V2"
+            - radiogroup "Approved scenes" [ref=e296]:
+              - generic [ref=e297] [cursor=pointer]:
+                - radio "Verified Approved Trip to Andromeda 13,029 frames · 30 fps" [checked]
+                - generic [ref=e304]:
+                  - generic [ref=e305]:
+                    - generic [ref=e306]: Verified
+                    - generic [ref=e307]: Approved
+                  - strong [ref=e308]: Trip to Andromeda
+                  - generic [ref=e309]: 13,029 frames · 30 fps
+          - generic [ref=e310]:
+            - button "Back" [disabled] [ref=e311]
+            - generic [ref=e315]: Step 1 of 6
+            - button [ref=e316] [cursor=pointer]

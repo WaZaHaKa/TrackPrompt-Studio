@@ -159,6 +159,77 @@ export interface VisualCuePreferences {
   curveDetail: VisualCurveDetail
 }
 
+export const BLENDER_VISUALIZER_PRESETS = ['abstract-geometry', 'space-journey'] as const
+
+export type BlenderVisualizerPreset = typeof BLENDER_VISUALIZER_PRESETS[number]
+
+export const SPACE_JOURNEY_PALETTES = [
+  'andromeda',
+  'deep-space',
+  'cyan-violet',
+  'violet-magenta',
+  'monochrome-blue',
+  'dark-amber',
+] as const
+
+export type SpaceJourneyPalette = typeof SPACE_JOURNEY_PALETTES[number]
+
+export interface SpaceJourneyParameters {
+  cameraDistance: number
+  cameraOrbitSpeed: number
+  ringThickness: number
+  ringOcclusion: number
+  palette: SpaceJourneyPalette
+  glowStrength: number
+  shardDensity: number
+  fogDepth: number
+  bassResponse: number
+  drumResponse: number
+  vocalResponse: number
+}
+
+interface VisualizerConfigRequestBase {
+  schemaVersion: '1.0.0'
+  seed?: number
+}
+
+export type VisualizerConfigRequest =
+  | (VisualizerConfigRequestBase & {
+      preset: 'abstract-geometry'
+      parameters?: never
+    })
+  | (VisualizerConfigRequestBase & {
+      preset: 'space-journey'
+      parameters?: Partial<SpaceJourneyParameters>
+    })
+
+interface ResolvedVisualizerConfigBase {
+  schemaVersion: '1.0.0'
+  seed: number
+  defaultedParameters: string[]
+  warnings: string[]
+}
+
+export type ResolvedVisualizerConfig =
+  | (ResolvedVisualizerConfigBase & {
+      preset: 'abstract-geometry'
+      parameters: Record<string, never>
+    })
+  | (ResolvedVisualizerConfigBase & {
+      preset: 'space-journey'
+      parameters: SpaceJourneyParameters
+    })
+
+export function isBlenderVisualizerPreset(value: unknown): value is BlenderVisualizerPreset {
+  return typeof value === 'string'
+    && (BLENDER_VISUALIZER_PRESETS as readonly string[]).includes(value)
+}
+
+export function isSpaceJourneyPalette(value: unknown): value is SpaceJourneyPalette {
+  return typeof value === 'string'
+    && (SPACE_JOURNEY_PALETTES as readonly string[]).includes(value)
+}
+
 export interface VisualCueEvent {
   index: number
   timeSeconds: number
@@ -425,14 +496,379 @@ export interface Capabilities {
   limits: {
     maxUploadMb: number
     maxDurationSeconds: number
-    jobTtlMinutes: number
     maxPendingJobs: number
+    maxSingleTrackAnalysisSeconds: number
+    maxLongformDurationSeconds: number
+    maxSourceUploadBytes: number
+    uploadChunkBytes: number
+    maxActiveUploads: number
+    maxActiveAnalyses: number
+    maxActiveGpuTasks: number
+    longformScanTimeoutSeconds: number
+    minimumFreeDiskBytes: number
   }
+  catalogue?: {
+    available: boolean
+    catalogueSchemaVersion: string
+    auditSchemaVersion: string
+    segmentSchemaVersion: string
+    reportSchemaVersion: string
+    autoSegmentationAvailable: boolean
+    supportedRetentionPolicies: RetentionPolicy[]
+    freeStorageBytes: number
+    archiveStorageUsedBytes: number
+    archiveQuotaBytes: number
+  } | null
   visualCueExportAvailable: boolean
   visualCueSheetSchemaVersion: string
   visualFeatureArtifactSchemaVersion: string
   blenderVisualizerPreset: string
+  blenderVisualizerDefaultPreset: BlenderVisualizerPreset
+  blenderVisualizerPresets: BlenderVisualizerPreset[]
+  blenderVisualizerConfigSchemaVersion: string
   networkFeaturesEnabled: boolean
+  retentionPolicy: 'explicit-delete-only'
+  automaticAnalysisDeletionEnabled: false
+}
+
+export const RENDERER_AVAILABILITY_STATES = [
+  'READY',
+  'READY_FOR_PREVIEW',
+  'READY_FOR_CAPTURE',
+  'MISSING_RAINMETER',
+  'MISSING_ASSETS',
+  'MISSING_FFMPEG',
+  'MISSING_CAPTURE_PROVIDER',
+  'MISSING_MASTER',
+  'INVALID_MASTER_DURATION',
+  'INVALID_WORKSPACE',
+  'UNSUPPORTED_PLATFORM',
+  'INVALID_VENDOR_SNAPSHOT',
+  'INVALID_CONTRACT',
+  'INVALID_DESIGN_PRESET',
+  'ASSET_DURATION_MISMATCH',
+  'WORKSPACE_UNAVAILABLE',
+] as const
+
+export type RendererAvailabilityState = typeof RENDERER_AVAILABILITY_STATES[number]
+
+export interface RendererRequirement {
+  id: string
+  label: string
+  available: boolean
+  requiredForPreparation: boolean
+  detail: string
+}
+
+export interface RendererContractSummary {
+  artist: string
+  title: string
+  bpm: number
+  meter: string
+  totalBars: number
+  gridDurationSeconds: number
+  masterDurationSeconds: number | null
+  tailDurationSeconds: number | null
+  width: number
+  height: number
+  fps: number
+}
+
+export type SpectrumPreviewSection = 'intro' | 'main' | 'outro'
+
+export const SPECTRUM_BACKGROUND_MODES = [
+  'generative-geometry',
+  'static-structured',
+] as const
+
+export type SpectrumBackgroundMode = typeof SPECTRUM_BACKGROUND_MODES[number]
+
+export const WZHK_GENERATIVE_SHAPE_IDS = [
+  'sparse-field',
+  'lissajous',
+  'matrix-field',
+  'wave-surface',
+  'torus',
+  'twisted-torus',
+  'trefoil-knot',
+  'superformula',
+  'spherical-lattice',
+  'dispersed-field',
+] as const
+
+export type WzhkGenerativeShapeId = typeof WZHK_GENERATIVE_SHAPE_IDS[number]
+export type SpectrumGeometryPreviewSection = SpectrumPreviewSection | 'post-grid-tail'
+export type SpectrumGeometryPreviewMode = 'shape' | 'morph' | 'section' | 'lab'
+export type SpectrumPreviewAudioMode = 'disabled' | 'simulated'
+
+export interface SpectrumGeometryShapeSpec {
+  shapeId: WzhkGenerativeShapeId
+  seed: number
+}
+
+interface SpectrumGenerativePreviewOverrideBase {
+  pointCount?: number
+  rotationDegrees?: number
+  scale?: number
+  seed?: number
+  audioMode: SpectrumPreviewAudioMode
+}
+
+export type SpectrumGenerativePreviewOverride = SpectrumGenerativePreviewOverrideBase & (
+  | {
+      mode: 'shape'
+      shapeA: SpectrumGeometryShapeSpec
+    }
+  | {
+      mode: 'morph'
+      shapeA: SpectrumGeometryShapeSpec
+      shapeB: SpectrumGeometryShapeSpec
+      morphProgress: number
+    }
+  | {
+      mode: 'section'
+      section: SpectrumGeometryPreviewSection
+    }
+  | {
+      mode: 'lab'
+      shapeA: SpectrumGeometryShapeSpec
+      shapeB?: SpectrumGeometryShapeSpec
+      morphProgress?: number
+    }
+)
+
+export interface SpectrumGenerativeGeometrySummary {
+  enabled: boolean
+  subsystemId: 'wzhk-generative-geometry'
+  renderMode: 'neopixel-points'
+  seed: number
+  pointCount: number
+  performanceProfile: 'preview' | 'production' | 'high'
+  shapeFamilies: WzhkGenerativeShapeId[]
+}
+
+export const SPECTRUM_GEOMETRY_CAPABILITY_STATES = [
+  'READY',
+  'WEBGL2_UNAVAILABLE',
+  'GPU_RENDERER_UNAVAILABLE',
+  'SHADER_COMPILE_FAILED',
+  'PERFORMANCE_INSUFFICIENT',
+  'BROWSER_UNAVAILABLE',
+] as const
+
+export type SpectrumGeometryCapabilityState = typeof SPECTRUM_GEOMETRY_CAPABILITY_STATES[number]
+
+export interface SpectrumGeometryCapability {
+  state: SpectrumGeometryCapabilityState
+  webgl2: boolean | null
+  gpuRenderer: string | null
+  shaderCompiled: boolean | null
+  performanceMeasured: boolean
+  performanceSufficient: boolean | null
+  rendererFps: number | null
+  averageFrameTimeMs: number | null
+  pointCount: number | null
+  detail: string | null
+}
+
+export interface SpectrumGeometryTelemetry {
+  actualFps: number | null
+  averageFrameTimeMs: number | null
+  pointCount: number | null
+  droppedRendererFrames: number | null
+  gpuRenderer: string | null
+}
+
+export interface SpectrumTimelineSectionSummary {
+  id: SpectrumPreviewSection | 'post-grid-tail'
+  label: string
+  startSeconds: number
+  endSeconds: number | null
+  spectrumColor: string
+}
+
+export interface SpectrumDesignPresetSummary {
+  presetId: 'scattered'
+  displayName: string
+  previewTimingSource: 'external-media-player-position'
+  productionTimingSource: 'trackprompt-production-clock'
+  previewTimingAccuracy: 'preview-level'
+  productionTimingAccuracy: 'host-monotonic-process-boundary'
+  progressVisible: boolean
+  backgroundMode: SpectrumBackgroundMode
+  generativeGeometry: SpectrumGenerativeGeometrySummary | null
+  sections: SpectrumTimelineSectionSummary[]
+}
+
+export interface SpectrumVisualOverrides {
+  spectrumScale?: number
+  sensitivity?: number
+  logoScale?: number
+  accentColor?: string
+  backgroundIntensity?: number
+}
+
+interface SpectrumWorkspacePrepareOptionsBase {
+  backgroundMode: SpectrumBackgroundMode
+  visualOverrides: SpectrumVisualOverrides
+}
+
+export type SpectrumWorkspacePrepareOptions = SpectrumWorkspacePrepareOptionsBase & (
+  | {
+      mode: 'preview'
+      previewSection: SpectrumPreviewSection | null
+      generativePreview?: SpectrumGenerativePreviewOverride
+    }
+  | {
+      mode: 'production'
+      previewSection: null
+      generativePreview?: never
+    }
+)
+
+export interface RendererDescriptor {
+  rendererId: string
+  displayName: string
+  description: string
+  platform: 'cross-platform' | 'windows'
+  capabilities: string[]
+  availability: RendererAvailabilityState
+  available: boolean
+  preparationAvailable: boolean
+  previewAvailability: SpectrumProductionAvailability | null
+  captureAvailability: SpectrumProductionAvailability | null
+  previewAvailable: boolean
+  captureAvailable: boolean
+  warnings: string[]
+  requirements: RendererRequirement[]
+  contractSummary: RendererContractSummary | null
+  designPreset: SpectrumDesignPresetSummary | null
+  geometryCapability?: SpectrumGeometryCapability | null
+}
+
+export interface SpectrumWorkspaceJob {
+  schemaVersion: '1.0.0' | '2.0.0' | '3.0.0' | '4.0.0'
+  jobId: string
+  rendererId: 'wzhk-spectrum'
+  state: SpectrumProductionState | 'PREPARED'
+  workspaceRelativePath: string
+  contractValid: boolean
+  brandingApplied: boolean
+  vendorUnchanged: boolean
+  generatedWorkspaceHash: string
+  vendorSourceHash: string
+  vendorCommit: string
+  logoResolved: boolean
+  masterAudioResolved: boolean
+  warnings: string[]
+  contractSummary: RendererContractSummary
+  mode: 'preview' | 'production'
+  backgroundMode: SpectrumBackgroundMode
+  presetId: 'scattered' | null
+  presetName: string | null
+  compositionRevision?: 'scattered-geometry-first-3.7' | null
+  previewSection: SpectrumPreviewSection | null
+  generativePreviewOverride: SpectrumGenerativePreviewOverride | null
+  designHash: string | null
+  timingSource: 'external-media-player-position' | 'trackprompt-production-clock' | null
+  timingAccuracy: 'preview-level' | 'host-monotonic-process-boundary' | null
+  timelineControllerVersion: string | null
+  visualQaRequired: boolean
+  masterTiming: SpectrumMasterTiming | null
+  productionAvailability: SpectrumProductionAvailability | null
+  capturePreflight: SpectrumCapturePreflight | null
+  artifacts: SpectrumArtifact[]
+  synchronization: SpectrumCaptureSynchronization | null
+  validationReport: SpectrumValidationReport | null
+  captureProvider: string | null
+  encoder: string | null
+  capturedFrames: number | null
+  droppedFrames: number | null
+  captureDurationSeconds: number | null
+  errorMessage: string | null
+  geometryCapability?: SpectrumGeometryCapability | null
+  geometryTelemetry?: SpectrumGeometryTelemetry | null
+}
+
+export type SpectrumProductionAvailability =
+  | 'READY_FOR_PREVIEW'
+  | 'READY_FOR_CAPTURE'
+  | 'MISSING_RAINMETER'
+  | 'MISSING_FFMPEG'
+  | 'MISSING_CAPTURE_PROVIDER'
+  | 'INVALID_WORKSPACE'
+  | 'MISSING_MASTER'
+  | 'INVALID_MASTER_DURATION'
+
+export type SpectrumProductionState =
+  | 'WORKSPACE_READY'
+  | 'PREVIEW_READY'
+  | 'CAPTURE_PREFLIGHT'
+  | 'CAPTURE_READY'
+  | 'CAPTURING'
+  | 'CAPTURE_COMPLETE'
+  | 'MUXING'
+  | 'VALIDATING'
+  | 'COMPLETE'
+  | 'FAILED'
+  | 'CANCELLED'
+
+export interface SpectrumMasterTiming {
+  gridDurationSeconds: number
+  masterDurationSeconds: number
+  tailDurationSeconds: number
+  configuredFinalFadeSeconds: number
+  finalFadeStartSeconds: number
+}
+
+export interface SpectrumCaptureProvider {
+  providerId: 'ffmpeg-gfxcapture'
+  displayName: string
+  available: boolean
+  supportsWindowCapture: boolean
+  supportsConstantFrameRate: boolean
+  crashResilientContainer: 'matroska'
+  encoder: 'h264_nvenc' | 'libx264' | null
+  hardwareAccelerationVerified: boolean
+  detail: string
+}
+
+export interface SpectrumCapturePreflight {
+  availability: SpectrumProductionAvailability
+  ready: boolean
+  provider: SpectrumCaptureProvider
+  timing: SpectrumMasterTiming | null
+  rainmeterPathResolved: boolean
+  ffmpegPathResolved: boolean
+  ffprobePathResolved: boolean
+  playbackPathResolved: boolean
+  workspaceValid: boolean
+  masterValid: boolean
+  operatorNotice: string
+  warnings: string[]
+}
+
+export interface SpectrumArtifact {
+  artifactType: string
+  relativePath: string
+  sha256: string
+  sizeBytes: number
+  createdState: SpectrumProductionState
+  provenance: string
+  timestampSeconds: number | null
+}
+
+export interface SpectrumCaptureSynchronization {
+  method: 'owned-playback-process-ffmpeg-progress-clock'
+  measuredStartOffsetSeconds: number
+  measuredEndOffsetSeconds: number
+  correctionAppliedSeconds: number
+  precision: 'host-monotonic-process-boundary'
+}
+
+export interface SpectrumValidationReport {
+  valid: boolean
+  checks: Array<{ id: string; passed: boolean; measured: string; expected: string }>
 }
 
 export interface AnalysisOptions {
@@ -441,6 +877,212 @@ export interface AnalysisOptions {
   lyricsConsentConfirmed: boolean
   deriveLyricalThemes: boolean
   allowFeatureFallback: boolean
+}
+
+export interface AnalysisCatalogueItem {
+  analysisId: string
+  displayName: string
+  status: string
+  retentionPolicy: 'persistent'
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+  durationSeconds: number | null
+  analysisSchemaVersion: string | null
+  archiveHealth: string
+  retainedAudioAvailable: boolean
+  analysisAvailable: boolean
+  storyPlanAvailable: boolean
+  shotPlanAvailable: boolean
+  dependentVideoJobCount: number
+  explicitDeleteEligible: boolean
+  legacyMissing: boolean
+  deletedAt: string | null
+}
+
+export interface AnalysisCataloguePage {
+  items: AnalysisCatalogueItem[]
+  total: number
+  offset: number
+  limit: number
+}
+
+export type RetentionPolicy = 'temporary' | 'archive' | 'custom'
+export type BatchState = 'draft' | 'uploading' | 'awaiting_review' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled'
+export type UploadState = 'created' | 'uploading' | 'paused' | 'verifying' | 'completed' | 'cancelled' | 'failed'
+export type TransitionType = 'silence_gap' | 'hard_cut' | 'fade' | 'crossfade' | 'gradual_transition' | 'uncertain'
+export type ReviewState = 'detected' | 'accepted' | 'rejected' | 'user_edited' | 'imported' | 'unresolved'
+export type QueueState = 'stored' | 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled'
+
+export interface CataloguePage<T> {
+  items: T[]
+  total: number
+  offset: number
+  limit: number
+}
+
+export interface CatalogueClient {
+  id: string
+  displayName: string
+  privateNotes: string
+  tags: string[]
+  archived: boolean
+  projectCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CatalogueProject {
+  id: string
+  clientId: string
+  name: string
+  description: string
+  status: string
+  retentionPolicy: RetentionPolicy
+  retentionUntil?: string | null
+  tags: string[]
+  archivedAt?: string | null
+  storageBytes: number
+  batchCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CatalogueBatch {
+  id: string
+  projectId: string
+  name: string
+  sequence: number
+  defaultAnalysisMode: AnalysisMode
+  enableGenreAnalysis: boolean
+  enableLyricalAnalysis: boolean
+  lyricsConsentConfirmed: boolean
+  state: BatchState
+  itemTotal: number
+  completedItems: number
+  failedItems: number
+  durationSeconds: number
+  progress: number
+  createdAt: string
+  completedAt?: string | null
+}
+
+export interface UploadSession {
+  id: string
+  batchId: string
+  displayName: string
+  totalBytes: number
+  receivedBytes: number
+  chunkSizeBytes: number
+  expectedSha256?: string | null
+  state: UploadState
+  assetId?: string | null
+  duplicateAssetId?: string | null
+  createdAt: string
+  updatedAt: string
+  expiresAt: string
+}
+
+export interface SourceAsset {
+  id: string
+  projectId: string
+  batchId: string
+  displayName: string
+  contentSha256: string
+  byteSize: number
+  durationSeconds: number
+  codec: string
+  container: string
+  sampleRate: number
+  channels: number
+  originalOrder: number
+  uploadState: UploadState
+  storageState: string
+  archivalState: RetentionPolicy
+  segmentationState: string
+  createdAt: string
+}
+
+export interface VirtualSegment {
+  id: string
+  sourceAssetId: string
+  sequenceIndex: number
+  label: string
+  startSeconds: number
+  endSeconds: number
+  stableCoreStartSeconds: number
+  stableCoreEndSeconds: number
+  transitionInStartSeconds?: number | null
+  transitionInEndSeconds?: number | null
+  transitionOutStartSeconds?: number | null
+  transitionOutEndSeconds?: number | null
+  confidence: Confidence
+  confidenceScore?: number | null
+  transitionType: TransitionType
+  reviewState: ReviewState
+  accepted: boolean
+  childAnalysisJobId?: string | null
+  evidence: Record<string, number>
+  revision: number
+}
+
+export interface SegmentationJob {
+  id: string
+  assetId: string
+  state: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  stage: string
+  progress: number
+  observationCount: number
+  candidateCount: number
+  refinedBoundaryCount: number
+  peakBufferBytes: number
+  elapsedSeconds: number
+  errorCode?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SegmentEditOperation = 'add' | 'move' | 'delete' | 'merge' | 'split' | 'rename' | 'accept' | 'reject' | 'restore'
+
+export interface SegmentEdit {
+  operation: SegmentEditOperation
+  segmentId?: string
+  adjacentSegmentId?: string
+  atSeconds?: number
+  startSeconds?: number
+  endSeconds?: number
+  label?: string
+  reason: string
+}
+
+export interface QueueItem {
+  id: string
+  batchId: string
+  segmentId: string
+  state: QueueState
+  attempt: number
+  analysisMode: AnalysisMode
+  jobId?: string | null
+  failureReason?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AuditEvent {
+  eventId: string
+  timestamp: string
+  sequence: number
+  projectId: string
+  batchId?: string | null
+  entityType: string
+  entityId: string
+  eventType: string
+  actorType: string
+  correlationId: string
+  schemaVersion: string
+  payload: Record<string, unknown>
+  previousEventHash: string
+  eventHash: string
 }
 
 export interface GenreCandidate {
@@ -719,10 +1361,29 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
   gpuTaskQueue: { workers: 1, active: 0, waiting: 0, policy: 'single-heavy-task' },
   ffmpeg: { available: false },
   ffprobe: { available: false },
-  limits: { maxUploadMb: 200, maxDurationSeconds: 1200, jobTtlMinutes: 60, maxPendingJobs: 2 },
+  limits: {
+    maxUploadMb: 200,
+    maxDurationSeconds: 1200,
+    maxPendingJobs: 2,
+    maxSingleTrackAnalysisSeconds: 1200,
+    maxLongformDurationSeconds: 43200,
+    maxSourceUploadBytes: 50 * 1024 * 1024 * 1024,
+    uploadChunkBytes: 32 * 1024 * 1024,
+    maxActiveUploads: 3,
+    maxActiveAnalyses: 1,
+    maxActiveGpuTasks: 1,
+    longformScanTimeoutSeconds: 7200,
+    minimumFreeDiskBytes: 10 * 1024 * 1024 * 1024,
+  },
+  catalogue: null,
   visualCueExportAvailable: false,
   visualCueSheetSchemaVersion: 'unknown',
   visualFeatureArtifactSchemaVersion: 'unknown',
   blenderVisualizerPreset: '',
+  blenderVisualizerDefaultPreset: 'abstract-geometry',
+  blenderVisualizerPresets: ['abstract-geometry'],
+  blenderVisualizerConfigSchemaVersion: 'unknown',
   networkFeaturesEnabled: false,
+  retentionPolicy: 'explicit-delete-only',
+  automaticAnalysisDeletionEnabled: false,
 }

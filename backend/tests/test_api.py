@@ -325,7 +325,14 @@ def test_unexpected_api_failure_uses_safe_structured_error(
             "bad_request",
         ),
         ("GET", "/api/not-a-route", {}, None, 404, "route_not_found"),
-        ("GET", "/api/analyses", {}, None, 405, "method_not_allowed"),
+        (
+            "GET",
+            "/api/analyses/11111111-1111-4111-8111-111111111111/reconcile",
+            {},
+            None,
+            405,
+            "method_not_allowed",
+        ),
     ],
 )
 def test_framework_http_errors_use_safe_structured_envelope(

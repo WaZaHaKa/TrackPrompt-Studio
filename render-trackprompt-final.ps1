@@ -14,6 +14,19 @@ param(
     [string]$PythonExecutable = ""
 )
 
+# TrackPrompt bootstrap: explicitly load Microsoft.PowerShell.Utility.
+$script:TrackPromptUtilityManifest = Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1'
+
+if (-not (Test-Path -LiteralPath $script:TrackPromptUtilityManifest -PathType Leaf)) {
+    throw "Required PowerShell utility module was not found: $script:TrackPromptUtilityManifest"
+}
+
+Import-Module `
+    -Name $script:TrackPromptUtilityManifest `
+    -Force `
+    -ErrorAction Stop
+
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 

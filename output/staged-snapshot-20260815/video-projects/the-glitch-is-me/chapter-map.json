@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "bindingMode": "normalized ranges snapped to nearest existing TrackPrompt ShotPlan boundary within 3 seconds",
+  "chapters": [
+    {
+      "chapterId": "digital-ocean",
+      "title": "01 — The Digital Ocean",
+      "startFraction": 0.0,
+      "endFraction": 0.07,
+      "shotIds": [
+        "shot-001",
+        "shot-002"
+      ],
+      "transitionIn": "fade-from-black",
+      "transitionOut": "dissolve-8f"
+    },
+    {
+      "chapterId": "the-flicker",
+      "title": "02 — The Flicker",
+      "startFraction": 0.07,
+      "endFraction": 0.25,
+      "shotIds": [
+        "shot-003",
+        "shot-004"
+      ],
+      "transitionIn": "dissolve-8f",
+      "transitionOut": "cut"
+    },
+    {
+      "chapterId": "unsolvable-distance",
+      "title": "03 — Unsolvable Distance",
+      "startFraction": 0.25,
+      "endFraction": 0.4,
+      "shotIds": [
+        "shot-005",
+        "shot-006"
+      ],
+      "transitionIn": "cut-on-impact",
+      "transitionOut": "dissolve-8f"
+    },
+    {
+      "chapterId": "the-mirror",
+      "title": "04 — The Mirror",
+      "startFraction": 0.4,
+      "endFraction": 0.58,
+      "shotIds": [
+        "shot-007",
+        "shot-008"
+      ],
+      "transitionIn": "dissolve-8f",
+      "transitionOut": "cut"
+    },
+    {
+      "chapterId": "the-split",
+      "title": "05 — The Split",
+      "startFraction": 0.58,
+      "endFraction": 0.68,
+      "shotIds": [
+        "shot-009",
+        "shot-010"
+      ],
+      "transitionIn": "hard-cut",
+      "transitionOut": "glitch-cut-2f"
+    },
+    {
+      "chapterId": "liquid-circuit",
+      "title": "06 — Liquid Circuit",
+      "startFraction": 0.68,
+      "endFraction": 0.76,
+      "shotIds": [
+        "shot-011",
+        "shot-012"
+      ],
+      "transitionIn": "glitch-cut-2f",
+      "transitionOut": "dissolve-8f"
+    },
+    {
+      "chapterId": "transcendence",
+      "title": "07 — Transcendence",
+      "startFraction": 0.76,
+      "endFraction": 0.93,
+      "shotIds": [
+        "shot-013",
+        "shot-014"
+      ],
+      "transitionIn": "cut-on-impact",
+      "transitionOut": "long-dissolve-16f"
+    },
+    {
+      "chapterId": "system-failure",
+      "title": "08 — System Failure",
+      "startFraction": 0.93,
+      "endFraction": 1.0,
+      "shotIds": [
+        "shot-015",
+        "shot-016"
+      ],
+      "transitionIn": "long-dissolve-16f",
+      "transitionOut": "fade-to-black"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+Place exactly one final track here as track.wav (preferred), track.flac, or track.mp3.
+The file is intentionally not included in this package. TrackPrompt Studio must hash and analyze it locally.

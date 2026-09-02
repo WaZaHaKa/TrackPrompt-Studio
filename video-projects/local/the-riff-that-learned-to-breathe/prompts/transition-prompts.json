@@ -1,0 +1,257 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "defaultPolicy": {
+    "implementation": "editorial post effect or generated overlay, not a separate full diffusion clip",
+    "frameRange": [
+      12,
+      24
+    ],
+    "beatSnapped": true,
+    "alphaAwareWhenPossible": true,
+    "fallback": "8-frame dissolve",
+    "preserveStoryContinuity": true
+  },
+  "transitions": [
+    {
+      "transitionId": "transition-001",
+      "fromShotId": "shot-001",
+      "toShotId": "shot-002",
+      "description": "the bird opens one wing toward lens; use its dark feather as a practical wipe",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-002",
+      "fromShotId": "shot-002",
+      "toShotId": "shot-003",
+      "description": "match the circular conduit to a rain-covered circular window",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-003",
+      "fromShotId": "shot-003",
+      "toShotId": "shot-004",
+      "description": "a lightning reflection creates a restrained one-frame white bridge into the old pulse",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 12,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-004",
+      "fromShotId": "shot-004",
+      "toShotId": "shot-005",
+      "description": "match the final wing rotation to the rotation of a tape reel",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-005",
+      "fromShotId": "shot-005",
+      "toShotId": "shot-006",
+      "description": "the softened metal feather spreads into an ink-and-paper bleed",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-006",
+      "fromShotId": "shot-006",
+      "toShotId": "shot-007",
+      "description": "paper fibers lengthen into vertical rain streaks",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-007",
+      "fromShotId": "shot-007",
+      "toShotId": "shot-008",
+      "description": "the widening puddle ripple becomes a circular night sky",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-008",
+      "fromShotId": "shot-008",
+      "toShotId": "shot-009",
+      "description": "the amber comet splits into two trails that lead into two separate windows",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-009",
+      "fromShotId": "shot-009",
+      "toShotId": "shot-010",
+      "description": "the central split seam tears like paper",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-010",
+      "fromShotId": "shot-010",
+      "toShotId": "shot-011",
+      "description": "the tear folds inward around the amber heart for a macro match cut",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 12,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-011",
+      "fromShotId": "shot-011",
+      "toShotId": "shot-012",
+      "description": "the expanding amber heartbeat becomes the arch of a floating bridge",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-012",
+      "fromShotId": "shot-012",
+      "toShotId": "shot-013",
+      "description": "their simultaneous touch triggers a watercolor bloom",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-013",
+      "fromShotId": "shot-013",
+      "toShotId": "shot-014",
+      "description": "the woven ribbon sweeps across lens as a soft luma-and-pigment wipe",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-014",
+      "fromShotId": "shot-014",
+      "toShotId": "shot-015",
+      "description": "the bird crosses close to lens and reveals the warm workshop behind its wing",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 18,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    },
+    {
+      "transitionId": "transition-015",
+      "fromShotId": "shot-015",
+      "toShotId": "shot-016",
+      "description": "match the glowing ring on the workbench to the glow of a distant dawn window",
+      "preferredImplementation": "editorial-post-effect",
+      "durationFrames": 12,
+      "beatSnap": "nearest strong beat or phrase boundary within 0.35 seconds",
+      "fallback": "8-frame opacity dissolve",
+      "mustNot": [
+        "introduce text",
+        "change character identity",
+        "add a new location",
+        "hide a failed clip with frantic cuts"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+TRACKPROMPT GCP VIDEO FAST LANE STARTER v0.1.0
+================================================
+
+TARGET DIRECTORY
+C:\Users\theon\GitHub\TrackPrompt-Studio
+
+INSTALL
+1. Keep the TrackPrompt repository and any active render untouched.
+2. Extract this ZIP directly into the repository root.
+3. Do not move the contained backend/, tools/, docs/, schemas/, config/ or video-projects/ directories elsewhere.
+4. Open CODEX-GCP-VIDEO-FASTLANE-PROMPT.md and paste it into Codex from the repository.
+5. Run tools\VERIFY-GCP-VIDEO-FASTLANE.ps1 before any GCP request.
+
+DEFAULT
+- Veo 3.1 Fast
+- 1920x1080
+- 24 FPS
+- 16 generated shots x 8 seconds
+- video-only generation
+- original song muxed locally
+- autonomous FFmpeg preview
+- FCPXML/FCP7 XML/EDL/CSV DaVinci handoff
+
+NO CLOUD REQUEST WAS MADE WHILE BUILDING THIS PACKAGE.

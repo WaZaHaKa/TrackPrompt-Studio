@@ -1,0 +1,290 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-final-render-package",
+  "packageId": "andromeda-v2-final-render-package-v2",
+  "projectId": "trip-to-andromeda-v2",
+  "identity": {
+    "schemaVersion": "2.0.0",
+    "releaseId": "andromeda-v2-final-release-v2",
+    "projectId": "trip-to-andromeda-v2",
+    "sourceAudioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "sourceCueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+    "ownerCreativeAcceptanceSha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+    "encodingProfilesSha256": "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8",
+    "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+    "storyPlanSha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+    "shotPlanSha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+    "outputVariantContractSha256": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+    "builderSourceSha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "sourceTreeSha256": "8e9bfef3f56caaaeede68b02100f01c3f793c190e192c177216d03ac0c266f3f",
+    "gitCommitSha": "61984132f05fd0a863687fedec58d34b4dd97019",
+    "deterministicSeed": 84291,
+    "outputMatrix": {
+      "schemaVersion": "2.0.0",
+      "matrixId": "andromeda-v2-horizontal-only-v2",
+      "enabledVariantIds": [
+        "horizontal-16x9-1080p"
+      ],
+      "variants": [
+        {
+          "id": "horizontal-16x9-1080p",
+          "enabled": true,
+          "required": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30,
+          "frameStart": 1,
+          "frameEnd": 13029,
+          "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+          "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+          "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+          "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+          "workerRequirementId": "local-rtx3060-eevee-v1",
+          "outputPattern": "final-output/andromeda-v2-horizontal/frames/frame_######.png"
+        }
+      ]
+    },
+    "workerRequirements": [
+      {
+        "id": "local-rtx3060-eevee-v1",
+        "deviceClass": "gpu",
+        "renderer": "BLENDER_EEVEE",
+        "blenderVersion": "5.2.0 LTS",
+        "minimumVramMib": 8192,
+        "maximumWorkersPerDevice": 1,
+        "chunkSizeFrames": 300,
+        "deterministicSeed": 84291,
+        "requiredCapabilities": [
+          "png-16bit-rgb",
+          "atomic-chunk-publication",
+          "validated-missing-frame-resume",
+          "variant-aware-telemetry"
+        ]
+      }
+    ]
+  },
+  "releaseIdentitySha256": "dd3036eb00baec5f4ab921bea0a7a1565e15fea9fcc5be752e69d114d3c58c56",
+  "calibrationId": "andromeda-v2-final-calibration-v2",
+  "calibrationSha256": "31afac2cf80dfb37ba25125d68beb04c364486d30800947477d8ecb755e9d10f",
+  "technicalAuthorizationId": "andromeda-v2-technical-authorization-v2",
+  "status": "technically-ready-operator-start-blocked",
+  "technicalReady": true,
+  "artifacts": [
+    {
+      "role": "final-scene",
+      "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-horizontal-release-v2.blend",
+      "sha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+      "immutable": true
+    },
+    {
+      "role": "output-variants",
+      "path": "production/andromeda-v2/output-variants.json",
+      "sha256": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+      "immutable": true
+    },
+    {
+      "role": "story-plan",
+      "path": "backend/app/cinematic/templates/trip_to_andromeda_story_v2.json",
+      "sha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+      "immutable": true
+    },
+    {
+      "role": "shot-plan",
+      "path": "backend/app/cinematic/templates/trip_to_andromeda_shots_v2.json",
+      "sha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+      "immutable": true
+    },
+    {
+      "role": "final-calibration-v2",
+      "path": "production/andromeda-v2/v2-calibration.json",
+      "sha256": "31afac2cf80dfb37ba25125d68beb04c364486d30800947477d8ecb755e9d10f",
+      "immutable": true
+    },
+    {
+      "role": "technical-authorization-v2",
+      "path": "production/andromeda-v2/technical-authorization-v2.json",
+      "sha256": "3e5d6c93b5530fc677638e1213db2ec2d94fce8935157e520511d58d137f1e78",
+      "immutable": true
+    },
+    {
+      "role": "deterministic-effects-and-disk-report",
+      "path": "production/andromeda-v2/evidence/deterministic-effects-and-disk-report.json",
+      "sha256": "6bfecaaf2c28c14a0c255e43430bb551236b792f3f8d42eb3ebd45d1ac570bc2",
+      "immutable": true
+    },
+    {
+      "role": "live-dashboard-proof",
+      "path": "production/andromeda-v2/evidence/live-dashboard-proof.json",
+      "sha256": "58fa3eb3b9f623643182e90ed5cf53b26f12f337134962d03d74d4fc25d1039b",
+      "immutable": true
+    },
+    {
+      "role": "full-audio-animatic",
+      "path": "test-output/andromeda-v2-finish-line-20260723/animatic-horizontal-release-v2/animatic-horizontal-full-release-v2.mp4",
+      "sha256": "bb88363b9dca91088c4d358964460d569d424bf408815cf84ed9164c74598d8b",
+      "immutable": true
+    },
+    {
+      "role": "animatic-media-qa-report",
+      "path": "test-output/andromeda-v2-finish-line-20260723/animatic-horizontal-release-v2/media-qa.json",
+      "sha256": "5e00071e840de053251e2c1d0dad3d8f892f21e8c992daa11438a8b147d97a3d",
+      "immutable": true
+    },
+    {
+      "role": "dependency-health-report",
+      "path": "production/andromeda-v2/evidence/dependency-health-report.json",
+      "sha256": "a759c7af20d439aceae45ec942a094a3d9a6bcb8eb687c0e030db614b734fe59",
+      "immutable": true
+    },
+    {
+      "role": "source-revision-report",
+      "path": "production/andromeda-v2/evidence/source-revision-report.json",
+      "sha256": "71844cb572ffb5cdb97497ec6b6abd56c04f14e627bcd773e06568856b6abfb7",
+      "immutable": true
+    },
+    {
+      "role": "worker-requirements",
+      "path": "production/andromeda-v2/evidence/worker-requirements.json",
+      "sha256": "4441d2c57e7041d1d761d55589e84b623cd4db17c42c04f18f89b0e765bc28fa",
+      "immutable": true
+    },
+    {
+      "role": "release-report",
+      "path": "production/andromeda-v2/evidence/release-report.json",
+      "sha256": "2b484ce85a39ea2c103a2ebbc726929f93ed75ccb89473bcd422742e24d9c37d",
+      "immutable": true
+    },
+    {
+      "role": "owner-creative-acceptance",
+      "path": "production/andromeda-v2/creative-acceptance.json",
+      "sha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+      "immutable": true
+    },
+    {
+      "role": "final-look-profile",
+      "path": "production/andromeda-v2/final-look-profile.json",
+      "sha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+      "immutable": true
+    },
+    {
+      "role": "horizontal-render-profile",
+      "path": "render-profiles/trip-to-andromeda/andromeda-v2-horizontal-1080p-final.json",
+      "sha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+      "immutable": true
+    },
+    {
+      "role": "vertical-render-profile",
+      "path": "render-profiles/trip-to-andromeda/andromeda-v2-vertical-1080x1920-final-optional.json",
+      "sha256": "c4543eea639a06e548262b68c78bbd825b08f4f2a63f95d9c3eaf1502ba034ed",
+      "immutable": true
+    },
+    {
+      "role": "final-scene-receipt",
+      "path": "production/andromeda-v2/evidence/final-scene.json",
+      "sha256": "25e88a7e0ace7c0214e1715afe9a29688c33f6d6228ed809f31727832f02e9f0",
+      "immutable": true
+    },
+    {
+      "role": "horizontal-scene-build-receipt",
+      "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-horizontal-release-v2.build.json",
+      "sha256": "176806209aa4cd9e606154a2742127cb29ee916353673d29a2207dde1697936b",
+      "immutable": true
+    },
+    {
+      "role": "motion-health-report",
+      "path": "production/andromeda-v2/evidence/motion-health-report.json",
+      "sha256": "48ea1543b218c514728f4942e656f65f3f2757ce8d7618efc3ebc95d2d4b8268",
+      "immutable": true
+    },
+    {
+      "role": "hardware-and-storage-report",
+      "path": "production/andromeda-v2/hardware-and-storage-report.json",
+      "sha256": "497244bc82411166a8655547a8760745187ab49710394aaa50aefd420f169232",
+      "immutable": true
+    },
+    {
+      "role": "encoding-profiles",
+      "path": "production/andromeda-v2/encoding-profiles.json",
+      "sha256": "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8",
+      "immutable": true
+    },
+    {
+      "role": "animatic-receipt",
+      "path": "production/andromeda-v2/evidence/animatic-receipt.json",
+      "sha256": "7e6ef1c71b203c2682400a45f61ffd50013e00f57ef6fb794054d16baf2fab80",
+      "immutable": true
+    },
+    {
+      "role": "exposure-mobile-readability-report",
+      "path": "production/andromeda-v2/evidence/exposure-mobile-readability-report.json",
+      "sha256": "d3dfe4fd254e633e56f2d12e6cfe3f928c0943c101d2d5f9bb7317124f204e84",
+      "immutable": true
+    },
+    {
+      "role": "final-quality-transition-report",
+      "path": "production/andromeda-v2/evidence/final-quality-transition-report.json",
+      "sha256": "620db290c2540ad3df16a2810ab28488adb81c06acb1fc4723ba7df79963d53d",
+      "immutable": true
+    },
+    {
+      "role": "gates-to-rupture-media",
+      "path": "test-output/render-calibration/andromeda-v2-release-transition-gates-to-rupture/gates-to-rupture-final-quality.mp4",
+      "sha256": "6e5947526ae89a03f38ca865d4321ddd1c7a2fb47c5c0320be1b938dd86561b3",
+      "immutable": true
+    },
+    {
+      "role": "rupture-to-transformation-media",
+      "path": "test-output/render-calibration/andromeda-v2-release-transition-rupture-to-transformation/rupture-to-transformation-final-quality.mp4",
+      "sha256": "d119c5cabf3f737d5abefef5a48dcc2a6fd53fe63df1fbec502e464cbc37f848",
+      "immutable": true
+    },
+    {
+      "role": "transformation-to-arrival-media",
+      "path": "test-output/render-calibration/andromeda-v2-release-transition-transformation-to-arrival/transformation-to-arrival-final-quality.mp4",
+      "sha256": "8a5a79325933567c5cd7296cea1deeffdfd1f0afef9a18ad5331c4cf775a0fb2",
+      "immutable": true
+    },
+    {
+      "role": "vertical-composition-proof",
+      "path": "production/andromeda-v2/evidence/vertical-composition-proof.json",
+      "sha256": "d4ce47fc2215cfdc7fa3a1c188b2c75ad1d7b6c9e8f564dbb4831289076da4f7",
+      "immutable": true
+    },
+    {
+      "role": "vertical-master-scene",
+      "path": "test-output/andromeda-v2-finish-line-20260723/andromeda-v2-master-vertical-release-v2.blend",
+      "sha256": "2bcbba3e3b84313f08c52762739727eeda6011c4e0611dc4d2616a74ffcf1baa",
+      "immutable": true
+    },
+    {
+      "role": "vertical-transition-proof-media",
+      "path": "test-output/andromeda-v2-finish-line-20260723/vertical-transition-proof-release-v2/vertical-transition-proof-release-v2.mp4",
+      "sha256": "de7b42a7e06e0160eb4b5468f9e297c12f45fd308a43e65a8fd745d12c2189ec",
+      "immutable": true
+    },
+    {
+      "role": "live-dashboard-screenshot",
+      "path": "docs/images/mission-control-render-progress.png",
+      "sha256": "242a9b8abe189128293263b09f06d303e41b32d9bdb06b613d3b7b71e1a4e8ea",
+      "immutable": true
+    }
+  ],
+  "sourceBindings": [
+    {
+      "role": "source-audio",
+      "sha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+      "sizeBytes": 76608080,
+      "privateLocalArtifact": true,
+      "committed": false
+    },
+    {
+      "role": "source-cue",
+      "sha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+      "sizeBytes": 1276886,
+      "privateLocalArtifact": true,
+      "committed": false
+    }
+  ],
+  "productionStartAllowed": false,
+  "codexHumanArtisticApproval": false
+}

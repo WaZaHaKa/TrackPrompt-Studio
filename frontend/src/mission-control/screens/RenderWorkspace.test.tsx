@@ -82,6 +82,9 @@ describe('RenderWorkspace', () => {
         onRefreshJob={vi.fn()}
         onStopAfterChunk={vi.fn()}
         onCancelStop={vi.fn()}
+        onCancelRender={vi.fn()}
+        onRetryCurrentChunk={vi.fn()}
+        onRetryFailedRender={vi.fn()}
         onResumeJob={vi.fn()}
         onRefreshData={vi.fn().mockResolvedValue(undefined)}
         onOpenOutput={vi.fn()}
@@ -155,6 +158,9 @@ describe('RenderWorkspace', () => {
         onRefreshJob={vi.fn()}
         onStopAfterChunk={vi.fn()}
         onCancelStop={vi.fn()}
+        onCancelRender={vi.fn()}
+        onRetryCurrentChunk={vi.fn()}
+        onRetryFailedRender={vi.fn()}
         onResumeJob={vi.fn()}
         onRefreshData={vi.fn().mockResolvedValue(undefined)}
         onOpenOutput={vi.fn()}
@@ -175,5 +181,92 @@ describe('RenderWorkspace', () => {
 
     expect(await screen.findByText('Dry-run passed')).toBeInTheDocument()
     expect(onJobStarted).not.toHaveBeenCalled()
+  })
+
+  it('keeps an optional vertical profile off until explicitly enabled and sends its exact scene and variant identity', async () => {
+    const user = userEvent.setup()
+    const verticalScene = {
+      ...testScene,
+      id: 'ANDROMEDA-V2-VERTICAL',
+      displayName: 'Andromeda V2 Vertical',
+      sha256: 'A'.repeat(64),
+    }
+    const verticalProfile = {
+      ...testProfile,
+      id: 'ANDROMEDA-V2-VERTICAL-1080X1920-FINAL-OPTIONAL',
+      sceneId: verticalScene.id,
+      displayName: 'Andromeda V2 Vertical 1080x1920 Final (Optional)',
+      width: 1080,
+      height: 1920,
+      recommended: false,
+      calibrated: false,
+      outputVariants: [{
+        id: 'vertical-9x16-1080p',
+        enabledByDefault: false,
+        required: false,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        deliverableRole: 'optional-social',
+        compositionProfileId: 'andromeda-v2-vertical-master-v1',
+      }],
+    }
+    const inspectOutput = vi.fn().mockResolvedValue({
+      path: 'C:\\renders',
+      classification: 'empty',
+      usable: true,
+      resumable: false,
+      entries: [],
+      message: 'Folder is ready.',
+      suggestedChildName: null,
+      conflictingIdentity: null,
+    })
+
+    render(
+      <RenderWorkspace
+        data={makeSnapshot({
+          scenes: [testScene, verticalScene],
+          profiles: [testProfile, verticalProfile],
+        })}
+        client={makeClient({ inspectOutput })}
+        advanced={false}
+        initialProfileId={null}
+        resetKey={0}
+        activeJob={null}
+        connection="connected"
+        logs={[]}
+        jobBusyAction={null}
+        onJobStarted={vi.fn()}
+        onRefreshJob={vi.fn()}
+        onStopAfterChunk={vi.fn()}
+        onCancelStop={vi.fn()}
+        onCancelRender={vi.fn()}
+        onRetryCurrentChunk={vi.fn()}
+        onRetryFailedRender={vi.fn()}
+        onResumeJob={vi.fn()}
+        onRefreshData={vi.fn().mockResolvedValue(undefined)}
+        onOpenOutput={vi.fn()}
+        onEncode={vi.fn()}
+        onDismissJobError={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    await user.click(screen.getByRole('radio', { name: /andromeda v2 vertical 1080x1920/i }))
+
+    const continueButton = screen.getByRole('button', { name: /continue/i })
+    expect(continueButton).toBeDisabled()
+    expect(screen.getByText(/optional profile is disabled by default/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /enable vertical-9x16-1080p/i }))
+    expect(continueButton).toBeEnabled()
+    await user.click(continueButton)
+    await user.click(screen.getByRole('button', { name: /browse/i }))
+
+    await waitFor(() => expect(inspectOutput).toHaveBeenCalledWith(expect.objectContaining({
+      sceneId: verticalScene.id,
+      profileId: verticalProfile.id,
+      enabledOutputVariantIds: ['vertical-9x16-1080p'],
+    })))
   })
 })

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "masterSeed": 18031000,
+  "seedLocked": true,
+  "seedDerivation": "sha256-v1",
+  "characterProfiles": [
+    {
+      "id": "quantum-siren",
+      "label": "The Quantum Siren",
+      "identity": "One consistent adult woman with expressive dark eyes, translucent pale skin with subtle signal fractures, and long black hair moving as if underwater.",
+      "wardrobe": "The same flowing charcoal fabric in every appearance, without logos, armor, jewelry, or costume changes.",
+      "faceHairAge": "Clearly adult, ageless presentation, stable facial proportions, dark eyes, long black hair, never a celebrity or real person.",
+      "referenceAssetIds": []
+    }
+  ],
+  "visualAnchors": {
+    "world": "A melancholic psychedelic digital afterlife where water, bone, wet glass, and fabric meet restrained computational artifacts.",
+    "palette": ["midnight black", "cold cobalt", "deep violet", "wet silver", "rare amber"],
+    "lighting": ["soft volumetric shafts", "underwater caustics", "rim-lit translucent edges", "rich shadow detail"],
+    "camera": ["slow deliberate dolly or orbit", "deep parallax", "stable horizon", "24 FPS cinematic motion"],
+    "texture": ["wet glass", "fine film grain", "liquid diffraction", "sparse pixel fragmentation"],
+    "aspectRatio": "16:9"
+  },
+  "continuityGroups": [
+    {
+      "id": "world-global",
+      "label": "Global world",
+      "lockedTokens": ["melancholic haunted digital afterlife", "midnight black and cold cobalt palette", "wet tactile materials", "restrained violet signal artifacts"]
+    },
+    {
+      "id": "quantum-siren-identity",
+      "label": "Quantum Siren identity",
+      "lockedTokens": ["the same adult Quantum Siren", "stable dark-eyed face", "long black underwater-moving hair", "translucent pale skin with subtle signal fractures", "the same flowing charcoal fabric"]
+    },
+    {
+      "id": "digital-ocean",
+      "label": "Digital ocean",
+      "lockedTokens": ["wet black ocean", "violet signal plankton", "rare restrained amber glint"]
+    },
+    {
+      "id": "flicker-room",
+      "label": "Flicker room",
+      "lockedTokens": ["wet concrete chamber", "single failing practical light", "wet silver refraction"]
+    },
+    {
+      "id": "distance-architecture",
+      "label": "Distance architecture",
+      "lockedTokens": ["bone-white organic arches", "translucent impossible planes", "distant amber glow"]
+    },
+    {
+      "id": "mirror-world",
+      "label": "Mirror world",
+      "lockedTokens": ["wet black mirror", "rain-covered cobalt glass", "violet chamber"]
+    },
+    {
+      "id": "split-corridor",
+      "label": "Split corridor",
+      "lockedTokens": ["stable black corridor", "single violet pulse", "restrained temporal echoes"]
+    },
+    {
+      "id": "liquid-circuit",
+      "label": "Liquid circuit",
+      "lockedTokens": ["cobalt water-space", "liquid luminous filaments", "phasing circular echoes"]
+    },
+    {
+      "id": "transcendence-failure",
+      "label": "Transcendence and failure",
+      "lockedTokens": ["abstract water-glass structures", "violet and restrained amber release", "fine violet pixel dissolution"]
+    }
+  ]
+}

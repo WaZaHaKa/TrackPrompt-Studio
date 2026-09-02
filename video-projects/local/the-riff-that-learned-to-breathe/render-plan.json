@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "mode": "fully-local-windows",
+  "stages": [
+    {
+      "stageId": "01-ingest",
+      "name": "Ingest and bind audio",
+      "outputs": [
+        "audio probe",
+        "SHA-256 content hash",
+        "persistent project revision"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "02-analysis",
+      "name": "Analyze tempo, beats, phrases, sections and energy",
+      "outputs": [
+        "persistent audio analysis",
+        "snapped 16-scene timeline",
+        "markers"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "03-reference-sheets",
+      "name": "Generate and select fictional character/prop reference sheets",
+      "outputs": [
+        "Architect sheet",
+        "Listener sheet",
+        "bird sheet",
+        "contact sheet"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "04-keyframes",
+      "name": "Generate 16 approved keyframes",
+      "outputs": [
+        "one selected 1024x576 keyframe per scene",
+        "prompt/seed manifest"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "05-video",
+      "name": "Generate 16 base Wan2.2 I2V clips",
+      "outputs": [
+        "81-frame clip per scene",
+        "up to four bounded hero alternates"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "06-post",
+      "name": "Interpolate, upscale and stabilize",
+      "outputs": [
+        "24 fps 1080p scene masters",
+        "frame-quality report"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "07-edit",
+      "name": "Assemble exact audio-locked edit and artistic transitions",
+      "outputs": [
+        "rough cut",
+        "Resolve exports",
+        "edit sheet"
+      ],
+      "network": false
+    },
+    {
+      "stageId": "08-qc",
+      "name": "Validate freshness, decode, duration, sync, frame integrity and manifests",
+      "outputs": [
+        "final MP4",
+        "audio-preserved master",
+        "QC report",
+        "contact sheet"
+      ],
+      "network": false
+    }
+  ],
+  "progressContract": {
+    "transport": "existing TrackPrompt Studio SSE/job event system",
+    "requiredFields": [
+      "stage",
+      "shotId",
+      "completedUnits",
+      "totalUnits",
+      "elapsedSeconds",
+      "etaSeconds",
+      "statusMessage"
+    ],
+    "perFrameProgressWhenAvailable": true,
+    "cancelResume": true,
+    "neverClaimCompleteBeforeFinalQc": true
+  },
+  "failurePolicy": {
+    "boundedRetries": true,
+    "preserveSuccessfulShots": true,
+    "resumeFromManifest": true,
+    "noUnboundedRerolls": true,
+    "honestEnvironmentalBlockers": true
+  }
+}

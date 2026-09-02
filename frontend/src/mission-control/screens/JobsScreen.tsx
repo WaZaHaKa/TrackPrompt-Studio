@@ -7,7 +7,7 @@ function jobTone(job: RenderJob): 'success' | 'warning' | 'error' | 'neutral' | 
   if (job.state === 'complete') return 'success'
   if (job.state === 'failed' || job.state === 'cancelled') return 'error'
   if (job.state === 'paused_safely' || job.state === 'resumable') return 'warning'
-  if (job.state === 'running' || job.state === 'starting' || job.state === 'stop_requested' || job.state === 'finishing_current_chunk') return 'info'
+  if (job.state === 'running' || job.state === 'starting' || job.state === 'stop_requested' || job.state === 'retry_requested' || job.state === 'finishing_current_chunk') return 'info'
   return 'neutral'
 }
 

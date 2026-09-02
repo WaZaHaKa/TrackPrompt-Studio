@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-output-variant-encoding-matrix",
+  "projectId": "trip-to-andromeda-v2",
+  "sourceAudio": {
+    "sha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "codec": "pcm_s16le",
+    "sampleRate": 44100,
+    "channels": 2,
+    "durationSeconds": 434.285714,
+    "creativeProcessing": "none"
+  },
+  "variants": [
+    {
+      "outputVariantId": "horizontal-16x9-1080p",
+      "enabledByDefault": true,
+      "frameSequence": {
+        "format": "png",
+        "bitDepth": 16,
+        "filenamePattern": "frame_%06d.png",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30
+      },
+      "delivery": {
+        "container": "mp4",
+        "videoCodec": "libx264",
+        "profile": "high",
+        "pixelFormat": "yuv420p",
+        "crf": 16,
+        "preset": "slow",
+        "audioCodec": "aac",
+        "audioBitrate": "320k",
+        "audioSampleRate": 44100,
+        "movFlags": "+faststart",
+        "machineProgress": "pipe:1"
+      },
+      "optionalMezzanine": {
+        "enabled": false,
+        "container": "mkv",
+        "videoCodec": "ffv1",
+        "level": 3,
+        "audioCodec": "pcm_s16le"
+      }
+    },
+    {
+      "outputVariantId": "vertical-9x16-1080p",
+      "enabledByDefault": false,
+      "frameSequence": {
+        "format": "png",
+        "bitDepth": 16,
+        "filenamePattern": "frame_%06d.png",
+        "width": 1080,
+        "height": 1920,
+        "fps": 30
+      },
+      "delivery": {
+        "container": "mp4",
+        "videoCodec": "libx264",
+        "profile": "high",
+        "pixelFormat": "yuv420p",
+        "crf": 16,
+        "preset": "slow",
+        "audioCodec": "aac",
+        "audioBitrate": "320k",
+        "audioSampleRate": 44100,
+        "movFlags": "+faststart",
+        "machineProgress": "pipe:1"
+      },
+      "optionalMezzanine": {
+        "enabled": false,
+        "container": "mkv",
+        "videoCodec": "ffv1",
+        "level": 3,
+        "audioCodec": "pcm_s16le"
+      }
+    }
+  ],
+  "publicationPolicy": {
+    "partialSuffix": ".partial",
+    "verifyBeforeAtomicPublication": true,
+    "overwriteValidArtifact": false,
+    "verticalEmittedOnlyWhenEnabled": true
+  }
+}

@@ -55,6 +55,12 @@ const wizardSteps = [
 
 type WizardStep = typeof wizardSteps[number]['id']
 
+function defaultOutputVariantIds(profile: RenderProfileSummary | undefined): string[] {
+  return profile?.outputVariants
+    .filter((variant) => variant.required || variant.enabledByDefault)
+    .map((variant) => variant.id) ?? []
+}
+
 function authorized(profile: RenderProfileSummary | undefined, result: AuthorizationResult | null): boolean {
   return result?.authorized === true || profile?.authorizationStatus === 'authorized'
 }
@@ -73,6 +79,9 @@ export function RenderWorkspace({
   onRefreshJob,
   onStopAfterChunk,
   onCancelStop,
+  onCancelRender,
+  onRetryCurrentChunk,
+  onRetryFailedRender,
   onResumeJob,
   onRefreshData,
   onOpenOutput,
@@ -92,6 +101,9 @@ export function RenderWorkspace({
   onRefreshJob: (job: RenderJob) => void
   onStopAfterChunk: (job: RenderJob) => void
   onCancelStop: (job: RenderJob) => void
+  onCancelRender: (job: RenderJob) => void
+  onRetryCurrentChunk: (job: RenderJob) => void
+  onRetryFailedRender: (job: RenderJob) => void
   onResumeJob: (job: RenderJob) => void
   onRefreshData: () => Promise<void>
   onOpenOutput: (path: string) => void
@@ -111,6 +123,9 @@ export function RenderWorkspace({
   const [projectId, setProjectId] = useState(defaultProject?.id ?? '')
   const [sceneId, setSceneId] = useState(defaultScene?.id ?? '')
   const [profileId, setProfileId] = useState(defaultProfile?.id ?? '')
+  const [enabledOutputVariantIds, setEnabledOutputVariantIds] = useState<string[]>(
+    defaultOutputVariantIds(defaultProfile),
+  )
   const [outputPath, setOutputPath] = useState('')
   const [inspection, setInspection] = useState<OutputInspection | null>(null)
   const [preflight, setPreflight] = useState<PreflightResult | null>(null)
@@ -126,6 +141,7 @@ export function RenderWorkspace({
     setProjectId(defaultProject?.id ?? '')
     setSceneId(defaultScene?.id ?? '')
     setProfileId(defaultProfile?.id ?? '')
+    setEnabledOutputVariantIds(defaultOutputVariantIds(defaultProfile))
     setOutputPath('')
     setInspection(null)
     setPreflight(null)
@@ -143,10 +159,29 @@ export function RenderWorkspace({
   const profile = data.profiles.find((item) => item.id === profileId)
   const scenes = data.scenes.filter((item) => !projectId || item.projectId === projectId)
   const visibleProfiles = useMemo(
-    () => data.profiles.filter((item) => advanced || !/4k.*ultra|ultra.*4k/i.test(item.displayName)),
-    [advanced, data.profiles],
+    () => data.profiles.filter(
+      (item) => (!projectId || !item.projectId || item.projectId === projectId)
+        && (advanced || !/4k.*ultra|ultra.*4k/i.test(item.displayName)),
+    ),
+    [advanced, data.profiles, projectId],
   )
-  const selection: RenderSelection = { projectId, sceneId, profileId, outputPath }
+  const selection: RenderSelection = {
+    projectId,
+    sceneId,
+    profileId,
+    outputPath,
+    enabledOutputVariantIds,
+  }
+  const outputVariantSelectionValid = !profile?.outputVariants.length
+    || (
+      enabledOutputVariantIds.length > 0
+      && profile.outputVariants
+        .filter((variant) => variant.required)
+        .every((variant) => enabledOutputVariantIds.includes(variant.id))
+    )
+  const selectedOutputVariants = profile?.outputVariants.filter(
+    (variant) => enabledOutputVariantIds.includes(variant.id),
+  ) ?? []
   const renderer = data.system.capabilities.demoMode ? 'fake' as const : 'production' as const
   const preflightCanAuthorize = preflight?.authorizationRequired === true
     && preflight.checks.every((check) => check.status !== 'fail')
@@ -165,6 +200,9 @@ export function RenderWorkspace({
         onRefresh={() => onRefreshJob(activeJob)}
         onStopAfterChunk={() => onStopAfterChunk(activeJob)}
         onCancelStop={() => onCancelStop(activeJob)}
+        onCancelRender={() => onCancelRender(activeJob)}
+        onRetryCurrentChunk={() => onRetryCurrentChunk(activeJob)}
+        onRetryFailedRender={() => onRetryFailedRender(activeJob)}
         onResume={() => onResumeJob(activeJob)}
         onOpenOutput={() => { if (activeJob.outputPath) onOpenOutput(activeJob.outputPath) }}
         onEncode={onEncode}
@@ -192,17 +230,36 @@ export function RenderWorkspace({
       ?? data.scenes.find((item) => item.projectId === nextProjectId)
     setProjectId(nextProjectId)
     setSceneId(nextScene?.id ?? '')
-    if (nextProject?.recommendedProfileId) setProfileId(nextProject.recommendedProfileId)
+    if (nextProject?.recommendedProfileId) {
+      const nextProfile = data.profiles.find((item) => item.id === nextProject.recommendedProfileId)
+      setProfileId(nextProject.recommendedProfileId)
+      setEnabledOutputVariantIds(defaultOutputVariantIds(nextProfile))
+    }
     setInspection(null)
     setPreflight(null)
     setAuthorization(null)
   }
 
   const chooseProfile = (nextProfileId: string): void => {
+    const nextProfile = data.profiles.find((item) => item.id === nextProfileId)
     setProfileId(nextProfileId)
+    if (nextProfile?.sceneId) setSceneId(nextProfile.sceneId)
+    setEnabledOutputVariantIds(defaultOutputVariantIds(nextProfile))
     setInspection(null)
     setPreflight(null)
     setAuthorization(null)
+  }
+
+  const toggleOutputVariant = (variantId: string, enabled: boolean): void => {
+    setEnabledOutputVariantIds((current) => (
+      enabled
+        ? Array.from(new Set([...current, variantId]))
+        : current.filter((id) => id !== variantId)
+    ))
+    setInspection(null)
+    setPreflight(null)
+    setAuthorization(null)
+    setDryRunResult(null)
   }
 
   const browseOutput = (): void => {
@@ -247,6 +304,7 @@ export function RenderWorkspace({
           totalFrames: scene.totalFrames,
           storageGiB: profile.storageGiB,
           exactOperation: preflight.exactOperation,
+          enabledOutputVariantIds,
         }, { configurationReviewed: true, fullRenderApproved: true })
         if (!result.authorized) throw new Error('The local service did not save an authorization record.')
         setAuthorization(result)
@@ -292,7 +350,7 @@ export function RenderWorkspace({
 
   const goForward = (): void => {
     if (step === 1 && projectId && sceneId) setStep(2)
-    else if (step === 2 && profileId) setStep(3)
+    else if (step === 2 && profileId && outputVariantSelectionValid) setStep(3)
     else if (step === 3 && inspection?.usable) setStep(4)
     else if (step === 4 && (preflight?.ready || preflightCanAuthorize)) setStep(preflight?.authorizationRequired || !authorized(profile, authorization) ? 5 : 6)
     else if (step === 5 && authorized(profile, authorization)) setStep(6)
@@ -368,6 +426,43 @@ export function RenderWorkspace({
                 </label>
               ))}
             </div>
+            {profile?.outputVariants.length ? (
+              <div className="mc-output-variant-selector" aria-labelledby="mc-output-variant-heading">
+                <div>
+                  <h3 id="mc-output-variant-heading">Output matrix for this job</h3>
+                  <p>Optional formats run only when explicitly enabled here and stay bound to their own authored scene, calibration, preflight, and authorization.</p>
+                </div>
+                <div className="mc-output-variant-list">
+                  {profile.outputVariants.map((variant) => {
+                    const checked = enabledOutputVariantIds.includes(variant.id)
+                    return (
+                      <label key={variant.id} className={`mc-output-variant ${checked ? 'is-enabled' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={variant.required}
+                          onChange={(event) => toggleOutputVariant(variant.id, event.target.checked)}
+                          aria-label={`${checked ? 'Disable' : 'Enable'} ${variant.id}`}
+                        />
+                        <span>
+                          <strong>{variant.id}</strong>
+                          <small>{variant.width} × {variant.height} · {variant.fps} fps · {sentenceCase(variant.deliverableRole)}</small>
+                          <small>Authored composition: {variant.compositionProfileId}</small>
+                        </span>
+                        <StatusBadge tone={variant.required ? 'info' : checked ? 'warning' : 'neutral'}>
+                          {variant.required ? 'Required' : checked ? 'Explicitly enabled' : 'Optional · off'}
+                        </StatusBadge>
+                      </label>
+                    )
+                  })}
+                </div>
+                {!outputVariantSelectionValid ? (
+                  <Notice tone="warning" title="Select an output variant">
+                    <p>This optional profile is disabled by default. Explicitly enable it to continue; production preflight will still require its separate calibration and exact operator authorization.</p>
+                  </Notice>
+                ) : null}
+              </div>
+            ) : null}
             {!advanced && data.profiles.length > visibleProfiles.length ? <p className="mc-muted">Additional profiles that are not recommended locally are available in Advanced mode.</p> : null}
           </div>
         ) : null}
@@ -432,6 +527,7 @@ export function RenderWorkspace({
                     <div><dt>Project</dt><dd>{project?.displayName ?? projectId}</dd></div>
                     <div><dt>Scene</dt><dd>{scene?.displayName ?? sceneId}</dd></div>
                     <div><dt>Profile</dt><dd>{profile?.displayName ?? profileId}</dd></div>
+                    <div><dt>Output matrix</dt><dd>{selectedOutputVariants.map((variant) => variant.id).join(', ') || 'Profile default'}</dd></div>
                     <div><dt>Resolution</dt><dd>{profile ? `${profile.width} × ${profile.height}` : 'Unavailable'}</dd></div>
                     <div><dt>Frames</dt><dd>{scene?.totalFrames.toLocaleString() ?? 'Unavailable'}</dd></div>
                     <div><dt>Expected</dt><dd>{formatDuration(profile?.expectedSeconds ?? null)}</dd></div>
@@ -468,7 +564,7 @@ export function RenderWorkspace({
         <footer className="mc-wizard-footer">
           <Button tone="quiet" icon={<ArrowLeft aria-hidden="true" />} disabled={step === 1 || busy !== null} onClick={goBack}>Back</Button>
           <span>Step {step} of {wizardSteps.length}</span>
-          {step < 6 ? <Button tone="primary" disabled={(step === 1 && (!projectId || !sceneId)) || (step === 2 && !profileId) || (step === 3 && !inspection?.usable) || (step === 4 && !(preflight?.ready || preflightCanAuthorize)) || (step === 5 && !authorized(profile, authorization)) || busy !== null} onClick={goForward}>Continue <ArrowRight aria-hidden="true" /></Button> : <span />}
+          {step < 6 ? <Button tone="primary" disabled={(step === 1 && (!projectId || !sceneId)) || (step === 2 && (!profileId || !outputVariantSelectionValid)) || (step === 3 && !inspection?.usable) || (step === 4 && !(preflight?.ready || preflightCanAuthorize)) || (step === 5 && !authorized(profile, authorization)) || busy !== null} onClick={goForward}>Continue <ArrowRight aria-hidden="true" /></Button> : <span />}
         </footer>
       </section>
 
@@ -480,7 +576,7 @@ export function RenderWorkspace({
         footer={<><Button onClick={() => setConfirmation('closed')}>Cancel</Button><Button tone="primary" onClick={() => setConfirmation('approve')}>Review and continue</Button></>}
       >
         <div className="mc-modal-review">
-          <dl><div><dt>Project</dt><dd>{project?.displayName}</dd></div><div><dt>Scene</dt><dd>{scene?.displayName}</dd></div><div><dt>Profile</dt><dd>{profile?.displayName}</dd></div><div><dt>Resolution</dt><dd>{profile ? `${profile.width} × ${profile.height}` : 'Unavailable'}</dd></div><div><dt>Frame count</dt><dd>{scene?.totalFrames.toLocaleString()}</dd></div><div><dt>Expected duration</dt><dd>{formatDuration(profile?.expectedSeconds ?? null)}</dd></div><div><dt>Output path</dt><dd><code>{outputPath}</code></dd></div><div><dt>Operation</dt><dd>{preflight?.exactOperation ?? 'Full production render'}</dd></div></dl>
+          <dl><div><dt>Project</dt><dd>{project?.displayName}</dd></div><div><dt>Scene</dt><dd>{scene?.displayName}</dd></div><div><dt>Profile</dt><dd>{profile?.displayName}</dd></div><div><dt>Output matrix</dt><dd>{selectedOutputVariants.map((variant) => variant.id).join(', ') || 'Profile default'}</dd></div><div><dt>Resolution</dt><dd>{profile ? `${profile.width} × ${profile.height}` : 'Unavailable'}</dd></div><div><dt>Frame count</dt><dd>{scene?.totalFrames.toLocaleString()}</dd></div><div><dt>Expected duration</dt><dd>{formatDuration(profile?.expectedSeconds ?? null)}</dd></div><div><dt>Output path</dt><dd><code>{outputPath}</code></dd></div><div><dt>Operation</dt><dd>{preflight?.exactOperation ?? 'Full production render'}</dd></div></dl>
           {advanced ? <AdvancedDetails summary="Exact identity"><p><strong>Scene:</strong> <code>{shortHash(preflight?.sceneSha256 ?? scene?.sha256 ?? null)}</code></p><p><strong>Profile:</strong> <code>{shortHash(preflight?.profileSha256 ?? profile?.savedFileSha256 ?? null)}</code></p></AdvancedDetails> : null}
         </div>
       </Modal>

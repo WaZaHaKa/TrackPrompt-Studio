@@ -1,0 +1,140 @@
+{
+  "$id": "https://wzhk.local/schemas/resolved-timeline.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "markers": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "segments": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "chapterId": {
+            "type": "string"
+          },
+          "clipPath": {
+            "type": "string"
+          },
+          "durationFrames": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "editorialNote": {
+            "type": "string"
+          },
+          "segmentId": {
+            "type": "string"
+          },
+          "shotId": {
+            "type": "string"
+          },
+          "sourceDurationFrames": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sourceInFrames": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "timelineStartFrames": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "transitionIn": {
+            "type": "string"
+          },
+          "transitionOut": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "segmentId",
+          "chapterId",
+          "shotId",
+          "clipPath",
+          "timelineStartFrames",
+          "durationFrames",
+          "sourceInFrames",
+          "sourceDurationFrames",
+          "transitionIn",
+          "transitionOut",
+          "editorialNote"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "timeline": {
+      "properties": {
+        "audioPath": {
+          "type": "string"
+        },
+        "durationFrames": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "durationSeconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "fps": {
+          "const": 24
+        },
+        "generatedClipDurationSeconds": {
+          "enum": [
+            4,
+            6,
+            8
+          ]
+        },
+        "height": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "targetEditSeconds": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "width": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fps",
+        "width",
+        "height",
+        "durationFrames",
+        "durationSeconds",
+        "audioPath",
+        "generatedClipDurationSeconds",
+        "targetEditSeconds"
+      ],
+      "type": "object"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "timeline",
+    "markers",
+    "segments"
+  ],
+  "title": "TrackPrompt resolved music-video timeline",
+  "type": "object"
+}

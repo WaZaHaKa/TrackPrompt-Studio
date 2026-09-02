@@ -34,6 +34,8 @@ in the [Andromeda V2 production runbook](andromeda-v2-production-runbook.md).
 
 The optional Veo fast lane consumes completed analysis, StoryPlan, and ShotPlan artifacts; it never reruns music analysis. Its controller lives inside the existing Mission Control service, persists jobs and globally sequenced events in the existing Mission Control SQLite database, and reuses the existing SSE route and React shell. Provider long-running operations are resumed by their durable operation name. No browser refresh can submit work.
 
+The fully local video path is a separate provider implementation within the same Mission Control Video workspace. `backend/app/local_video/` discovers packages under `video-projects/local/`, binds audio by content hash, reuses or creates a persistent TrackPrompt analysis, compiles an exact audio-clock StoryPlan/ShotPlan, and stores append-only project revisions under the configured runtime data root. Its `local-comfyui` adapter uses ComfyUI HTTP plus WebSocket APIs, semantic workflow-node mapping, one-at-a-time bounded qualification, and no hidden install or download behavior. The shared resumable manifest preserves successful reference/keyframe/shot/post units and cannot publish `complete` before final QC.
+
 Offline plan compilation hash-binds every exact generation parameter, request-contract version, continuity profile/group, deterministic seed/variation, optional reference-image hash, source artifact, pricing snapshot, and maximum spend. A digest-specific exact phrase authorizes that one plan. Only the subsequent explicit start transition may submit the smoke shot; the remaining same-plan batch continues automatically after local media verification. Original audio never leaves the host and is muxed only during local assembly. See [GCP video fast-lane architecture](gcp-video-fastlane-architecture.md) and the [operator runbook](gcp-video-fastlane-runbook.md).
 
 ## Catalogue and long-form boundary
@@ -257,15 +259,14 @@ is:
 | Completed | 100 |
 
 Fast, insufficient-signal, and unavailable-Deep paths skip inapplicable rows
-rather than manufacture stages. Cancellation, failure, and expiry intentionally
-reset progress to 0; deleting an active job does the same before removal. Those
-terminal cleanup transitions are not active-stage regressions. Per-job locks and
-cancellation markers prevent success finalization, cancellation, deletion, and
-TTL cleanup from committing conflicting terminal state. Expiry emits an
-`expired` terminal event before the job is removed; later reads return the same
-not-found/expired-safe response used for an absent job. State-change SSE events
-have increasing sequence IDs, while a 15-second keepalive snapshot may repeat the
-latest sequence.
+rather than manufacture stages. Cancellation and failure intentionally reset
+progress to 0; deleting an active job does the same before removal. Those terminal
+cleanup transitions are not active-stage regressions. Per-job locks and
+cancellation markers prevent success finalization, cancellation, and explicit
+deletion from committing conflicting terminal state. The `expired` enum/event
+remains decode-only compatibility for old persisted records; current code never
+schedules or emits timed analysis expiry. State-change SSE events have increasing
+sequence IDs, while a 15-second keepalive snapshot may repeat the latest sequence.
 
 ## State and persistence
 
@@ -274,6 +275,10 @@ latest sequence.
 ```text
 .trackprompt-data/
   trackprompt.sqlite3
+  archive/
+    blobs/<sha-prefix>/<sha>.bin
+    analyses/<uuid>/manifest.json
+    analyses/<uuid>/artifacts/<kind>/<sha>.json
   .cancellations/  # transient UUID cancellation markers
   jobs/
     <uuid>/
@@ -326,14 +331,19 @@ restore. Disabling the edited inferred-label path removes semantic-label
 influence from that arrangement-blueprint row while retaining its timing under
 the generic label `section`.
 
-Deletion is a single lifecycle operation spanning persisted state, the UUID job
-directory, and the in-process registry. Each job receives a fixed expiration at
-creation (`createdAt + JOB_TTL_MINUTES`); cleanup applies the same removal after
-that deadline. Cancellation sets an idempotent cancellation signal, checks it
-between stages and during FFmpeg decode, and removes the upload, partial results,
-and derivatives while retaining only safe cancelled lifecycle metadata. A
-successfully completed job retains its private source until explicit delete or
-TTL cleanup.
+Successful finalization publishes a private immutable manifest, deduplicated
+source blob, and versioned canonical artifacts before the lifecycle becomes
+complete. Startup reconciliation is idempotent and restores catalogue truth after
+a restart. Physical paths and raw lyrics are excluded from catalogue responses
+and manifests.
+
+Deletion is a single explicit lifecycle operation spanning persisted state, the
+UUID job directory, archive references, and the in-process registry. It requires
+a second UI confirmation and is blocked while dependent video work lacks an
+immutable snapshot. Cancellation sets an idempotent cancellation signal, checks
+it between stages and during FFmpeg decode, and removes the upload, partial
+results, and derivatives while retaining only safe cancelled lifecycle metadata.
+Completed analyses have no automatic deletion deadline.
 
 Docker mounts `/data` from a named volume. Direct development uses the ignored
 repository-root `.trackprompt-data/` default. See `docs/privacy.md` before changing

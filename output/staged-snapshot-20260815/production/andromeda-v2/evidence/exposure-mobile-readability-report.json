@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-exposure-mobile-readability-report",
+  "projectId": "trip-to-andromeda-v2",
+  "sourceMediaQaSha256": "5e00071e840de053251e2c1d0dad3d8f892f21e8c992daa11438a8b147d97a3d",
+  "sampleFrames": [
+    652,
+    1950,
+    3779,
+    6150,
+    7688,
+    8834,
+    11987,
+    13029
+  ],
+  "nativeReview": {
+    "width": 480,
+    "height": 270,
+    "meanLuminanceMinimum": 0.0782596427983539,
+    "meanLuminanceMaximum": 0.13539464350036312,
+    "maximumNearBlackFraction": 0.23628858024691357,
+    "maximumClippedHighlightFraction": 0.0,
+    "minimumBroadP90MinusP10": 0.0039215686274509665,
+    "minimumSparseP995MinusP005": 0.43807294117647055
+  },
+  "phoneReview": {
+    "width": 320,
+    "height": 180,
+    "meanLuminanceMinimum": 0.07831805808823529,
+    "meanLuminanceMaximum": 0.13540501657135076,
+    "maximumNearBlackFraction": 0.23814236111111112,
+    "maximumClippedHighlightFraction": 0.0,
+    "minimumSparseP995MinusP005": 0.43558745098039214
+  },
+  "interpretation": {
+    "broadContrastMayBeLowForSparseSubjects": true,
+    "sparseSubjectContrastThreshold": 0.12,
+    "allSparseSubjectSamplesAboveThreshold": true,
+    "clippedHighlightAdvisoryTriggered": false,
+    "reviewFrameFindings": 0
+  },
+  "visuallyInspectedFrames": [
+    652,
+    1950,
+    3779,
+    6150,
+    7688,
+    8834,
+    11987,
+    13029
+  ],
+  "technicalPass": true,
+  "humanArtisticApproval": false
+}

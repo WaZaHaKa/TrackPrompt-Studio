@@ -1,0 +1,13 @@
+[    1231ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5183/node_modules/.vite/deps/chunk-NXESFFTV.js?v=679e7662:21608
+[    1376ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/status:0
+[    1384ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/paths:0
+[    1384ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/projects:0
+[    1384ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/scenes:0
+[    1384ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/profiles:0
+[    1384ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/jobs:0
+[    1392ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/status:0
+[    1393ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/system/paths:0
+[    1399ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/projects:0
+[    1399ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/scenes:0
+[    1399ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/profiles:0
+[    1399ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5183/api/mission-control/jobs:0

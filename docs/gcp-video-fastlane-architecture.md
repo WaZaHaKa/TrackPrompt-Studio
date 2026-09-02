@@ -14,7 +14,7 @@ Inputs may include:
 - normalized chapter map;
 - selected generation profile and maximum spend.
 
-The compiler hashes every source artifact it actually uses. The compiled plan contains sanitized visual intent and hashes, but it does not contain the original source locator, transcript, credentials, or raw analysis payload.
+The compiler hashes every source artifact it actually uses. The compiled plan contains sanitized visual intent and hashes, but it does not contain the original source locator, transcript, credentials, or raw analysis payload. At video-job creation, the exact StoryPlan and ShotPlan used are copied into immutable job-owned inputs and recorded in a dependency manifest. Resolution prefers those snapshots, then the persistent analysis archive, then the live workspace. A legacy missing analysis falls back to the compiled chapter map with an explicit provenance warning; it never triggers provider retry.
 
 ## Track-agnostic platform/content split
 
@@ -52,8 +52,9 @@ The provider operation name is durable resume state. Browser reconnect must neve
 
 ## Resolution strategy
 
-- 1080p Fast is the default first and final profile.
-- 1080p standard is an optional quality rerender path.
+- 1080p is the default delivery resolution and valid final completion target.
+- `Static Into Signal` uses Veo 3.1 Quality 1080p for its authorized complete
+  batch; Fast remains an independently compiled lower-cost profile.
 - 4K standard is optional, not a completion requirement.
 - Fast 4K is deliberately rejected by the starter because the reviewed GA model specification for the Fast model lists 720p/1080p.
 - Generated and delivery frame rate is 24 FPS.
@@ -63,5 +64,13 @@ The provider operation name is durable resume state. Browser reconnect must neve
 The verified private audio binding is authoritative. Its exact ffprobe duration and SHA-256 participate in a local edit digest while the completed provider-generation digest and authorization remain unchanged. The chapter map provides normalized ranges; stored ShotPlan boundaries are used only when their inferred clock matches the newly bound master within five percent.
 
 The deterministic 1080p rough cut expands immutable provider clips into project-validated replaceable derived events. The shared engine knows no song, character, motif, chapter name or output stem. It validates and interprets the selected package's `edit-blueprint.json`, including deterministic shot sequences, alternate trims, bounded retimes/crops, optional reviewed treatments, recurrence checks and artifact names. FCPXML, FCP7 XML, and EDL reference those event files plus one continuous 48 kHz stereo master. Resolve remains the finishing environment for grading, refinements, overlays, and titles.
+
+Generation completion and local finishing are separate state transitions. Once
+all selected clips verify, the controller stops at `review_ready`. Timeline
+resolution, export, and assembly are explicit local actions exposed by the same
+Mission Control job. A legacy dependency repair and audio reattachment are
+receipt-backed local mutations; controller invariants reject any change to the
+provider plan digest, authorization, reservation, provider operation snapshot,
+selected attempt identity, or clip hash.
 
 `The Glitch Is Me` retains its established 55–80 event escalation and legacy filenames through its blueprint. `Static Into Signal` uses a conservative 45–64 event treatment, no automatic reverse, chapter-07 recurrence of shots 007/008 and the standard `trackprompt-timeline.*` / `autonomous-preview-1080p.mp4` names. Adding another track requires a new content package, not a branch in shared Python or React code.

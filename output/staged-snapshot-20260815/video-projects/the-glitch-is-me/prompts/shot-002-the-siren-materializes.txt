@@ -1,0 +1,14 @@
+SHOT shot-002 — The Siren Materializes
+
+NARRATIVE INTENT
+Introduce the recurring protagonist as a signal becoming human rather than a robot.
+
+SHOT PROMPT
+Wide underwater-like chamber with no visible walls. The Quantum Siren gradually assembles from silver mist, fine static and transparent ribbons of water, first as a distant silhouette and then as a fully coherent adult woman. Her long black hair and charcoal fabric float gently. She opens her eyes near the end while the camera performs a slow half orbit.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, robot joints, metal body, superhero pose, dramatic mouth movement
+
+REVIEW NOTES
+- Adult appearance must be unambiguous.
+- Face and costume become continuity reference for all later Siren shots.

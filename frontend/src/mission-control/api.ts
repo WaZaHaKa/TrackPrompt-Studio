@@ -99,7 +99,7 @@ function normalizeToken(value: unknown): string {
 
 const renderStates = new Set<RenderState>([
   'idle', 'validating', 'authorization_required', 'ready', 'starting', 'running',
-  'stop_requested', 'finishing_current_chunk', 'paused_safely', 'resumable',
+  'stop_requested', 'retry_requested', 'cancel_requested', 'finishing_current_chunk', 'paused_safely', 'resumable',
   'encoding', 'verifying', 'complete', 'failed', 'cancelled',
 ])
 
@@ -231,8 +231,26 @@ function parseProfile(value: unknown): RenderProfileSummary | null {
       : rawAuthorization.includes('invalid') || rawAuthorization.includes('changed')
         ? 'invalid'
         : rawAuthorization
+  const outputVariants = records(first(item, 'output_variants', 'outputVariants'))
+    .map((variant) => {
+      const variantId = nullableString(first(variant, 'id', 'output_variant_id', 'outputVariantId'))
+      if (!variantId) return null
+      return {
+        id: variantId,
+        enabledByDefault: booleanValue(first(variant, 'enabled_by_default', 'enabledByDefault')),
+        required: booleanValue(variant.required),
+        width: numberValue(variant.width),
+        height: numberValue(variant.height),
+        fps: numberValue(variant.fps, numberValue(item.fps, 30)),
+        deliverableRole: stringValue(first(variant, 'deliverable_role', 'deliverableRole'), 'optional-deliverable'),
+        compositionProfileId: stringValue(first(variant, 'composition_profile_id', 'compositionProfileId'), `${variantId}-composition`),
+      }
+    })
+    .filter((variant): variant is NonNullable<typeof variant> => variant !== null)
   return {
     id,
+    projectId: stringValue(first(item, 'project_id', 'projectId', 'project'), ''),
+    sceneId: stringValue(first(item, 'scene_id', 'sceneId'), ''),
     displayName: stringValue(first(item, 'display_name', 'displayName', 'name'), id),
     width: numberValue(first(item, 'width', 'resolution_width', 'resolutionWidth'), numberValue(resolution.width)),
     height: numberValue(first(item, 'height', 'resolution_height', 'resolutionHeight'), numberValue(resolution.height)),
@@ -254,6 +272,7 @@ function parseProfile(value: unknown): RenderProfileSummary | null {
     lastUsedAt: nullableString(first(item, 'last_used_at', 'lastUsedAt')),
     savedFileSha256: nullableString(first(item, 'saved_file_sha256', 'savedFileSha256', 'profile_sha256', 'profileSha256')),
     path: nullableString(item.path),
+    outputVariants,
   }
 }
 
@@ -790,9 +809,11 @@ export function parseRenderEvent(value: unknown): RenderEvent {
     latestLogLine: nullableString(first(item, 'latest_log_line', 'latestLogLine')),
     warning: nullableString(item.warning),
     error: rawError === null || rawError === undefined ? null : parseStructuredError(rawError, 'Render issue'),
-    safeStopStatus: safeStop === 'none' || safeStop === 'requested' || safeStop === 'finishing_chunk' || safeStop === 'paused' || safeStop === 'cancelled'
-      ? safeStop
-      : 'unknown',
+    safeStopStatus: safeStop === 'finishing_current_chunk'
+      ? 'finishing_chunk'
+      : safeStop === 'none' || safeStop === 'requested' || safeStop === 'finishing_chunk' || safeStop === 'paused' || safeStop === 'cancelled'
+        ? safeStop
+        : 'unknown',
     rendererActive: typeof first(item, 'renderer_active', 'rendererActive') === 'boolean'
       ? booleanValue(first(item, 'renderer_active', 'rendererActive'))
       : null,
@@ -1055,6 +1076,9 @@ function parseSettings(value: unknown, performanceValue?: unknown): MissionSetti
 
 function parseEncodeCandidate(value: unknown): EncodeCandidate {
   const item = asRecord(value)
+  const outputKinds = strings(first(item, 'output_kinds', 'outputKinds', 'enabled_output_kinds', 'enabledOutputKinds'))
+    .map(normalizeToken)
+    .filter((kind): kind is 'delivery' | 'master' => kind === 'delivery' || kind === 'master')
   return {
     jobId: stringValue(first(item, 'job_id', 'jobId')),
     displayName: stringValue(first(item, 'display_name', 'displayName'), 'Verified frame sequence'),
@@ -1062,6 +1086,7 @@ function parseEncodeCandidate(value: unknown): EncodeCandidate {
     frameCount: numberValue(first(item, 'frame_count', 'frameCount')),
     totalFrames: numberValue(first(item, 'total_frames', 'totalFrames')),
     verified: booleanValue(item.verified),
+    outputKinds,
     videoOutputPath: nullableString(first(item, 'video_output_path', 'videoOutputPath')),
     audioMuxAvailable: booleanValue(first(item, 'audio_mux_available', 'audioMuxAvailable')),
   }
@@ -1254,6 +1279,7 @@ class HttpMissionControlClient implements MissionControlClient {
         frame_count: first(readiness, 'published_frames', 'publishedFrames'),
         total_frames: first(readiness, 'total_frames', 'totalFrames'),
         verified: readiness.ready,
+        enabled_output_kinds: first(readiness, 'enabled_output_kinds', 'enabledOutputKinds'),
         audio_mux_available: readiness.ready,
       })
     }))
@@ -1291,11 +1317,15 @@ class HttpMissionControlClient implements MissionControlClient {
     review: AuthorizationReview,
     confirmations: { configurationReviewed: true; fullRenderApproved: true },
   ): Promise<AuthorizationResult> {
-    const item = asRecord(await this.post(`/profiles/${encodeURIComponent(review.profileId)}/authorize`, {
+    const body: Record<string, unknown> = {
       scene_id: review.sceneId,
       settings_and_hashes_reviewed: confirmations.configurationReviewed,
       production_render_authorized: confirmations.fullRenderApproved,
-    }))
+    }
+    if (review.enabledOutputVariantIds.length > 0) {
+      body.enabled_output_variant_ids = review.enabledOutputVariantIds
+    }
+    const item = asRecord(await this.post(`/profiles/${encodeURIComponent(review.profileId)}/authorize`, body))
     return {
       authorized: booleanValue(item.authorized),
       authorizationId: nullableString(first(item, 'authorization_id', 'authorizationId', 'token_sha256', 'tokenSha256')),
@@ -1303,6 +1333,7 @@ class HttpMissionControlClient implements MissionControlClient {
       sceneSha256: nullableString(first(item, 'scene_sha256', 'sceneSha256')),
       profileSha256: nullableString(first(item, 'profile_sha256', 'profileSha256')),
       token: nullableString(first(item, 'token', 'authorization_token', 'authorizationToken')),
+      enabledOutputVariantIds: strings(first(item, 'enabled_output_variant_ids', 'enabledOutputVariantIds')),
     }
   }
 
@@ -1342,22 +1373,56 @@ class HttpMissionControlClient implements MissionControlClient {
     return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/cancel-stop`, { operator_confirmed: true }))
   }
 
+  async cancelRender(jobId: string): Promise<RenderJob> {
+    const identity = await this.exactRenderIdentity(jobId, 'cancel')
+    return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/cancel`, {
+      ...identity,
+      operator_confirmed: true,
+    }))
+  }
+
+  async retryFailedRender(jobId: string): Promise<RenderJob> {
+    const identity = await this.exactRenderIdentity(jobId, 'retry')
+    return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/retry`, {
+      ...identity,
+      operator_confirmed: true,
+    }))
+  }
+
+  async retryCurrentChunk(jobId: string): Promise<RenderJob> {
+    const identity = await this.exactRenderIdentity(jobId, 'retry')
+    return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/retry-current-chunk`, {
+      ...identity,
+      operator_confirmed: true,
+    }))
+  }
+
   async resumeRender(jobId: string): Promise<RenderJob> {
+    const identity = await this.exactRenderIdentity(jobId, 'resume')
+    return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/resume`, {
+      ...identity,
+    }))
+  }
+
+  private async exactRenderIdentity(
+    jobId: string,
+    operation: 'cancel' | 'resume' | 'retry',
+  ): Promise<{ scene_sha256: string; profile_sha256: string }> {
     const job = await this.getRenderJob(jobId)
     if (!job.sceneSha256 || !job.profileSha256) {
       throw new MissionControlApiError(parseStructuredError({
-        code: 'resume_identity_missing',
+        code: `${operation}_identity_missing`,
         title: 'Exact render identity is unavailable',
-        summary: 'Mission Control cannot resume until the backend returns both the scene and profile hashes.',
+        summary: `Mission Control cannot ${operation} until the backend returns both the scene and profile hashes.`,
         recommended_action: 'Refresh the job and inspect its advanced identity details.',
         retryable: true,
         job_id: jobId,
       }))
     }
-    return parseRenderJob(await this.post(`/render/${encodeURIComponent(jobId)}/resume`, {
+    return {
       scene_sha256: job.sceneSha256,
       profile_sha256: job.profileSha256,
-    }))
+    }
   }
 
   async createCalibrationPlan(): Promise<CalibrationSummary> {
@@ -1392,9 +1457,13 @@ class HttpMissionControlClient implements MissionControlClient {
     return parseCalibration(await this.request(`/calibrations/${encodeURIComponent(calibrationId)}`))
   }
 
-  startEncode(jobId: string, includeAudio: boolean): Promise<EncodeJob> {
+  startEncode(
+    jobId: string,
+    includeAudio: boolean,
+    outputKinds: Array<'delivery' | 'master'>,
+  ): Promise<EncodeJob> {
     return this.post(`/encode/${encodeURIComponent(jobId)}/start`, {
-      output_kinds: ['delivery', 'master'],
+      output_kinds: outputKinds,
       include_audio: includeAudio,
       operator_confirmed: true,
     }).then(parseEncodeJob)
@@ -1424,13 +1493,17 @@ class HttpMissionControlClient implements MissionControlClient {
   }
 }
 
-function selectionBody(selection: RenderSelection): Record<string, string> {
-  return {
+function selectionBody(selection: RenderSelection): Record<string, unknown> {
+  const body: Record<string, unknown> = {
     project_id: selection.projectId,
     scene_id: selection.sceneId,
     profile_id: selection.profileId,
     output_directory: selection.outputPath,
   }
+  if (selection.enabledOutputVariantIds.length > 0) {
+    body.enabled_output_variant_ids = selection.enabledOutputVariantIds
+  }
+  return body
 }
 
 function startBody(request: StartRenderRequest): Record<string, unknown> {

@@ -36,6 +36,19 @@ disabled by default. The live dashboard selector only selects an enabled
 preview/telemetry stream. It cannot add vertical to a running or authorized
 job.
 
+The current Andromeda V2 calibration proves timing only. A 2026-07-23 human
+visual audit found its seven frames sparse and blockout-like relative to the
+preserved R13.1 contact sheets, including floating or isolated Awakening
+elements and an Arrival without an unmistakable destination. The existing
+immutable package and technical authorization remain historical evidence; they
+do not prove artistic equivalence, sprint completion, or present production
+readiness. Keep operator start blocked until corrected bounded final-quality
+visual proof is reviewed and a changed identity is freshly calibrated,
+packaged, and technically authorized. The additive
+`production/andromeda-v2/release-hold.json` binds the held identity, and the
+operator-authorization CLI rejects inspect, create, and validate for that
+exact release.
+
 The project wrapper is:
 
 ```powershell
@@ -44,13 +57,23 @@ The project wrapper is:
 ```
 
 Both commands are planning-only. `StartOrResume` is a production action and
-must fail until technical readiness and the exact operator-start gate authorize
-the same release. The action also requires private source-audio and visual-cues
+must fail until the immutable technical authorization and a separate local
+operator-start artifact bind the same exact release and enabled matrix. The
+committed technical document remains operator-gated and is never edited to
+record consent. The action also requires private source-audio and visual-cues
 paths so their contents can be hashed locally against the authorized identity;
-the paths themselves are not persisted. `-EnableVertical` is deliberately
-guarded until independent vertical calibration, separate QA, aggregate
-selected-matrix SLA, and a new authorization exist. It must not reuse
-horizontal-only evidence or silently crop horizontal frames.
+the paths themselves are not persisted.
+
+Create the separate non-overwriting operator artifact with
+`production/andromeda-v2/new-operator-authorization.ps1`; it writes only after
+the owner types the exact release/matrix-bound phrase. Before inspect, create,
+or validate, the CLI revalidates the full package manifest and every repository
+artifact it binds. `-EnableVertical` selects the independently authored vertical
+scene/profile/output, but `StartOrResume` still fails before either variant
+starts unless separately authored dual-matrix package, calibration, technical
+authorization, operator artifact, and both scene/profile tokens agree.
+Horizontal-only evidence is never reused for the dual matrix, and vertical is
+never cropped from horizontal frames.
 
 Changing any enabled variant, scene, composition, camera, profile, frame clock,
 or bound hash invalidates authorization. Variant frame directories, in-flight

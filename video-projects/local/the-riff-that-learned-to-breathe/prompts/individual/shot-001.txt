@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-001 — The Iron Seed
+Provisional timing: 0.000–8.000 s
+Seed: 24081001
+
+NARRATIVE INTENT
+Introduce the source melody as something carefully built rather than merely played.
+
+KEYFRAME PROMPT
+The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos sits at a compact warm mechanical workbench before dawn, folding the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged from narrow metal strips that resemble guitar strings. Tiny amber gears glow inside the bird's chest; rain-dark windows and shelves of hand tools recede into watercolor shadow. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+A slow, deliberate dolly moves toward the workbench. The Architect folds one metal feather, the bird's amber heart begins to pulse, tiny gears turn, and a faint curl of steam drifts upward. The camera stays stable and the action unfolds as one continuous shot, ending on the bird opening one eye.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+architect-identity, origami-bird-core, warm-workshop
+
+TRANSITION IN
+fade-from-black
+
+TRANSITION OUT
+the bird opens one wing toward lens; use its dark feather as a practical wipe
+
+ACCEPTANCE NOTES
+- The bird silhouette and amber heart must be readable by 00:05.
+- No guitar brand marks or written notation.

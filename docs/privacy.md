@@ -1,5 +1,26 @@
 # Privacy and data lifecycle
 
+## Archived projects and resumable sources
+
+Professional project sources remain local under UUID/SHA-256-derived keys.
+Browser filenames, client text, cue labels, imported CSV/CUE/JSON, transcripts,
+and model output never become filesystem paths or instructions. Resumable
+chunks are range-checked, bounded, individually hashable, and committed only
+after complete-file hashing and ffprobe validation.
+
+`archive` retention keeps one source blob, immutable artifacts/revisions, and
+the audit journal until explicit deletion. Ordinary completed analyses now use
+the same explicit-delete-only retention contract.
+Temporary segment decodes and stems are still removed. “Permanent” means local
+retention until explicit deletion; it does not protect against disk or host
+loss. Backups are opt-in, local, checksum-manifested, and never uploaded by the
+application.
+
+Audit payloads contain bounded state, IDs, versions, hashes, and safe reasons.
+They exclude raw audio, raw lyrics/transcripts, tensors, secrets, stack traces,
+and physical paths. Hash chaining provides tamper evidence, not operator
+identity proof.
+
 ## Local-first boundary
 
 TrackPrompt Studio's normal data path is browser to local FastAPI service and
@@ -61,8 +82,8 @@ directory. If the optional Deep adapter is explicitly enabled and ready, it
 creates vocals, drums, bass, and other stems there, derives coarse descriptors,
 including section-aligned relative-energy measurements, and deletes those stems
 immediately after feature extraction or adapter failure.
-Cancellation, failed-job cleanup, explicit deletion, and TTL cleanup also cover
-the private stem directory. The API never exposes stem downloads.
+Cancellation, failed-job cleanup, and explicit deletion also cover the private
+stem directory. The API never exposes stem downloads.
 
 `scripts/diagnose_analysis.py` follows the same local path in a process-managed
 temporary directory. It prints derived signal/music evidence, not the source
@@ -120,15 +141,26 @@ The visualizer adds one private, versioned `visual-features.json` artifact to a
 completed job directory. It contains bounded normalized numbers and method
 metadata only—never audio/stem samples, a source name/path, media tags, lyrics,
 transcript, prompts, or model paths. Deep stem curves are calculated before the
-temporary stems are deleted. Explicit deletion and TTL expiry remove the
-artifact with the entire UUID job directory; cancellation and processing failure
-remove an incomplete artifact with other partial derivatives.
+temporary stems are deleted. Explicit deletion removes the artifact from both
+the live UUID directory and every archived revision; cancellation and processing
+failure remove an incomplete artifact with other partial derivatives.
 
 The public Blender cue sheet is compiled locally without rereading audio,
 loading a model, using a GPU, or contacting a network. Its privacy validator
 rejects private field names and absolute filesystem paths. The browser download
 uses only the job UUID in its name. The user supplies an audio file separately
 to Blender, and Blender writes only to caller-approved output locations.
+
+Visualizer preset configuration is a second, separate public contract. It
+contains only a schema version, preset identifier, bounded visual parameters,
+deterministic seed, defaulted field names, and safe warnings. The validation-only
+resolver does not receive audio or a job ID, launch Blender, or persist state.
+The canonical runner saves the complete `visualizer-config.resolved.json` only
+inside its ignored local run directory. Config validation rejects unknown keys,
+non-finite values, and unsupported enums; manifests do not copy the caller's
+configuration path. Neither the config nor its manifest may contain a source
+filename/path, transcript, lyrics, waveform data, chord sequence, prompt output,
+model path, or credential.
 
 The private singing transcript keeps accepted, uncertain, likely-hallucinated,
 and non-lexical detections so users can review or delete the actual local model
@@ -200,20 +232,21 @@ private request data.
 
 `DELETE /api/analyses/{job_id}` is idempotent. Deletion removes the job directory,
 its upload, result artifacts and derivatives, its SQLite lifecycle row, and
-associated in-memory event state. The UI's **Delete analysis** control uses this
-route. Cancellation is also idempotent and removes the upload, partial results,
-decoded audio, and intermediates while retaining a safe cancelled lifecycle row
-until explicit deletion or TTL expiry. Processing failures apply the same private
-payload cleanup. A completed job retains its source privately until deletion or
-expiry.
+associated in-memory event state. The UI requires an explicit second confirmation
+before using this route. Cancellation is also idempotent and removes the upload,
+partial results, decoded audio, and intermediates while retaining a safe cancelled
+lifecycle row until explicit deletion. Processing failures apply the same private
+payload cleanup. A completed job and its archive source remain private until
+explicit deletion.
 
-### Automatic expiration
+### Analysis retention
 
-At creation, every job receives a fixed expiration of `JOB_TTL_MINUTES` (60 by
-default). The deadline is not silently extended by polling or edits. Periodic
-cleanup removes uploads and derived files, lifecycle metadata, result artifacts,
-and live state after that deadline. A process that is forcibly terminated cannot
-run cleanup until it is started again; use manual complete deletion when needed.
+There is no automatic analysis expiration. `JOB_TTL_MINUTES` is ignored if an
+older shell or deployment still defines it. Completed analyses, retained audio,
+and versioned artifacts persist through browser reloads, process restarts, and
+ordinary container restarts. Explicit deletion removes private bytes and shared
+blob references only when safe, while preserving a content-free append-only
+deletion audit event and catalogue tombstone.
 
 ### Entire installation
 
@@ -252,3 +285,11 @@ for explicit consent. It should send only a bounded structured set of derived
 features—not audio, source metadata, raw lyrics, exact melody, or credentials.
 The response must validate against `PromptPackage`, secrets must stay on the
 backend, and deterministic local composition must remain the fallback.
+
+## Fully local video projects
+
+Local video packages remain inside the repository's configured local project and runtime roots. Source audio is validated without requesting embedded metadata, bound by SHA-256, copied to a private project revision, and never sent to ComfyUI. API responses expose only a short audio-hash prefix and measured media facts; they do not expose source filenames, full paths, raw metadata, prompts derived from metadata, or private chat evidence.
+
+ComfyUI defaults to loopback and rejects non-loopback endpoints unless the operator explicitly enables the private-network option. Readiness exposes safe device, node-class, and model-filename identities but strips installation paths. Workflow and model setup is explicit, revision/hash recorded, and never triggered by project preparation or generation APIs.
+
+Temporary analysis decoding can be removed after the persistent revision is verified. Project-owned analysis, StoryPlan, ShotPlan, prompt/seed manifests, retained audio, and approved outputs remain until exact, previewed project/revision deletion. Orphan cleanup must consult project dependencies before deleting an analysis.

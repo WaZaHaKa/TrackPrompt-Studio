@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "2.0.0",
+  "kind": "trackprompt-final-render-calibration",
+  "calibrationId": "andromeda-v2-final-calibration-v2",
+  "identity": {
+    "schemaVersion": "2.0.0",
+    "releaseId": "andromeda-v2-final-release-v2",
+    "projectId": "trip-to-andromeda-v2",
+    "sourceAudioSha256": "6adf4f3e75f1f775226571ace56883b6e72ad11775bde6c94adc1b95112e5cd5",
+    "sourceCueSha256": "b58ba759feb44aa869391ade40e72b8450d0e2917e40255ccf60af2e0205c1b2",
+    "ownerCreativeAcceptanceSha256": "023173db958ae7627757e7799d55caf427342d7a9b7da73af82fd0a1de2ded48",
+    "encodingProfilesSha256": "6e312848fde7e06f734d2c5e19c31be18e0dddaedf6403ea7be65d0f58f0fab8",
+    "lookProfileSha256": "455aab70d90f43b78889905deeb2883a3a1aeaa802e6c34f3e0343eb45ee22d9",
+    "storyPlanSha256": "24040d7ba834e392a4ed5f07d7af58b915fa1f3ef6510c9feadcfe969a30f048",
+    "shotPlanSha256": "153ab10352a36d40f9164fa61fe11289bc0d858d9e01e56f1caac6773b780e47",
+    "outputVariantContractSha256": "5cc0bbaab1f2d821f1eb18ff6b2785a56d35294f05df4cb22405e7cec32aea56",
+    "builderSourceSha256": "0312da34918c37d824667645701254d7f262b409628fb1ce28047b821ba18e88",
+    "sourceTreeSha256": "8e9bfef3f56caaaeede68b02100f01c3f793c190e192c177216d03ac0c266f3f",
+    "gitCommitSha": "61984132f05fd0a863687fedec58d34b4dd97019",
+    "deterministicSeed": 84291,
+    "outputMatrix": {
+      "schemaVersion": "2.0.0",
+      "matrixId": "andromeda-v2-horizontal-only-v2",
+      "enabledVariantIds": [
+        "horizontal-16x9-1080p"
+      ],
+      "variants": [
+        {
+          "id": "horizontal-16x9-1080p",
+          "enabled": true,
+          "required": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30,
+          "frameStart": 1,
+          "frameEnd": 13029,
+          "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+          "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+          "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+          "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+          "workerRequirementId": "local-rtx3060-eevee-v1",
+          "outputPattern": "final-output/andromeda-v2-horizontal/frames/frame_######.png"
+        }
+      ]
+    },
+    "workerRequirements": [
+      {
+        "id": "local-rtx3060-eevee-v1",
+        "deviceClass": "gpu",
+        "renderer": "BLENDER_EEVEE",
+        "blenderVersion": "5.2.0 LTS",
+        "minimumVramMib": 8192,
+        "maximumWorkersPerDevice": 1,
+        "chunkSizeFrames": 300,
+        "deterministicSeed": 84291,
+        "requiredCapabilities": [
+          "png-16bit-rgb",
+          "atomic-chunk-publication",
+          "validated-missing-frame-resume",
+          "variant-aware-telemetry"
+        ]
+      }
+    ]
+  },
+  "releaseIdentitySha256": "dd3036eb00baec5f4ab921bea0a7a1565e15fea9fcc5be752e69d114d3c58c56",
+  "variantCalibrations": [
+    {
+      "outputVariantId": "horizontal-16x9-1080p",
+      "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+      "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+      "compositionProfileId": "andromeda-v2-horizontal-master-v1",
+      "cameraName": "TP_ANDROMEDA_V2_CAMERA_HORIZONTAL",
+      "workerRequirementId": "local-rtx3060-eevee-v1",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "sampleFrames": [
+        652,
+        1950,
+        3779,
+        6150,
+        7688,
+        8834,
+        11987
+      ],
+      "p50SecondsPerFrame": 0.622351199999684,
+      "p90SecondsPerFrame": 0.834927400021115,
+      "weightedSecondsPerFrame": 0.631091304088987,
+      "projectedRenderSecondsP50": 8108.61378479588,
+      "projectedRenderSecondsP90": 10878.2690948751,
+      "projectedOutputBytes": 50277960909,
+      "calibrationComplete": true
+    }
+  ],
+  "stageForecasts": [
+    {
+      "stage": "rendering",
+      "p50Seconds": 9296.614,
+      "p90Seconds": 14479.5228
+    },
+    {
+      "stage": "frame-validation",
+      "p50Seconds": 600.0,
+      "p90Seconds": 1200.0
+    },
+    {
+      "stage": "encoding",
+      "p50Seconds": 900.0,
+      "p90Seconds": 1800.0
+    },
+    {
+      "stage": "media-qa",
+      "p50Seconds": 600.0,
+      "p90Seconds": 1200.0
+    },
+    {
+      "stage": "publication",
+      "p50Seconds": 60.0,
+      "p90Seconds": 120.0
+    }
+  ],
+  "aggregateP50Seconds": 11456.614,
+  "aggregateP90Seconds": 18799.5228,
+  "slaLimitSeconds": 86400,
+  "slaSatisfied": true,
+  "deterministicEffectsVerified": true,
+  "allRequiredBakesComplete": true,
+  "dependencyHealthPassed": true,
+  "vramStable": true,
+  "diskFreeBytes": 379058008064,
+  "projectedPeakDiskBytes": 56290915124,
+  "diskSafetyMultiplier": 1.25,
+  "diskHeadroomSatisfied": true
+}

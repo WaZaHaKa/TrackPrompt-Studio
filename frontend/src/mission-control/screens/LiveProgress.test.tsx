@@ -102,6 +102,9 @@ function renderProgress(overrides: Parameters<typeof makeRenderJob>[0] = {}) {
     onRefresh: vi.fn(),
     onStopAfterChunk: vi.fn(),
     onCancelStop: vi.fn(),
+    onCancelRender: vi.fn(),
+    onRetryCurrentChunk: vi.fn(),
+    onRetryFailedRender: vi.fn(),
     onResume: vi.fn(),
     onOpenOutput: vi.fn(),
     onEncode: vi.fn(),
@@ -142,19 +145,165 @@ describe('LiveProgress', () => {
     expect(screen.getByText('Current chunk ETA').closest('.mc-metric')).toHaveTextContent('P90 8 minutes')
 
     const cancelRender = screen.getByRole('button', { name: 'Cancel render' })
-    expect(cancelRender).toBeDisabled()
-    expect(cancelRender).toHaveAttribute('aria-describedby', 'mc-cancel-render-unavailable')
-    expect(screen.getByText(/the current backend exposes only a safe stop/i)).toBeInTheDocument()
+    expect(cancelRender).toBeEnabled()
+    await user.click(cancelRender)
+    expect(screen.getByRole('dialog', { name: /cancel this render at the safe chunk boundary/i })).toBeInTheDocument()
+    expect(screen.getByText(/does not delete output files or job history/i)).toBeInTheDocument()
+    const confirmCancel = screen.getByRole('button', { name: 'Confirm cancel' })
+    expect(confirmCancel).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /cancel this exact render job/i }))
+    expect(confirmCancel).toBeEnabled()
+    await user.click(confirmCancel)
+    expect(callbacks.onCancelRender).toHaveBeenCalledTimes(1)
 
-    const retryChunk = screen.getByRole('button', { name: 'Retry failed chunk' })
-    expect(retryChunk).toBeDisabled()
-    expect(retryChunk).toHaveAttribute('aria-describedby', 'mc-retry-chunk-unavailable')
-    expect(screen.getByText(/no failed-chunk retry endpoint/i)).toBeInTheDocument()
+    const retryChunk = screen.getByRole('button', { name: 'Retry current chunk' })
+    expect(retryChunk).toBeEnabled()
+    await user.click(retryChunk)
+    expect(screen.getByRole('dialog', { name: /retry the active current chunk/i })).toBeInTheDocument()
+    expect(screen.getByText(/does not delete published output or job history/i)).toBeInTheDocument()
+    const confirmRetryCurrent = screen.getByRole('button', { name: 'Retry exact current chunk' })
+    expect(confirmRetryCurrent).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /retry this exact current chunk/i }))
+    await user.click(confirmRetryCurrent)
+    expect(callbacks.onRetryCurrentChunk).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: /stop after current chunk/i }))
     expect(callbacks.onStopAfterChunk).toHaveBeenCalledTimes(1)
     await user.click(screen.getByRole('button', { name: /open logs/i }))
     expect(screen.getByRole('log')).toHaveTextContent('Rendering frame 8110')
+  })
+
+  it('confirms an exact-identity retry only for a retryable failed render', async () => {
+    const user = userEvent.setup()
+    const callbacks = renderProgress({
+      state: 'failed',
+      rendererActive: false,
+      watcherActive: false,
+      error: {
+        code: 'render_process_failed',
+        title: 'Render process failed',
+        summary: 'The renderer stopped in the active chunk.',
+        likelyCause: 'The renderer process exited.',
+        recommendedAction: 'Retry the deterministic missing work.',
+        retryable: true,
+        context: {},
+        technicalDetails: 'exit code 1',
+        relatedPath: null,
+        timestamp: '2026-07-21T10:00:00Z',
+        jobId: 'job-test',
+      },
+    })
+
+    const retryChunk = screen.getByRole('button', { name: 'Retry failed chunk' })
+    expect(retryChunk).toBeEnabled()
+    await user.click(retryChunk)
+
+    expect(screen.getByRole('dialog', { name: /retry the failed render work/i })).toBeInTheDocument()
+    expect(screen.getByText(/fill only deterministic missing or invalid work/i)).toBeInTheDocument()
+    const confirmRetry = screen.getByRole('button', { name: 'Retry exact failed work' })
+    expect(confirmRetry).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: /retry the missing or invalid work/i }))
+    expect(confirmRetry).toBeEnabled()
+    await user.click(confirmRetry)
+
+    expect(callbacks.onRetryFailedRender).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries a failed current chunk through the exact current-chunk control', async () => {
+    const user = userEvent.setup()
+    const callbacks = renderProgress({
+      state: 'failed',
+      rendererActive: false,
+      watcherActive: false,
+      error: {
+        code: 'render_process_failed',
+        title: 'Render process failed',
+        summary: 'The renderer stopped in the active chunk.',
+        likelyCause: 'The renderer process exited.',
+        recommendedAction: 'Retry the deterministic missing work.',
+        retryable: true,
+        context: {},
+        technicalDetails: 'exit code 1',
+        relatedPath: null,
+        timestamp: '2026-07-21T10:00:00Z',
+        jobId: 'job-test',
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Retry current chunk' }))
+    expect(screen.getByRole('dialog', { name: /retry the failed current chunk/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /retry this exact current chunk/i }))
+    await user.click(screen.getByRole('button', { name: 'Retry exact current chunk' }))
+
+    expect(callbacks.onRetryCurrentChunk).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not enable retry when the backend marks the failed render non-retryable', () => {
+    renderProgress({
+      state: 'failed',
+      rendererActive: false,
+      error: {
+        code: 'render_identity_invalid',
+        title: 'Render identity is invalid',
+        summary: 'The saved identity no longer matches.',
+        likelyCause: 'A saved file changed.',
+        recommendedAction: 'Restore the exact identity.',
+        retryable: false,
+        context: {},
+        technicalDetails: null,
+        relatedPath: null,
+        timestamp: '2026-07-21T10:00:00Z',
+        jobId: 'job-test',
+      },
+    })
+
+    expect(screen.getByRole('button', { name: 'Retry failed chunk' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Retry current chunk' })).toBeDisabled()
+    expect(screen.getAllByText(/backend marked this failure as non-retryable/i)).toHaveLength(2)
+  })
+
+  it('shows safe-boundary cancellation as pending and does not offer to undo it', () => {
+    renderProgress({
+      state: 'cancel_requested',
+      safeStopStatus: 'requested',
+      warning: 'Cancellation is pending at the current chunk boundary.',
+    })
+
+    expect(screen.getByRole('button', { name: 'Cancellation requested' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Cancel stop request' })).not.toBeInTheDocument()
+    expect(screen.getByText(/saved output is preserved/i)).toBeInTheDocument()
+  })
+
+  it('shows a truthful disabled state while current-chunk retry is pending', () => {
+    renderProgress({
+      state: 'retry_requested',
+      warning: 'Retry requested for exact chunk 7801-8400.',
+    })
+
+    expect(screen.getByRole('button', { name: 'Retry current chunk requested' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Cancel render' })).not.toBeInTheDocument()
+    expect(screen.getByText(/validated prior chunks remain authoritative/i)).toBeInTheDocument()
+  })
+
+  it('cancels only a pending stop request before the chunk boundary is committed', async () => {
+    const user = userEvent.setup()
+    const callbacks = renderProgress({
+      state: 'stop_requested',
+      safeStopStatus: 'requested',
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Cancel stop request' }))
+
+    expect(callbacks.onCancelStop).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not offer cancel-stop after the renderer commits to finishing the chunk', () => {
+    renderProgress({
+      state: 'finishing_current_chunk',
+      safeStopStatus: 'finishing_chunk',
+    })
+
+    expect(screen.queryByRole('button', { name: 'Cancel stop request' })).not.toBeInTheDocument()
   })
 
   it('keeps a structured renderer error visible with a safe resume action', async () => {

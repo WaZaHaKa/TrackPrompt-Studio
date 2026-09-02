@@ -5,7 +5,7 @@ import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, Never, cast
 
 from fastapi import APIRouter, FastAPI, Header, Query, Request
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -13,6 +13,22 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 from ..cinematic.schemas import ArtDirectionReview
+from ..local_video.archive import LocalVideoArchiveError
+from ..local_video.comfyui import ComfyUIProviderError
+from ..local_video.models import (
+    ComfyUIReadiness,
+    LocalVideoDeletePreview,
+    LocalVideoDeleteRequest,
+    LocalVideoPrepareRequest,
+    LocalVideoProjectSummary,
+    LocalVideoProjectView,
+    LocalVideoQualificationRequest,
+    LocalVideoWorkflowRequest,
+    LocalVideoWorkflowView,
+    QualificationView,
+)
+from ..local_video.package import LocalVideoPackageError
+from ..local_video.workflow import WorkflowContractError
 from ..video_generation.mission_models import (
     VideoAudioBrowseRequest,
     VideoAudioSelection,
@@ -37,6 +53,7 @@ from .models import (
     CalibrationPlanResult,
     CalibrationReviewRequest,
     CalibrationSummary,
+    CancelRenderRequest,
     CancelStopRequest,
     CapabilityActionResult,
     CloudPackageRequest,
@@ -69,6 +86,8 @@ from .models import (
     ProfileValidation,
     ProjectSummary,
     ResumeRequest,
+    RetryCurrentChunkRequest,
+    RetryFailedRenderRequest,
     RuntimeIdentity,
     SceneSummary,
     StartFakeRenderRequest,
@@ -118,6 +137,56 @@ def _service(request: Request) -> MissionControlService:
     created = MissionControlService(config, runtime=runtime)
     request.app.state.mission_control_service = created
     return created
+
+
+def _raise_local_video_error(exc: Exception) -> Never:
+    if isinstance(exc, LocalVideoPackageError):
+        raise MissionControlError(
+            422,
+            exc.code,
+            "Local video package is invalid",
+            exc.safe_message,
+            "Repair the declared package field and validate the package again.",
+            retryable=False,
+        ) from exc
+    if isinstance(exc, ComfyUIProviderError):
+        raise MissionControlError(
+            exc.status_code or 503,
+            exc.code,
+            "Local ComfyUI request failed",
+            exc.safe_message,
+            "Check local provider readiness and retry the exact unchanged operation.",
+            retryable=exc.retryable,
+        ) from exc
+    if isinstance(exc, WorkflowContractError):
+        raise MissionControlError(
+            422,
+            exc.code,
+            "ComfyUI workflow is incompatible",
+            exc.safe_message,
+            "Export a current API-format workflow and ensure every required semantic role is present.",
+            retryable=False,
+            context={"missingRoles": list(exc.missing_roles)},
+        ) from exc
+    if isinstance(exc, KeyError):
+        raise MissionControlError(
+            404,
+            "local_video_not_found",
+            "Local video project was not found",
+            "The requested local project or workflow does not exist.",
+            "Refresh the local video catalogue and select an available item.",
+            retryable=False,
+        ) from exc
+    if isinstance(exc, (LocalVideoArchiveError, ValueError)):
+        raise MissionControlError(
+            409,
+            "local_video_operation_blocked",
+            "Local video operation is blocked",
+            str(exc)[:500],
+            "Review provider readiness, workflow identity, and the exact project revision before retrying.",
+            retryable=True,
+        ) from exc
+    raise exc
 
 
 async def mission_control_error_handler(
@@ -255,6 +324,7 @@ async def authorize_profile(
     return _service(request).authorize_profile(
         profile_id,
         payload.scene_id,
+        enabled_output_variant_ids=payload.enabled_output_variant_ids,
         settings_and_hashes_reviewed=payload.settings_and_hashes_reviewed,
         production_render_authorized=payload.production_render_authorized,
     )
@@ -454,6 +524,33 @@ async def cancel_stop(
     return await _service(request).cancel_stop(job_id, payload)
 
 
+@router.post("/render/{job_id}/cancel", response_model=JobRecord)
+async def cancel_render(
+    job_id: str,
+    payload: CancelRenderRequest,
+    request: Request,
+) -> JobRecord:
+    return await _service(request).cancel_render(job_id, payload)
+
+
+@router.post("/render/{job_id}/retry", response_model=JobRecord)
+async def retry_failed_render(
+    job_id: str,
+    payload: RetryFailedRenderRequest,
+    request: Request,
+) -> JobRecord:
+    return await _service(request).retry_failed(job_id, payload)
+
+
+@router.post("/render/{job_id}/retry-current-chunk", response_model=JobRecord)
+async def retry_current_chunk(
+    job_id: str,
+    payload: RetryCurrentChunkRequest,
+    request: Request,
+) -> JobRecord:
+    return await _service(request).retry_current_chunk(job_id, payload)
+
+
 @router.post("/render/{job_id}/resume", response_model=JobRecord)
 async def resume_render(
     job_id: str,
@@ -466,6 +563,117 @@ async def resume_render(
 @router.get("/video/catalog", response_model=VideoCatalog)
 async def video_catalog(request: Request) -> VideoCatalog:
     return _service(request).video_generation.catalog()
+
+
+@router.get("/video/local/projects", response_model=list[LocalVideoProjectSummary])
+async def local_video_projects(
+    request: Request,
+    search: Annotated[str, Query(max_length=160)] = "",
+) -> list[LocalVideoProjectSummary]:
+    try:
+        return _service(request).local_video.catalog(query=search)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.get("/video/local/projects/{project_id}", response_model=LocalVideoProjectView)
+async def local_video_project(project_id: str, request: Request) -> LocalVideoProjectView:
+    try:
+        return _service(request).local_video.get(project_id)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.post("/video/local/projects/prepare", response_model=LocalVideoProjectView)
+async def prepare_local_video_project(
+    payload: LocalVideoPrepareRequest,
+    request: Request,
+) -> LocalVideoProjectView:
+    try:
+        return await _service(request).local_video.prepare(payload)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.get("/video/local/provider/readiness", response_model=ComfyUIReadiness)
+async def local_video_provider_readiness(request: Request) -> ComfyUIReadiness:
+    try:
+        return await _service(request).local_video.readiness()
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.get("/video/local/workflows", response_model=list[LocalVideoWorkflowView])
+async def local_video_workflows(request: Request) -> list[LocalVideoWorkflowView]:
+    return _service(request).local_video.workflows()
+
+
+@router.post("/video/local/workflows", response_model=LocalVideoWorkflowView)
+async def install_local_video_workflow(
+    payload: LocalVideoWorkflowRequest,
+    request: Request,
+) -> LocalVideoWorkflowView:
+    try:
+        return _service(request).local_video.install_workflow(payload)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.post(
+    "/video/local/projects/{project_id}/qualify",
+    response_model=QualificationView,
+)
+async def qualify_local_video_provider(
+    project_id: str,
+    payload: LocalVideoQualificationRequest,
+    request: Request,
+) -> QualificationView:
+    try:
+        return await _service(request).local_video.qualify(project_id, payload.workflow_id)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.post(
+    "/video/local/projects/{project_id}/qualification/import",
+    response_model=QualificationView,
+)
+async def import_local_video_qualification(
+    project_id: str,
+    request: Request,
+) -> QualificationView:
+    try:
+        return _service(request).local_video.record_qualification(project_id)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.get(
+    "/video/local/projects/{project_id}/delete-preview",
+    response_model=LocalVideoDeletePreview,
+)
+async def preview_local_video_delete(
+    project_id: str,
+    request: Request,
+    revision_id: Annotated[str | None, Query(alias="revisionId", max_length=80)] = None,
+) -> LocalVideoDeletePreview:
+    try:
+        return _service(request).local_video.delete_preview(project_id, revision_id)
+    except Exception as exc:
+        _raise_local_video_error(exc)
+
+
+@router.delete("/video/local/projects/{project_id}", status_code=204)
+async def delete_local_video_project(
+    project_id: str,
+    payload: LocalVideoDeleteRequest,
+    request: Request,
+) -> Response:
+    try:
+        _service(request).local_video.explicit_delete(project_id, payload)
+        return Response(status_code=204)
+    except Exception as exc:
+        _raise_local_video_error(exc)
 
 
 @router.get("/video/jobs", response_model=list[VideoJobView])
@@ -551,6 +759,8 @@ async def review_video_shot(
 def _audio_selection_response(selection: VideoAudioSelection) -> VideoAudioSelection | JSONResponse:
     if selection.error is None:
         return selection
+    if selection.error.code == "audio_hash_mismatch_confirmation_required":
+        return selection
     return JSONResponse(
         status_code=422,
         content=selection.model_dump(mode="json", by_alias=True),
@@ -602,6 +812,11 @@ async def clear_video_audio(job_id: str, request: Request) -> VideoAudioSelectio
 @router.post("/video/jobs/{job_id}/resolve", response_model=VideoJobView)
 async def resolve_video_timeline(job_id: str, request: Request) -> VideoJobView:
     return await _service(request).video_generation.resolve(job_id)
+
+
+@router.post("/video/jobs/{job_id}/repair-legacy-dependency", response_model=VideoJobView)
+async def repair_video_legacy_dependency(job_id: str, request: Request) -> VideoJobView:
+    return await _service(request).video_generation.repair_legacy_dependency(job_id)
 
 
 @router.post("/video/jobs/{job_id}/export", response_model=VideoJobView)

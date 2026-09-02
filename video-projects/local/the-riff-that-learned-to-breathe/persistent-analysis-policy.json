@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "purpose": "prevent the prior analysis-not-found failure and make every approved analysis reusable",
+  "recordsToArchive": [
+    "audio content hash and probe metadata",
+    "analysis snapshots",
+    "StoryPlan and ShotPlan",
+    "creative bible and continuity profile",
+    "keyframe prompts and selected reference assets",
+    "video prompts, seeds, workflow JSON, model hashes and runtime versions",
+    "shot status, retries, review decisions and final manifests",
+    "edit plan and delivery QC"
+  ],
+  "retentionRules": {
+    "projectOwnedRecords": "persistent until explicit project deletion",
+    "temporaryUploads": "may expire only after a durable project copy and hash binding exist",
+    "renderIntermediates": "may be cleaned by operator-configured policy after final delivery validation",
+    "approvedOutputs": "persistent until explicit project deletion",
+    "orphanCleanup": "must never delete records referenced by an active project or manifest"
+  },
+  "catalog": {
+    "primaryKey": "stable project ID plus immutable revision ID",
+    "audioBinding": "SHA-256 content hash, not filename",
+    "searchFields": [
+      "title",
+      "projectId",
+      "createdAt",
+      "updatedAt",
+      "audioHash",
+      "status",
+      "modelProfile",
+      "tags"
+    ],
+    "revisioning": "append-only analysis revisions with explicit current pointer",
+    "deleteSemantics": "transactional explicit delete with preview of affected artifacts"
+  }
+}

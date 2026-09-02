@@ -347,6 +347,55 @@ def hybrid_genre_regression_signals(duration: float = 16.0) -> dict[str, FloatAr
     }
 
 
+def segmentation_regression_signals(track_seconds: float = 18.0) -> dict[str, FloatArray]:
+    """Return deterministic transition and false-positive fixtures for long-form scans."""
+
+    track_a = np.clip(_four_on_floor(120.0, track_seconds) + _tone(220.0, track_seconds, 0.12), -1.0, 1.0)
+    track_b = np.clip(_four_on_floor(132.0, track_seconds) + _tone(370.0, track_seconds, 0.14), -1.0, 1.0)
+    track_c = np.clip(_place_hits(track_seconds, 90.0, (0.0, 2.5), _decaying_hit(62, 0.2, 0.7, 20)) + _tone(523.25, track_seconds, 0.1), -1.0, 1.0)
+    gap = np.zeros(int(SAMPLE_RATE * 3.0), dtype=np.float64)
+    fade_seconds = 6.0
+    fade_count = int(SAMPLE_RATE * fade_seconds)
+    faded = np.concatenate((
+        track_a[:-fade_count],
+        track_a[-fade_count:] * np.linspace(1.0, 0.0, fade_count),
+        track_b[:fade_count] * np.linspace(0.0, 1.0, fade_count),
+        track_b[fade_count:],
+    ))
+    crossfade = np.concatenate((
+        track_a[:-fade_count],
+        track_a[-fade_count:] * np.linspace(1.0, 0.0, fade_count)
+        + track_b[:fade_count] * np.linspace(0.0, 1.0, fade_count),
+        track_b[fade_count:],
+    ))
+    beat_matched_b = np.clip(_four_on_floor(120.0, track_seconds) + _tone(493.88, track_seconds, 0.14), -1.0, 1.0)
+    same_key_a = _chord((261.63, 329.63, 392.0), track_seconds, 0.32)
+    same_key_b = np.clip(_chord((261.63, 329.63, 392.0), track_seconds, 0.15) + 0.7 * _click_track(128, track_seconds), -1.0, 1.0)
+    rng = np.random.default_rng(20260720)
+    ambience = rng.normal(0.0, 0.008, track_a.size)
+    live_set = np.clip(np.concatenate((track_a + ambience, crossfade, track_b + ambience)), -1.0, 1.0)
+    continuous = np.tile(_chord((220.0, 277.18, 329.63), 2, 0.24), 18)
+    transient = continuous.copy()
+    hit = _decaying_hit(1800.0, 0.08, 0.95, 45.0, noise=0.2, seed=7)
+    transient_start = transient.size // 2
+    transient[transient_start : transient_start + hit.size] += hit
+    interlude = _fade(_tone(659.25, 5.0, 0.08), 500)
+    return {
+        "segment_three_tracks_silence_gaps.wav": np.concatenate((track_a, gap, track_b, gap, track_c)),
+        "segment_hard_cut.wav": np.concatenate((track_a, track_b)),
+        "segment_fade_out_in.wav": faded,
+        "segment_overlapping_crossfade.wav": crossfade,
+        "segment_beat_matched_transition.wav": np.concatenate((track_a, beat_matched_b)),
+        "segment_same_key_transition.wav": np.concatenate((same_key_a, same_key_b)),
+        "segment_same_tempo_transition.wav": np.concatenate((track_a, beat_matched_b)),
+        "segment_long_ambient.wav": _fade(_tone(110.0, track_seconds * 2, 0.06), 2500),
+        "segment_live_set_ambience.wav": live_set,
+        "segment_no_defensible_boundary.wav": continuous,
+        "segment_short_interlude.wav": np.concatenate((track_a, interlude, track_b)),
+        "segment_false_transient_spike.wav": np.clip(transient, -1.0, 1.0),
+    }
+
+
 def generate(output_dir: Path) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     files: dict[str, FloatArray] = {
@@ -421,6 +470,7 @@ def generate(output_dir: Path) -> list[Path]:
     }
     files.update(genre_regression_signals())
     files.update(hybrid_genre_regression_signals())
+    files.update(segmentation_regression_signals())
     left = _tone(330, 4, 0.35)
     right = _tone(550, 4, 0.35, phase=np.pi / 2)
     files["stereo_wide.wav"] = np.column_stack((left, right))

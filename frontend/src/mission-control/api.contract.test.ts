@@ -232,7 +232,13 @@ describe('Mission Control API contract', () => {
       .mockResolvedValueOnce(response({ ok: true, identity: { projectId: testProject.id, sceneId: testScene.id, sceneSha256: testScene.sha256, profileId: testProfile.id, profileSha256: testProfile.savedFileSha256, outputDirectory: 'C:\\renders' }, plan: { renderer: 'fake' }, logLines: ['No process started.'] }))
     vi.stubGlobal('fetch', fetchMock)
     const client = createMissionControlClient('/api/mission-control')
-    const selection = { projectId: testProject.id, sceneId: testScene.id, profileId: testProfile.id, outputPath: 'C:\\renders' }
+    const selection = {
+      projectId: testProject.id,
+      sceneId: testScene.id,
+      profileId: testProfile.id,
+      outputPath: 'C:\\renders',
+      enabledOutputVariantIds: [],
+    }
 
     await client.inspectOutput(selection)
     await client.preflight(selection, 'fake')
@@ -281,5 +287,78 @@ describe('Mission Control API contract', () => {
       profile_sha256: testProfile.savedFileSha256,
     })
     expect(requestBody(fetchMock.mock.calls[2]?.[1])).toEqual({ operator_confirmed: true })
+  })
+
+  it('binds confirmed cancel and failed-work retry to the refreshed exact identity', async () => {
+    const activeJob = {
+      id: 'job-test',
+      renderer: 'production',
+      state: 'RUNNING',
+      identity: {
+        projectId: testProject.id,
+        sceneId: testScene.id,
+        sceneSha256: testScene.sha256,
+        profileId: testProfile.id,
+        profileSha256: testProfile.savedFileSha256,
+        outputDirectory: 'C:\\renders',
+      },
+      createdAt: '2026-07-21T08:00:00Z',
+      updatedAt: '2026-07-21T10:00:00Z',
+      frameStart: 1,
+      frameEnd: 13029,
+      renderedFrameCount: 600,
+      inflightFrameCount: 0,
+      validatedFrameCount: 600,
+      publishedFrameCount: 600,
+      totalFrameCount: 13029,
+      chunksCompleted: 1,
+      chunksTotal: 22,
+      safeStopStatus: 'none',
+    }
+    const failedJob = {
+      ...activeJob,
+      state: 'FAILED',
+      error: {
+        code: 'render_process_failed',
+        title: 'Render failed',
+        summary: 'The renderer exited.',
+        retryable: true,
+      },
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(activeJob))
+      .mockResolvedValueOnce(response({ ...activeJob, state: 'CANCEL_REQUESTED', safeStopStatus: 'requested' }))
+      .mockResolvedValueOnce(response(activeJob))
+      .mockResolvedValueOnce(response({ ...activeJob, state: 'RETRY_REQUESTED' }))
+      .mockResolvedValueOnce(response(failedJob))
+      .mockResolvedValueOnce(response({ ...failedJob, state: 'STARTING', error: null }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = createMissionControlClient('/api/mission-control')
+
+    const cancelling = await client.cancelRender('job-test')
+    const retryingCurrentChunk = await client.retryCurrentChunk('job-test')
+    const retrying = await client.retryFailedRender('job-test')
+
+    expect(cancelling.state).toBe('cancel_requested')
+    expect(retryingCurrentChunk.state).toBe('retry_requested')
+    expect(retrying.state).toBe('starting')
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/mission-control/render/job-test/cancel')
+    expect(requestBody(fetchMock.mock.calls[1]?.[1])).toEqual({
+      scene_sha256: testScene.sha256,
+      profile_sha256: testProfile.savedFileSha256,
+      operator_confirmed: true,
+    })
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/mission-control/render/job-test/retry-current-chunk')
+    expect(requestBody(fetchMock.mock.calls[3]?.[1])).toEqual({
+      scene_sha256: testScene.sha256,
+      profile_sha256: testProfile.savedFileSha256,
+      operator_confirmed: true,
+    })
+    expect(fetchMock.mock.calls[5]?.[0]).toBe('/api/mission-control/render/job-test/retry')
+    expect(requestBody(fetchMock.mock.calls[5]?.[1])).toEqual({
+      scene_sha256: testScene.sha256,
+      profile_sha256: testProfile.savedFileSha256,
+      operator_confirmed: true,
+    })
   })
 })

@@ -1,0 +1,41 @@
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04@sha256:ac55d124da4882b497f732d8dfd9a702d5447a5f29d08d56da6f64f0a1eb34bc AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    TRACKPROMPT_DATA_DIR=/data \
+    HF_HUB_DISABLE_TELEMETRY=1 \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y python3.12 python3-pip python3-venv ffmpeg libsndfile1 ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system trackprompt \
+    && useradd --system --gid trackprompt --home-dir /app trackprompt \
+    && python3.12 -m venv /opt/trackprompt
+
+ENV PATH=/opt/trackprompt/bin:$PATH
+WORKDIR /app
+
+COPY requirements.lock.txt ./
+RUN python -m pip install --no-cache-dir --upgrade pip==25.1.1 \
+    && python -m pip install --no-cache-dir -r requirements.lock.txt
+RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu128 \
+         torch==2.7.1 torchaudio==2.7.1
+COPY requirements.full-gpu.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.full-gpu.txt \
+    && python -m pip check
+
+COPY app ./app
+RUN mkdir -p /data/models/demucs /data/models/genre /data/models/lyrics \
+    && chown -R trackprompt:trackprompt /app /data \
+    && python -m app.diagnostics.dependencies
+
+USER trackprompt
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
+  CMD python -c "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=3)); raise SystemExit(0 if data['status'] in ('ok','degraded') else 1)"
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

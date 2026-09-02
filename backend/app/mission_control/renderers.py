@@ -8,6 +8,7 @@ import math
 import os
 import re
 import shutil
+import signal
 import stat
 import struct
 import subprocess
@@ -862,6 +863,12 @@ def telemetry_event_is_new(job: JobRecord, event: RendererTelemetryEvent) -> boo
 class RendererController(Protocol):
     def get_job(self, job_id: str) -> JobRecord: ...
 
+    def validate_and_prepare_frame_event(
+        self,
+        job: JobRecord,
+        event: RendererTelemetryEvent,
+    ) -> bool: ...
+
     async def update_job(self, job_id: str, **changes: object) -> JobRecord: ...
 
     async def add_log(
@@ -872,6 +879,8 @@ class RendererController(Protocol):
     ) -> None: ...
 
     async def fail_job(self, job_id: str, error: StructuredError) -> JobRecord: ...
+
+    async def restart_retry_current_chunk(self, job_id: str) -> JobRecord: ...
 
 
 def _parse_json_output(lines: list[str]) -> dict[str, Any] | None:
@@ -893,6 +902,7 @@ class ProductionRenderer:
     def __init__(self, config: MissionControlConfig) -> None:
         self.config = config
         self.tasks: dict[str, asyncio.Task[None]] = {}
+        self.processes: dict[str, asyncio.subprocess.Process] = {}
 
     def powershell_path(self) -> str | None:
         return shutil.which("powershell.exe") or shutil.which("pwsh")
@@ -1093,11 +1103,17 @@ class ProductionRenderer:
                     )
                     return
                 snapshot = inspect_render_artifacts(job)
+                cancellation_completed = (
+                    job.state == JobState.CANCEL_REQUESTED
+                    and snapshot.disposition in {"paused", "resumable"}
+                )
                 changes = artifact_progress_changes(job, snapshot)
                 changes.update(
                     state=(
                         JobState.COMPLETE
                         if snapshot.disposition == "complete"
+                        else JobState.CANCELLED
+                        if cancellation_completed
                         else JobState.PAUSED_SAFELY
                         if snapshot.disposition == "paused"
                         else JobState.RESUMABLE
@@ -1110,7 +1126,9 @@ class ProductionRenderer:
                         else JobPhase.PUBLISH_CHUNK
                     ),
                     safe_stop_status=(
-                        SafeStopStatus.PAUSED
+                        SafeStopStatus.NONE
+                        if cancellation_completed
+                        else SafeStopStatus.PAUSED
                         if snapshot.disposition == "paused"
                         else SafeStopStatus.NONE
                     ),
@@ -1118,10 +1136,16 @@ class ProductionRenderer:
                     orphaned=False,
                     renderer_active=False,
                     watcher_active=False,
-                    error=None if snapshot.disposition in {"complete", "paused"} else error,
+                    error=(
+                        None
+                        if snapshot.disposition in {"complete", "paused"}
+                        or cancellation_completed
+                        else error
+                    ),
                     completed_at=(
                         datetime.now(UTC)
                         if snapshot.disposition in {"complete", "invalid"}
+                        or cancellation_completed
                         else None
                     ),
                 )
@@ -1129,6 +1153,42 @@ class ProductionRenderer:
             except Exception:
                 # The top-level guard must never leak an unobserved task exception.
                 return
+        finally:
+            self.processes.pop(job_id, None)
+            current = asyncio.current_task()
+            if self.tasks.get(job_id) is current:
+                self.tasks.pop(job_id, None)
+            try:
+                pending_retry = controller.get_job(job_id)
+                if (
+                    pending_retry.state == JobState.RETRY_REQUESTED
+                    and not process_is_alive(pending_retry.process_id)
+                ):
+                    await controller.restart_retry_current_chunk(job_id)
+            except Exception as exc:
+                try:
+                    await controller.fail_job(
+                        job_id,
+                        StructuredError(
+                            code="retry_current_chunk_restart_failed",
+                            title="Current chunk could not be requeued",
+                            summary=(
+                                "The active chunk attempt stopped safely, but its "
+                                "exact-identity restart did not begin."
+                            ),
+                            likely_cause=type(exc).__name__,
+                            recommended_action=(
+                                "Inspect the saved output and retry the exact current "
+                                "chunk again."
+                            ),
+                            retryable=True,
+                            technical_details=type(exc).__name__,
+                            timestamp=datetime.now(UTC),
+                            job_id=job_id,
+                        ),
+                    )
+                except Exception:
+                    return
 
     async def _run(
         self,
@@ -1160,6 +1220,7 @@ class ProductionRenderer:
                 ),
             )
             return
+        self.processes[job_id] = process
         await controller.update_job(
             job_id,
             process_id=process.pid,
@@ -1269,6 +1330,23 @@ class ProductionRenderer:
                 output_at = datetime.now(UTC)
                 if not telemetry_event_is_new(job, event):
                     continue
+                if event.event_type == "frame_written":
+                    frame_ready = await asyncio.to_thread(
+                        controller.validate_and_prepare_frame_event,
+                        job,
+                        event,
+                    )
+                    if not frame_ready:
+                        await controller.add_log(
+                            job_id,
+                            "warning",
+                            (
+                                "Rejected frame_written telemetry because the exact "
+                                "artifact was not stable, readable, correctly sized, "
+                                "or inside the selected output-variant frame root."
+                            ),
+                        )
+                        continue
                 telemetry_changes = telemetry_progress_changes(job, event, output_at=output_at)
                 if event.event_type == "frame_started":
                     frame_started_at = output_at
@@ -1340,6 +1418,50 @@ class ProductionRenderer:
             watcher_active=False,
             current_frame_started_at=None,
         )
+        if job.state == JobState.RETRY_REQUESTED:
+            if snapshot.disposition in {"resumable", "missing", "paused"}:
+                changes.update(
+                    state=JobState.RETRY_REQUESTED,
+                    completed_at=None,
+                    safe_stop_status=SafeStopStatus.NONE,
+                    error=None,
+                    warning=(
+                        "The isolated current-chunk attempt stopped; Mission "
+                        "Control is requeueing the exact saved chunk identity."
+                    ),
+                )
+                await controller.update_job(job_id, **changes)
+                await controller.add_log(
+                    job_id,
+                    "info",
+                    (
+                        "Current chunk attempt stopped without changing validated "
+                        "prior chunks; exact-identity requeue is starting."
+                    ),
+                )
+                return
+            if snapshot.disposition == "complete":
+                changes.update(
+                    state=JobState.COMPLETE,
+                    phase=JobPhase.FINAL_VERIFY,
+                    completed_at=datetime.now(UTC),
+                    safe_stop_status=SafeStopStatus.NONE,
+                    error=None,
+                    warning=(
+                        "The retry request arrived after the final chunk had already "
+                        "been validated and published; no validated frame was removed."
+                    ),
+                )
+                await controller.update_job(job_id, **changes)
+                await controller.add_log(
+                    job_id,
+                    "warning",
+                    (
+                        "Current-chunk retry was not started because the exact chunk "
+                        "became authoritative before the active attempt stopped."
+                    ),
+                )
+                return
         if exit_code == 0 and snapshot.disposition == "complete":
             changes.update(
                 state=JobState.COMPLETE,
@@ -1357,18 +1479,39 @@ class ProductionRenderer:
             )
             return
         if exit_code == 0 and snapshot.disposition == "paused":
+            cancellation_completed = job.state == JobState.CANCEL_REQUESTED
             changes.update(
-                state=JobState.PAUSED_SAFELY,
+                state=(
+                    JobState.CANCELLED
+                    if cancellation_completed
+                    else JobState.PAUSED_SAFELY
+                ),
                 phase=JobPhase.PUBLISH_CHUNK,
-                safe_stop_status=SafeStopStatus.PAUSED,
+                completed_at=(
+                    datetime.now(UTC) if cancellation_completed else None
+                ),
+                safe_stop_status=(
+                    SafeStopStatus.NONE
+                    if cancellation_completed
+                    else SafeStopStatus.PAUSED
+                ),
                 error=None,
-                warning=None,
+                warning=(
+                    "Render cancelled safely after the active chunk was published."
+                    if cancellation_completed
+                    else None
+                ),
             )
             await controller.update_job(job_id, **changes)
             await controller.add_log(
                 job_id,
                 "info",
-                "Renderer stopped safely after the manifest recorded the published chunk.",
+                (
+                    "Renderer cancelled safely; validated and published frames "
+                    "were preserved."
+                    if cancellation_completed
+                    else "Renderer stopped safely after the manifest recorded the published chunk."
+                ),
             )
             return
         if exit_code == 0:
@@ -1472,6 +1615,85 @@ class ProductionRenderer:
             },
         )
         return request_path
+
+    async def request_retry_current_chunk(self, job: JobRecord) -> None:
+        process = self.processes.get(job.id)
+        task = self.tasks.get(job.id)
+        if (
+            process is None
+            or process.returncode is not None
+            or task is None
+            or task.done()
+            or job.process_id != process.pid
+        ):
+            raise MissionControlError(
+                409,
+                "retry_current_chunk_not_watched",
+                "Current chunk retry is unavailable",
+                (
+                    "Mission Control does not own a live watcher for this exact "
+                    "renderer process."
+                ),
+                (
+                    "Refresh the job; if the renderer already stopped, retry the "
+                    "saved failed chunk instead."
+                ),
+                retryable=True,
+                job_id=job.id,
+            )
+        await self._terminate_current_attempt(process)
+
+    @staticmethod
+    async def _terminate_current_attempt(
+        process: asyncio.subprocess.Process,
+    ) -> None:
+        """Stop one isolated in-flight chunk attempt without touching artifacts."""
+        if process.returncode is not None:
+            return
+        if os.name == "nt":
+            terminator = await asyncio.create_subprocess_exec(
+                "taskkill",
+                "/PID",
+                str(process.pid),
+                "/T",
+                "/F",
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            try:
+                await asyncio.wait_for(terminator.wait(), timeout=15)
+            except TimeoutError as exc:
+                terminator.kill()
+                await terminator.wait()
+                raise MissionControlError(
+                    504,
+                    "retry_current_chunk_stop_timeout",
+                    "Current chunk attempt did not stop",
+                    "The bounded process-tree stop did not finish in time.",
+                    "Refresh render status before retrying this control.",
+                    retryable=True,
+                ) from exc
+        else:
+            try:
+                kill_process_group = getattr(os, "killpg", None)
+                if kill_process_group is None:
+                    process.terminate()
+                else:
+                    kill_process_group(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                return
+        try:
+            await asyncio.wait_for(process.wait(), timeout=15)
+        except TimeoutError as exc:
+            raise MissionControlError(
+                504,
+                "retry_current_chunk_stop_timeout",
+                "Current chunk attempt did not stop",
+                "The isolated renderer process remained active after cancellation.",
+                "Refresh render status before retrying this control.",
+                retryable=True,
+            ) from exc
 
     def cancel_stop(self, job: JobRecord) -> None:
         request_path = (
@@ -1708,16 +1930,48 @@ class FakeRenderer:
             await controller.add_log(job_id, "info", f"Published safe chunk {chunk_start}-{chunk_end}.")
             current = controller.get_job(job_id)
             if current.safe_stop_status == SafeStopStatus.REQUESTED:
+                cancellation_completed = (
+                    current.state == JobState.CANCEL_REQUESTED
+                )
                 await controller.update_job(
                     job_id,
-                    state=JobState.PAUSED_SAFELY,
-                    safe_stop_status=SafeStopStatus.PAUSED,
-                    latest_log_line="Stopped safely after the current chunk",
+                    state=(
+                        JobState.CANCELLED
+                        if cancellation_completed
+                        else JobState.PAUSED_SAFELY
+                    ),
+                    completed_at=(
+                        datetime.now(UTC) if cancellation_completed else None
+                    ),
+                    safe_stop_status=(
+                        SafeStopStatus.NONE
+                        if cancellation_completed
+                        else SafeStopStatus.PAUSED
+                    ),
+                    latest_log_line=(
+                        "Cancelled safely after the current chunk"
+                        if cancellation_completed
+                        else "Stopped safely after the current chunk"
+                    ),
+                    warning=(
+                        "Render cancelled safely; validated and published frames were preserved."
+                        if cancellation_completed
+                        else None
+                    ),
                     renderer_active=False,
                     watcher_active=False,
                     current_frame_started_at=None,
                 )
-                await controller.add_log(job_id, "info", "Stopped safely after the current chunk.")
+                await controller.add_log(
+                    job_id,
+                    "info",
+                    (
+                        "Fake renderer cancelled safely; validated and published "
+                        "frames were preserved."
+                        if cancellation_completed
+                        else "Stopped safely after the current chunk."
+                    ),
+                )
                 return
         await controller.update_job(
             job_id,
@@ -1760,3 +2014,17 @@ class FakeRenderer:
                 "Resume the render if more frames remain.",
                 job_id=job.id,
             )
+
+    async def request_retry_current_chunk(self, job: JobRecord) -> None:
+        task = self.tasks.get(job.id)
+        if task is None or task.done():
+            raise MissionControlError(
+                409,
+                "render_not_running",
+                "Render is not running",
+                "There is no active fake chunk attempt to retry.",
+                "Refresh the job and retry its saved failed chunk if available.",
+                job_id=job.id,
+            )
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)

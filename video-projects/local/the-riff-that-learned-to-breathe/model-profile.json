@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "selectionRationale": "Use keyframe-led image-to-video for character and prop continuity. Wan2.2-I2V-A14B is the quality target; a one-time local qualification chooses the highest quantization that completes safely. Wan2.2-TI2V-5B is the reliable fallback.",
+  "video": {
+    "primary": {
+      "family": "Wan2.2",
+      "model": "Wan2.2-I2V-A14B",
+      "runtime": "ComfyUI local API",
+      "weightFormat": "GGUF through ComfyUI-GGUF or another documented compatible loader",
+      "quantizationCandidatesInOrder": [
+        "Q5_K_M",
+        "Q4_K_M"
+      ],
+      "generation": {
+        "width": 1024,
+        "height": 576,
+        "lengthFrames": 81,
+        "fps": 16,
+        "durationSeconds": 5.0625,
+        "stepsCandidate": 24,
+        "samplerCandidate": "euler",
+        "schedulerCandidate": "simple",
+        "cfgCandidate": 3.5,
+        "expertBoundaryCandidate": 0.875,
+        "notes": "Import the current official ComfyUI Wan2.2 14B I2V workflow and map these as tunable starting values; do not assume stale node IDs."
+      }
+    },
+    "fallback": {
+      "family": "Wan2.2",
+      "model": "Wan2.2-TI2V-5B",
+      "runtime": "ComfyUI native workflow",
+      "weightFormat": "official safetensors/ComfyUI-supported format",
+      "generation": {
+        "width": 1024,
+        "height": 576,
+        "lengthFrames": 81,
+        "fps": 16,
+        "durationSeconds": 5.0625
+      }
+    },
+    "preview": {
+      "mode": "current official or documented four-step acceleration workflow",
+      "purpose": "hardware qualification, prompt smoke tests, and UI preview only",
+      "finalUse": false
+    }
+  },
+  "keyframe": {
+    "preferred": {
+      "model": "FLUX.1-schnell",
+      "runtime": "ComfyUI local API",
+      "precision": "FP8 or documented low-memory quantization",
+      "width": 1024,
+      "height": 576,
+      "steps": 4,
+      "license": "Apache-2.0",
+      "accessNote": "Official weights may require a one-time model access acceptance; never use an unverified mirror."
+    },
+    "fallback": {
+      "model": "Stable Diffusion XL 1.0 base",
+      "runtime": "ComfyUI local API",
+      "width": 1024,
+      "height": 576,
+      "license": "CreativeML Open RAIL++-M"
+    },
+    "optionalAnimeLoraPolicy": "disabled by default; enable only after recording source, checksum, and license that permits the intended release"
+  },
+  "post": {
+    "frameInterpolation": {
+      "targetFps": 24,
+      "preferredFamily": "RIFE or repository-approved equivalent"
+    },
+    "upscale": {
+      "preferredFamily": "Real-ESRGAN anime video model or repository-approved equivalent",
+      "workingScale": "2x to at least 2048x1152",
+      "delivery": "high-quality downscale/crop to exact 1920x1080"
+    },
+    "grain": "subtle, consistent final-pass grain after upscale; never use grain to conceal broken frames"
+  },
+  "modelSafety": {
+    "noSilentDownloads": true,
+    "recordLicenses": true,
+    "recordHashes": true,
+    "recordExactVersions": true,
+    "noNamedArtistOrStudioImitation": true
+  }
+}

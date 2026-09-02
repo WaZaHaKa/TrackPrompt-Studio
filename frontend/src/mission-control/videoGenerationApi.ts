@@ -32,6 +32,10 @@ export interface VideoAnalysisSource {
   storyPlanAvailable: boolean
   shotPlanAvailable: boolean
   retainedAudioAvailable: boolean
+  createdAt: string | null
+  durationSeconds: number | null
+  archived: boolean
+  archiveHealth: string
 }
 
 export interface VideoProfile {
@@ -120,7 +124,15 @@ export interface VideoAudioSelection {
   analysisJobId: string | null
   boundVideoJobId: string | null
   selectedAt: string | null
-  error: { code: string; message: string } | null
+  error: {
+    code: string
+    message: string
+    expectedHashPrefix: string | null
+    selectedHashPrefix: string | null
+    expectedDurationSeconds: number | null
+    selectedDurationSeconds: number | null
+    confirmationPhrase: string | null
+  } | null
 }
 
 export interface VideoJob {
@@ -143,6 +155,14 @@ export interface VideoJob {
   authorizationExpiresAt: string | null
   audioMasterBound: boolean
   audio: VideoAudioSelection
+  analysisDependency: {
+    sourceState: 'snapshotted' | 'archived-analysis' | 'live-analysis' | 'legacy-analysis-missing'
+    manifestReady: boolean
+    storyPlanAvailable: boolean
+    shotPlanAvailable: boolean
+    legacyAnalysisMissing: boolean
+    warning: string | null
+  }
   localEditDigest: string | null
   shots: VideoShot[]
   progressPercent: number
@@ -227,7 +247,15 @@ export function parseVideoAudioSelection(value: unknown): VideoAudioSelection {
     ? null
     : (() => {
         const error = record(rawError, 'audio error')
-        return { code: text(error.code, 'audio error code'), message: text(error.message, 'audio error message') }
+        return {
+          code: text(error.code, 'audio error code'),
+          message: text(error.message, 'audio error message'),
+          expectedHashPrefix: typeof error.expectedHashPrefix === 'string' ? error.expectedHashPrefix : null,
+          selectedHashPrefix: typeof error.selectedHashPrefix === 'string' ? error.selectedHashPrefix : null,
+          expectedDurationSeconds: typeof error.expectedDurationSeconds === 'number' ? error.expectedDurationSeconds : null,
+          selectedDurationSeconds: typeof error.selectedDurationSeconds === 'number' ? error.selectedDurationSeconds : null,
+          confirmationPhrase: typeof error.confirmationPhrase === 'string' ? error.confirmationPhrase : null,
+        }
       })()
   if (selected !== verified) throw new Error('selected audio must also be verified')
   return {
@@ -292,6 +320,10 @@ export function parseVideoCatalog(value: unknown): VideoCatalog {
         storyPlanAvailable: booleanValue(source.storyPlanAvailable, 'storyPlanAvailable'),
         shotPlanAvailable: booleanValue(source.shotPlanAvailable, 'shotPlanAvailable'),
         retainedAudioAvailable: booleanValue(source.retainedAudioAvailable, 'retainedAudioAvailable'),
+        createdAt: typeof source.createdAt === 'string' ? source.createdAt : null,
+        durationSeconds: typeof source.durationSeconds === 'number' ? source.durationSeconds : null,
+        archived: typeof source.archived === 'boolean' ? source.archived : false,
+        archiveHealth: typeof source.archiveHealth === 'string' ? source.archiveHealth : 'legacy-live',
       }
     }),
     packages: array(item.packages, 'video catalog packages').map((raw, packageIndex) => {
@@ -331,6 +363,13 @@ export function parseVideoJob(value: unknown): VideoJob {
   const item = record(value, 'video job')
   const cost = record(item.cost, 'video job cost')
   const artifacts = record(item.artifacts, 'video job artifacts')
+  const dependency = item.analysisDependency === undefined
+    ? {
+        sourceState: 'legacy-analysis-missing', manifestReady: false,
+        storyPlanAvailable: false, shotPlanAvailable: false,
+        legacyAnalysisMissing: true, warning: null,
+      }
+    : record(item.analysisDependency, 'analysis dependency')
   const sourceArtifacts = record(item.sourceArtifacts, 'source artifacts')
   return {
     jobId: text(item.jobId, 'jobId'),
@@ -352,6 +391,18 @@ export function parseVideoJob(value: unknown): VideoJob {
     authorizationExpiresAt: nullableText(item.authorizationExpiresAt, 'authorizationExpiresAt'),
     audioMasterBound: booleanValue(item.audioMasterBound, 'audioMasterBound'),
     audio: parseVideoAudioSelection(item.audio),
+    analysisDependency: {
+      sourceState: enumValue(
+        dependency.sourceState,
+        ['snapshotted', 'archived-analysis', 'live-analysis', 'legacy-analysis-missing'] as const,
+        'analysis dependency source state',
+      ),
+      manifestReady: booleanValue(dependency.manifestReady, 'analysis dependency manifest ready'),
+      storyPlanAvailable: booleanValue(dependency.storyPlanAvailable, 'analysis dependency StoryPlan available'),
+      shotPlanAvailable: booleanValue(dependency.shotPlanAvailable, 'analysis dependency ShotPlan available'),
+      legacyAnalysisMissing: booleanValue(dependency.legacyAnalysisMissing, 'legacy analysis missing'),
+      warning: nullableText(dependency.warning, 'analysis dependency warning'),
+    },
     localEditDigest: nullableText(item.localEditDigest, 'localEditDigest'),
     shots: array(item.shots, 'shots').map((raw, index) => {
       const shot = record(raw, `shot ${index}`)
@@ -433,9 +484,15 @@ const post = (path: string, body?: unknown): Promise<unknown> => request(path, {
 })
 
 export const videoGenerationClient = {
-  async selectAudio(jobId: string, initialDirectory: string | null = null): Promise<VideoAudioSelection> {
+  async selectAudio(
+    jobId: string,
+    initialDirectory: string | null = null,
+    revision?: { confirmation: string },
+  ): Promise<VideoAudioSelection> {
     return parseVideoAudioSelection(await post(`/video/jobs/${encodeURIComponent(jobId)}/audio/select`, {
       initialDirectory,
+      acceptLocalDeliveryRevision: revision !== undefined,
+      confirmation: revision?.confirmation ?? null,
     }))
   },
   async useRetainedAudio(jobId: string): Promise<VideoAudioSelection> {
@@ -487,6 +544,9 @@ export const videoGenerationClient = {
   },
   async action(jobId: string, action: 'start' | 'resume' | 'cancel' | 'resolve' | 'export' | 'assemble'): Promise<VideoJob> {
     return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/${action}`))
+  },
+  async repairLegacyDependency(jobId: string): Promise<VideoJob> {
+    return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/repair-legacy-dependency`))
   },
   async retry(jobId: string, shotId: string, mode: 'same_setup' | 'new_variation'): Promise<VideoJob> {
     return parseVideoJob(await post(`/video/jobs/${encodeURIComponent(jobId)}/shots/${encodeURIComponent(shotId)}/retry`, { mode }))

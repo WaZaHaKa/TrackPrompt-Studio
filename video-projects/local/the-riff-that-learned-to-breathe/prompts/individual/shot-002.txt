@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-002 — Send
+Provisional timing: 8.000–17.000 s
+Seed: 24081002
+
+NARRATIVE INTENT
+Turn the original riff into a message traveling from one collaborator to the other.
+
+KEYFRAME PROMPT
+The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos releases the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged into a circular brass-and-glass conduit in the workshop wall. The bird hovers at the threshold, amber heart bright against a tunnel formed from curved cables and floating measure-like bars without any written symbols. Warm light falls behind it; the tunnel ahead shifts toward rain blue. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The bird launches forward and the camera follows directly behind through a spiraling cable tunnel. Metal ribs flex like wings, amber reflections streak along the curved walls, and the warm workshop light falls away into cool blue. Keep a smooth forward chase with no cuts and end as the tunnel becomes a round window.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+origami-bird-core, warm-workshop, travel-conduit
+
+TRANSITION IN
+dark-feather wipe from shot-001
+
+TRANSITION OUT
+match the circular conduit to a rain-covered circular window
+
+ACCEPTANCE NOTES
+- Forward direction must remain consistent.
+- The bird cannot change size, shape, or heart position.

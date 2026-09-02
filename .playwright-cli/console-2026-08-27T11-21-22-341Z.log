@@ -1,0 +1,2 @@
+[      22ms] [ERROR] The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element. @ http://127.0.0.1:57588/index.html?token=1Bdw-0b9wUMHhDD2m4sj3c4fFKzMK-fetcBRoqlKETA&sessionJobId=5c325734-f4d7-4981-a225-763cb58d33ca:7
+[      57ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:57588/favicon.ico:0

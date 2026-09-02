@@ -1,0 +1,60 @@
+video-projects/local/the-riff-that-learned-to-breathe/
+├── README.md
+├── CODEX_IMPLEMENTATION_PROMPT.md
+├── project-config.json
+├── creative-bible.json
+├── continuity-profile.json
+├── chapter-map.json
+├── shot-bank.json
+├── edit-blueprint.json
+├── render-plan.json
+├── model-profile.json
+├── hardware-policy.json
+├── rights-and-credits.json
+├── persistent-analysis-policy.json
+├── audio/
+│   └── track.wav | track.flac | track.mp3
+├── references/
+│   ├── architect-reference.png
+│   ├── listener-reference.png
+│   └── origami-bird-reference.png
+└── outputs/
+    ├── analysis/
+    │   ├── audio-analysis.json
+    │   ├── beat-markers.csv
+    │   ├── section-map.json
+    │   └── archive-revision.json
+    ├── references/
+    │   ├── architect-reference.png
+    │   ├── listener-reference.png
+    │   ├── origami-bird-reference.png
+    │   └── contact-sheet.jpg
+    ├── keyframes/
+    │   ├── shot-001.png ... shot-016.png
+    │   └── keyframe-manifest.json
+    ├── raw-video/
+    │   ├── shot-001/frames/ ... shot-016/frames/
+    │   ├── shot-001-preview.mp4 ... shot-016-preview.mp4
+    │   └── generation-manifest.json
+    ├── scene-masters/
+    │   ├── shot-001-1080p24.mov ... shot-016-1080p24.mov
+    │   └── scene-qc.json
+    ├── edit/
+    │   ├── resolve.fcpxml
+    │   ├── resolve-fcp7.xml
+    │   ├── timeline.edl
+    │   ├── markers.csv
+    │   └── edit-sheet.csv
+    ├── review/
+    │   ├── contact-sheet.jpg
+    │   └── thumbnail-candidates/
+    ├── manifests/
+    │   ├── model-lock.json
+    │   ├── prompt-seed-manifest.json
+    │   ├── final-render-manifest.json
+    │   └── qc-report.json
+    └── final/
+        ├── youtube-1080p24.mp4
+        └── master-audio-preserved.mkv
+
+Runtime outputs may live under `.trackprompt-data/video-generation/the-riff-that-learned-to-breathe` and be linked or copied into the project output view. Raw model weights and private audio must never be committed.

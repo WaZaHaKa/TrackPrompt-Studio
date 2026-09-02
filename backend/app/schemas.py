@@ -170,8 +170,31 @@ class ModeCapability(APIModel):
 class LimitsCapability(APIModel):
     max_upload_mb: int
     max_duration_seconds: int
-    job_ttl_minutes: int
     max_pending_jobs: int
+    max_single_track_analysis_seconds: int = 1_200
+    max_longform_duration_seconds: int = 43_200
+    max_source_upload_bytes: int = 0
+    upload_chunk_bytes: int = 32 * 1024 * 1024
+    max_active_uploads: int = 3
+    max_active_analyses: int = 1
+    max_active_gpu_tasks: int = 1
+    longform_scan_timeout_seconds: int = 7_200
+    minimum_free_disk_bytes: int = 0
+
+
+class CatalogueCapability(APIModel):
+    available: bool = True
+    catalogue_schema_version: str = "1.0.0"
+    audit_schema_version: str = "1.0.0"
+    segment_schema_version: str = "1.0.0"
+    report_schema_version: str = "1.0.0"
+    auto_segmentation_available: bool = True
+    supported_retention_policies: list[str] = Field(
+        default_factory=lambda: ["temporary", "archive", "custom"]
+    )
+    free_storage_bytes: int
+    archive_storage_used_bytes: int
+    archive_quota_bytes: int
 
 
 class CapabilitiesResponse(APIModel):
@@ -180,6 +203,7 @@ class CapabilitiesResponse(APIModel):
     ffmpeg: FFmpegCapability
     ffprobe: FFmpegCapability
     limits: LimitsCapability
+    catalogue: CatalogueCapability | None = None
     optional_analyzers: list[OptionalAnalyzerCapability] = Field(default_factory=list)
     genre_tagger: ModelAdapterCapability | None = None
     lyrics_adapter: ModelAdapterCapability | None = None
@@ -195,6 +219,8 @@ class CapabilitiesResponse(APIModel):
     )
     blender_visualizer_config_schema_version: str = BLENDER_VISUALIZER_CONFIG_SCHEMA_VERSION
     network_features_enabled: bool = False
+    retention_policy: Literal["explicit-delete-only"] = "explicit-delete-only"
+    automatic_analysis_deletion_enabled: Literal[False] = False
 
 
 class HealthResponse(APIModel):
@@ -549,6 +575,20 @@ class DeepDiagnostics(APIModel):
     stem_relative_rms: dict[str, float] = Field(default_factory=dict)
 
 
+class SourceRange(APIModel):
+    source_asset_id: str
+    segment_id: str
+    start_seconds: float
+    end_seconds: float
+    stable_core_start_seconds: float
+    stable_core_end_seconds: float
+    transition_in_start_seconds: float | None = None
+    transition_in_end_seconds: float | None = None
+    transition_out_start_seconds: float | None = None
+    transition_out_end_seconds: float | None = None
+    analysis_used_stable_core: bool = True
+
+
 class AnalysisResult(APIModel):
     schema_version: str = "1.4.0"
     analysis_version: str = "0.5.0"
@@ -571,6 +611,7 @@ class AnalysisResult(APIModel):
     genre_analysis: GenreAnalysis | None = None
     lyrics_summary: LyricsAnalysisSummary | None = None
     deep_diagnostics: DeepDiagnostics | None = None
+    source_range: SourceRange | None = None
     warnings: list[str] = Field(default_factory=list)
     analyzer_versions: dict[str, str] = Field(default_factory=dict)
     disabled_feature_paths: list[str] = Field(default_factory=list)
@@ -614,6 +655,34 @@ class JobResponse(APIModel):
     error: ErrorDetail | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class AnalysisCatalogueItem(APIModel):
+    analysis_id: str
+    display_name: str
+    status: str
+    retention_policy: Literal["persistent"] = "persistent"
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None = None
+    duration_seconds: float | None = Field(default=None, gt=0)
+    analysis_schema_version: str | None = None
+    archive_health: str
+    retained_audio_available: bool
+    analysis_available: bool
+    story_plan_available: bool
+    shot_plan_available: bool
+    dependent_video_job_count: int = Field(ge=0)
+    explicit_delete_eligible: bool
+    legacy_missing: bool
+    deleted_at: datetime | None = None
+
+
+class AnalysisCataloguePage(APIModel):
+    items: list[AnalysisCatalogueItem]
+    total: int = Field(ge=0)
+    offset: int = Field(ge=0)
+    limit: int = Field(ge=1, le=200)
 
 
 class JobEvent(APIModel):

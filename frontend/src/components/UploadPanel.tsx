@@ -251,7 +251,7 @@ export function UploadPanel({
 
         <label className="permission-check">
           <input type="checkbox" checked={permissionConfirmed} onChange={(event) => setPermissionConfirmed(event.target.checked)} />
-          <span><strong>I have permission to analyze this audio.</strong><small>The file stays in this local application and expires automatically after {capabilities.limits.jobTtlMinutes} minutes.</small></span>
+          <span><strong>I have permission to analyze this audio.</strong><small>The file stays in this local application and is retained persistently until you explicitly delete it.</small></span>
         </label>
 
         <Button

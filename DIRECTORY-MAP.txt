@@ -1,0 +1,118 @@
+TRACKPROMPT GCP VIDEO FAST LANE STARTER v0.1.0
+TARGET ROOT: C:\Users\theon\GitHub\TrackPrompt-Studio
+ARCHIVE LAYOUT: root-aligned; extract directly into the repository root
+
+PRIMARY ENTRY POINTS
+  START-HERE-GCP-VIDEO-FASTLANE.md      human quick start
+  CODEX-GCP-VIDEO-FASTLANE-PROMPT.md   complete initial Codex task
+  tools\VERIFY-GCP-VIDEO-FASTLANE.ps1 offline verification
+  tools\SETUP-GCP-VIDEO-FASTLANE.ps1  bounded GCP setup preview/apply
+  tools\RUN-GCP-VIDEO-FASTLANE.ps1    prepare/generate/resume/export workflow
+
+FUNCTIONAL AREAS
+  backend/app/video_generation/         provider-neutral implementation starter
+  backend/tests/video_generation/       focused offline regression tests
+  schemas/                              versioned JSON contracts
+  config/                               example provider/Mission Control mappings
+  docs/                                 architecture, API, privacy, GCP, Resolve, runbook
+  video-projects/_template/             track-agnostic new-project template
+  video-projects/the-glitch-is-me/      complete first 16-shot content package
+
+COMPLETE INTENDED FILE TREE
+  .gitignore.gcp-video-fastlane.snippet
+  backend\app\video_generation\__init__.py
+  backend\app\video_generation\assembly.py
+  backend\app\video_generation\authorization.py
+  backend\app\video_generation\cli.py
+  backend\app\video_generation\contracts.py
+  backend\app\video_generation\costs.py
+  backend\app\video_generation\davinci.py
+  backend\app\video_generation\exporter.py
+  backend\app\video_generation\gcp_veo.py
+  backend\app\video_generation\jsonio.py
+  backend\app\video_generation\media.py
+  backend\app\video_generation\operations.py
+  backend\app\video_generation\planning.py
+  backend\app\video_generation\prompting.py
+  backend\app\video_generation\timeline.py
+  backend\tests\video_generation\__init__.py
+  backend\tests\video_generation\test_video_generation_fastlane.py
+  CODEX-GCP-VIDEO-FASTLANE-PROMPT.md
+  config\gcp-video-fastlane.example.json
+  config\mission-control-video-task-types.json
+  DIRECTORY-MAP.txt
+  docs\davinci-video-fastlane-handoff.md
+  docs\gcp-video-fastlane-api-contract.md
+  docs\gcp-video-fastlane-architecture.md
+  docs\gcp-video-fastlane-gcp.md
+  docs\gcp-video-fastlane-integration-checklist.md
+  docs\gcp-video-fastlane-privacy.md
+  docs\gcp-video-fastlane-runbook.md
+  INSTALLATION.txt
+  PACKAGE-MANIFEST.json
+  README-GCP-VIDEO-FASTLANE-STARTER.md
+  schemas\batch-authorization.schema.json
+  schemas\chapter-map.schema.json
+  schemas\compiled-video-plan.schema.json
+  schemas\creative-bible.schema.json
+  schemas\resolved-timeline.schema.json
+  schemas\shot-bank.schema.json
+  schemas\video-operation.schema.json
+  schemas\video-project.schema.json
+  START-HERE-GCP-VIDEO-FASTLANE.md
+  tools\RUN-GCP-VIDEO-FASTLANE.ps1
+  tools\SETUP-GCP-VIDEO-FASTLANE.ps1
+  tools\validate_gcp_video_fastlane_bundle.py
+  tools\VERIFY-GCP-VIDEO-FASTLANE.cmd
+  tools\VERIFY-GCP-VIDEO-FASTLANE.ps1
+  VALIDATION-REPORT.md
+  video-projects\_template\chapter-map.template.json
+  video-projects\_template\creative-bible.template.json
+  video-projects\_template\project-config.template.json
+  video-projects\_template\README.md
+  video-projects\_template\shot-bank.template.json
+  video-projects\the-glitch-is-me\chapter-map.json
+  video-projects\the-glitch-is-me\compiled-plan.example.json
+  video-projects\the-glitch-is-me\creative-bible.json
+  video-projects\the-glitch-is-me\edit-blueprint.json
+  video-projects\the-glitch-is-me\expected-output-tree.txt
+  video-projects\the-glitch-is-me\project-config.4k-optional.json
+  video-projects\the-glitch-is-me\project-config.json
+  video-projects\the-glitch-is-me\project-config.quality-1080p.json
+  video-projects\the-glitch-is-me\project-config.smoke.json
+  video-projects\the-glitch-is-me\prompts\shot-001-suspended-droplet-in-the-digital-ocean.txt
+  video-projects\the-glitch-is-me\prompts\shot-002-the-siren-materializes.txt
+  video-projects\the-glitch-is-me\prompts\shot-003-cold-flickering-room.txt
+  video-projects\the-glitch-is-me\prompts\shot-004-impossible-smile-reconstruction.txt
+  video-projects\the-glitch-is-me\prompts\shot-005-the-distance-equation.txt
+  video-projects\the-glitch-is-me\prompts\shot-006-house-made-of-bone.txt
+  video-projects\the-glitch-is-me\prompts\shot-007-mirror-without-a-face.txt
+  video-projects\the-glitch-is-me\prompts\shot-008-distant-crowd-through-blue-glass.txt
+  video-projects\the-glitch-is-me\prompts\shot-009-cold-hand-and-broken-microphone.txt
+  video-projects\the-glitch-is-me\prompts\shot-010-time-splits-out-of-sync.txt
+  video-projects\the-glitch-is-me\prompts\shot-011-liquid-guitar-filaments.txt
+  video-projects\the-glitch-is-me\prompts\shot-012-satellite-pulse-behind-the-mind.txt
+  video-projects\the-glitch-is-me\prompts\shot-013-siren-breaks-through-the-machine.txt
+  video-projects\the-glitch-is-me\prompts\shot-014-the-equation-dissolves-into-stars.txt
+  video-projects\the-glitch-is-me\prompts\shot-015-world-dissolves-into-reverb.txt
+  video-projects\the-glitch-is-me\prompts\shot-016-the-pixelated-brink.txt
+  video-projects\the-glitch-is-me\provider-request-examples\shot-001.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-002.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-003.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-004.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-005.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-006.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-007.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-008.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-009.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-010.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-011.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-012.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-013.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-014.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-015.request.json
+  video-projects\the-glitch-is-me\provider-request-examples\shot-016.request.json
+  video-projects\the-glitch-is-me\shot-bank.json
+  video-projects\the-glitch-is-me\SHOT-LIST.md
+
+NOTE: PACKAGE-MANIFEST.json intentionally omits its own SHA-256 entry; it hash-binds every other packaged file.

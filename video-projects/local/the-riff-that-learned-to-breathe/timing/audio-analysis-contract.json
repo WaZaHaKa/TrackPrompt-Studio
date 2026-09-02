@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "requiredAnalysisFields": [
+    "audioContentHash",
+    "durationSeconds",
+    "sampleRate",
+    "channels",
+    "tempoCandidates",
+    "beatTimes",
+    "downbeatTimes",
+    "onsetTimes",
+    "energyEnvelope",
+    "sectionBoundaries",
+    "phraseBoundaries"
+  ],
+  "optionalFields": [
+    "keyEstimate",
+    "spectralCentroidEnvelope",
+    "lowFrequencyEnergy",
+    "stemEnergySummaries"
+  ],
+  "forbiddenOutboundData": [
+    "raw audio",
+    "source filename",
+    "local path",
+    "embedded metadata",
+    "exact melody transcription"
+  ],
+  "persistence": {
+    "archive": true,
+    "catalogByContentHash": true,
+    "immutableVersionSnapshots": true,
+    "ttlDeletion": false,
+    "deletionTrigger": "explicit project deletion only"
+  }
+}

@@ -61,9 +61,13 @@ not a crop, stretch, or reframe of the horizontal master.
 Enabling vertical is a pre-production configuration decision. It adds another
 13,029-frame render/encode/QA stream, disk requirement, calibration, and ETA.
 It therefore requires a new aggregate 24-hour forecast, technical
-authorization, and operator-start gate. The current Andromeda wrapper's
-`-EnableVertical` option deliberately fails closed until those artifacts exist.
-Never toggle the matrix after authorization or after a job starts.
+authorization, and separate local operator-start artifact. The Andromeda
+wrapper permits `Inspect -EnableVertical` and `Preflight -EnableVertical`
+without starting work. `StartOrResume -EnableVertical` fails before either
+variant starts unless the separately authored dual-matrix calibration,
+technical authorization, operator artifact, and both scene/profile tokens are
+supplied and agree. Never toggle the matrix after authorization or after a job
+starts.
 
 ## Follow progress
 
@@ -86,13 +90,27 @@ During a long frame the heartbeat continues with current-frame elapsed time and
 renderer status. **Reconnecting** means the browser is restoring its stream;
 the last known state stays visible and the render is not restarted.
 
-Choose **Request stop after current chunk** for a recoverable stop. The renderer
+Choose **Stop after current chunk** for a recoverable stop. The renderer
 finishes, validates, and publishes that chunk before pausing. You may cancel the
 request before it is honored. A safely paused job appears under Jobs with
-**Resume**. Destructive **Cancel render** and targeted **Retry failed chunk**
-remain disabled because the current backend exposes neither operation. Use safe
-stop and exact resume; do not kill Blender, delete locks/in-flight directories,
-or remove successful frames to simulate those actions.
+**Resume**. **Cancel render** is a separate terminal action for an active job:
+after you confirm the exact saved scene/profile identity, it finishes,
+validates, and publishes the active chunk, then records the job as cancelled.
+It preserves valid output and job history; it does not delete frames.
+
+**Retry current chunk** is available while Mission Control is watching an
+active chunk with exact bounds. After confirmation it stops only that isolated
+in-flight attempt, keeps every previously validated chunk, and requeues the
+same saved chunk, scene, profile, and output-variant identity. A pending retry
+survives a Mission Control restart as safely resumable state.
+
+**Retry failed chunk** becomes available only after a retryable render failure.
+It confirms the exact original identity and authorization, preserves the saved
+failure/retry history and valid published frames, then fills only missing or
+invalid work. Do not kill Blender, delete locks/in-flight directories, or
+remove successful frames to simulate stop, cancel, resume, or retry. The
+earlier user-requested removal of V1 output was a separate manual cleanup, not
+Mission Control cancel behavior.
 
 ## Encode and open the result
 
@@ -132,7 +150,7 @@ now** is available when manual recovery is needed.
 
 The **Video** page turns one completed TrackPrompt analysis into a complete provider-generated music video without creating a second dashboard or job system.
 
-Select the analysis, content package, and delivery profile. Fast 1080p is the default final target and standard 1080p is the optional higher-quality rerender. The 4K profile remains visible but unavailable because the current GA Veo endpoints accept only 720p/1080p; enabling 4K requires a newly reviewed supported model contract. Enter the GCP project and private bucket, then select the original local audio master when the analysis job does not retain it.
+Select the analysis, content package, and delivery profile. Fast 1080p is the default final target and standard 1080p is the optional higher-quality rerender. The 4K profile remains visible but unavailable because the current GA Veo endpoints accept only 720p/1080p; enabling 4K requires a newly reviewed supported model contract. Enter the GCP project and private bucket. Audio is bound later to the saved job as a private local finishing input and never enters the paid provider plan.
 
 The Video screen also exposes the provider-neutral continuity profile, a master seed lock/new-seed control, continuity groups, and an optional private JPEG/PNG first-frame reference. Same-setup retry preserves seed and references. New-variation retry changes the seed and plan digest and therefore returns to plan review for a new authorization phrase. After accepting a verified shot, its final frame can be chained to its declared next shot; that reference change also requires fresh authorization.
 
@@ -140,7 +158,9 @@ The Video screen also exposes the provider-neutral continuity profile, a master 
 
 Mission Control runs shot 001 first using the same exact profile and plan. When that clip downloads and passes local resolution/FPS/duration/no-audio verification, it continues the remaining shots automatically. Per-shot cards show attempts, safe failures and filters, previews, accept/reject, and bounded retry. **Cancel batch safely** stops continuation without deleting evidence or valid clips.
 
-When generation is technically complete, Mission Control resolves the full-song timeline against the original local audio, exports FCPXML/XML/EDL/edit-sheet/marker files, and assembles a complete preview. Open the output in DaVinci Resolve for final artistic touches. Refreshing the browser only reconnects to backend-owned SSE state; it never restarts or duplicates a provider attempt.
+When generation is technically complete, bind the master using **Use retained analysis audio** or **Browse for audio…**. Mission Control verifies the media with ffprobe, displays filename, duration, sample rate, channels, source, verification, and hash, then persists an immutable private artifact. It creates a derived 48 kHz stereo WAV only when required. Replace or clear affects only local finishing output and never deletes the original.
+
+Mission Control then resolves the exact audio-clock rough cut, exports FCPXML/XML/EDL/edit-sheet/marker/relink/verification files, renders one replaceable derived media file per edit event, and assembles a complete preview. Open the output in DaVinci Resolve for final artistic touches. Refreshing the browser only reconnects to backend-owned SSE state; it never restarts or duplicates a provider attempt.
 
 ## Cloud rendering
 

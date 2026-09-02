@@ -1,0 +1,72 @@
+{
+  "$id": "https://wzhk.local/schemas/chapter-map.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bindingMode": {
+      "type": "string"
+    },
+    "chapters": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "chapterId": {
+            "type": "string"
+          },
+          "endFraction": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "shotIds": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "startFraction": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "transitionIn": {
+            "type": "string"
+          },
+          "transitionOut": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chapterId",
+          "title",
+          "startFraction",
+          "endFraction",
+          "shotIds",
+          "transitionIn",
+          "transitionOut"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "bindingMode",
+    "chapters"
+  ],
+  "title": "TrackPrompt normalized chapter map",
+  "type": "object"
+}

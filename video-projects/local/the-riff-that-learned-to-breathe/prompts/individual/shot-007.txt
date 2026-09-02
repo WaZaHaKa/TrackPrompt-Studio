@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-007 — New Drums
+Provisional timing: 53.000–62.000 s
+Seed: 24081007
+
+NARRATIVE INTENT
+Build the downtempo beat from the room itself and make the new groove feel handmade.
+
+KEYFRAME PROMPT
+The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos sits beside the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged on the desk. A rain droplet above a puddle, the ceramic cup, a loose pencil, a hanging fabric panel, and the tape reel form a visual percussion circle. Soft amber rings connect them without symbols; the hybrid bird watches. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+A calm lateral camera move follows a repeating chain: rain drop touches puddle, cup gives a tiny resonant hop, pencil taps once, fabric sways, tape reel turns, and the bird nods to the new downtempo pulse. Keep every motion subtle, synchronized, and continuous, ending on a widening water ripple.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+listener-identity, origami-bird-hybrid, rain-room, amber-rhythm-rings
+
+TRANSITION IN
+paper fibers become rain streaks
+
+TRANSITION OUT
+the widening puddle ripple becomes a circular night sky
+
+ACCEPTANCE NOTES
+- Objects move minimally and rhythmically.
+- No visible brand names, letters, or DAW interface.

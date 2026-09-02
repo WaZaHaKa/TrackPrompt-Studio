@@ -20,6 +20,8 @@ export type RenderState =
   | 'starting'
   | 'running'
   | 'stop_requested'
+  | 'retry_requested'
+  | 'cancel_requested'
   | 'finishing_current_chunk'
   | 'paused_safely'
   | 'resumable'
@@ -107,6 +109,8 @@ export interface SceneSummary {
 
 export interface RenderProfileSummary {
   id: string
+  projectId: string
+  sceneId: string
   displayName: string
   width: number
   height: number
@@ -124,6 +128,16 @@ export interface RenderProfileSummary {
   lastUsedAt: string | null
   savedFileSha256: string | null
   path: string | null
+  outputVariants: Array<{
+    id: string
+    enabledByDefault: boolean
+    required: boolean
+    width: number
+    height: number
+    fps: number
+    deliverableRole: string
+    compositionProfileId: string
+  }>
 }
 
 export interface OutputConflictIdentity {
@@ -182,6 +196,7 @@ export interface AuthorizationReview {
   totalFrames: number
   storageGiB: number | null
   exactOperation: string
+  enabledOutputVariantIds: string[]
 }
 
 export interface AuthorizationResult {
@@ -191,6 +206,7 @@ export interface AuthorizationResult {
   sceneSha256: string | null
   profileSha256: string | null
   token: string | null
+  enabledOutputVariantIds: string[]
 }
 
 export interface StructuredError {
@@ -537,6 +553,7 @@ export interface EncodeCandidate {
   frameCount: number
   totalFrames: number
   verified: boolean
+  outputKinds: Array<'delivery' | 'master'>
   videoOutputPath: string | null
   audioMuxAvailable: boolean
 }
@@ -578,6 +595,7 @@ export interface RenderSelection {
   sceneId: string
   profileId: string
   outputPath: string
+  enabledOutputVariantIds: string[]
 }
 
 export interface StartRenderRequest extends RenderSelection {
@@ -637,10 +655,17 @@ export interface MissionControlClient {
   getRenderLogs: (jobId: string, afterSequence?: number) => Promise<LogEntry[]>
   requestStopAfterChunk: (jobId: string) => Promise<RenderJob>
   cancelStopRequest: (jobId: string) => Promise<RenderJob>
+  cancelRender: (jobId: string) => Promise<RenderJob>
+  retryCurrentChunk: (jobId: string) => Promise<RenderJob>
+  retryFailedRender: (jobId: string) => Promise<RenderJob>
   resumeRender: (jobId: string) => Promise<RenderJob>
   createCalibrationPlan: () => Promise<CalibrationSummary>
   startCalibrationCandidate: (calibrationId: string, candidateId: string) => Promise<CalibrationSummary>
-  startEncode: (jobId: string, includeAudio: boolean) => Promise<EncodeJob>
+  startEncode: (
+    jobId: string,
+    includeAudio: boolean,
+    outputKinds: Array<'delivery' | 'master'>,
+  ) => Promise<EncodeJob>
   getEncodeJob: (jobId: string) => Promise<EncodeJob>
   openPath: (path: string) => Promise<void>
 }

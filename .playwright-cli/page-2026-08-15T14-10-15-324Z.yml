@@ -1,0 +1,40 @@
+- generic [ref=f1e3]:
+  - link "Skip to main content" [ref=f1e4] [cursor=pointer]:
+    - /url: "#mission-control-main"
+  - complementary "Mission Control navigation" [ref=f1e5]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e10]:
+        - strong [ref=f1e11]: WZHK
+        - generic [ref=f1e12]: MEDIA · MISSION CONTROL
+      - button "Close navigation" [ref=f1e13] [cursor=pointer]
+    - navigation [ref=f1e17]:
+      - button "Home" [ref=f1e18] [cursor=pointer]
+      - button "Render" [ref=f1e23] [cursor=pointer]
+      - button "Profiles" [ref=f1e27] [cursor=pointer]
+      - button "Calibration" [ref=f1e30] [cursor=pointer]
+      - button "Jobs" [ref=f1e34] [cursor=pointer]
+      - button "Director" [ref=f1e40] [cursor=pointer]
+      - button "Encode" [ref=f1e47] [cursor=pointer]
+      - button "Video" [ref=f1e51] [cursor=pointer]
+      - button "Cloud" [ref=f1e56] [cursor=pointer]
+      - button "Settings" [ref=f1e60] [cursor=pointer]
+    - generic [ref=f1e65]:
+      - generic [ref=f1e74]:
+        - strong [ref=f1e75]: Reconnecting
+        - generic [ref=f1e76]: Local service
+      - generic [ref=f1e82]:
+        - text: Local & private
+        - generic [ref=f1e83]: No telemetry
+  - generic [ref=f1e84]:
+    - banner [ref=f1e85]:
+      - generic [ref=f1e86]: Video
+      - generic [ref=f1e88]:
+        - generic "Show exact hashes, paths, and metrics" [ref=f1e89] [cursor=pointer]:
+          - generic [ref=f1e90]: Simple
+          - switch "Simple" [ref=f1e91]
+        - button "Use dark theme" [ref=f1e92] [cursor=pointer]
+        - generic "Backend reconnecting" [ref=f1e95]
+    - main [ref=f1e103]:
+      - generic [ref=f1e104]:
+        - status "Loading" [ref=f1e105]
+        - status "Loading" [ref=f1e111]

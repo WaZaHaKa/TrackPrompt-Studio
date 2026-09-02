@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "new-track-project",
+  "title": "New Track Project",
+  "visualIdentity": "Replace this with a coherent, track-specific visual world described without artist imitation or private source information.",
+  "protagonist": "Replace this with an invented adult protagonist or set personGeneration to dont_allow in the profile when no people are required.",
+  "palette": ["primary dark tone", "secondary tone", "rare highlight"],
+  "cameraLanguage": ["slow deliberate camera movement", "clear subject and depth"],
+  "lightingLanguage": ["controlled cinematic contrast", "readable shadows"],
+  "textureLanguage": ["project texture one", "project texture two"],
+  "globalNegativePrompt": "visible text, captions, logos, watermarks, malformed anatomy, abrupt internal cuts, low resolution, unsafe or unlicensed real-person likeness",
+  "privacyRules": [
+    "Do not include raw lyrics, transcripts, local paths, identifiers or credentials in provider requests.",
+    "Keep source audio local and mux it after video generation."
+  ]
+}

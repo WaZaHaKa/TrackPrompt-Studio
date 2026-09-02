@@ -1,0 +1,65 @@
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+
+# TrackPrompt runtime state (uploads, derived audio, SQLite, model cache)
+.trackprompt-data/
+
+# Reviewed model seeds/caches stay local and are provisioned into Docker volumes.
+deep-models/
+model-checkpoints/
+
+# Setup/repair by-products are never source.
+*.bak-*
+full-gpu-setup-*.log
+repair-*.tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.pytest_*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.e2e-data/
+*.tsbuildinfo
+
+# Generated synthetic fixtures stay local; the generator and README are tracked.
+test-fixtures/*
+!test-fixtures/README.md
+
+# Blender visualizer smoke outputs are generated locally and may include media.
+test-output/
+
+# Authorized production image sequences and final media stay local.
+final-output/
+
+# Provider-neutral remote render packages may contain the scene and assets.
+render-packages/
+
+# Generated render profiles may bind local approved-scene paths; keep them local.
+render-profiles/**/*.json
+render-profiles/**/*.txt
+render-profiles/**/*.md
+!render-profiles/README.md
+!render-profiles/trip-to-andromeda/andromeda-v2-horizontal-1080p-final.json
+!render-profiles/trip-to-andromeda/andromeda-v2-vertical-1080x1920-final-optional.json
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

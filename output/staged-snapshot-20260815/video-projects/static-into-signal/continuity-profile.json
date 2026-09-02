@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "static-into-signal",
+  "masterSeed": 314159265,
+  "seedLocked": true,
+  "seedDerivation": "sha256-v1",
+  "characterProfiles": [
+    {
+      "id": "signal-bearer",
+      "label": "The Signal Bearer",
+      "identity": "One recurring clearly adult anonymous figure of average build, never a celebrity or real person.",
+      "wardrobe": "The same charcoal hooded coat, dark grey trousers and worn black trainers, with no visible brand or logo.",
+      "faceHairAge": "Clearly adult; face normally obscured by shadow, profile, reflection or framing; identity continuity is best effort rather than a perfect lock.",
+      "referenceAssetIds": []
+    }
+  ],
+  "visualAnchors": {
+    "world": "A rain-dark non-specific British city where an initially unseen signal becomes a shared path through believable rooms, concrete, machines and people.",
+    "palette": ["graphite black", "cold blue", "concrete grey", "pale cyan-white", "rare warning red", "late muted amber"],
+    "lighting": ["cold night practicals", "industrial winter light", "deep natural shadow", "early dawn only at the end"],
+    "camera": ["restrained handheld or slow dolly", "35mm and 50mm composition", "stable horizon", "24 FPS cinematic motion"],
+    "texture": ["wet concrete", "rain-covered glass", "realistic modest interiors", "subtle film grain", "natural surfaces"],
+    "aspectRatio": "16:9"
+  },
+  "continuityGroups": [
+    {"id": "world-global", "label": "Global signal world", "lockedTokens": ["photoreal non-specific British city", "graphite cold-blue concrete palette", "pale cyan-white signal filament", "one restrained impossible event", "believable movement and physics"]},
+    {"id": "signal-bearer", "label": "Signal Bearer identity", "lockedTokens": ["the same clearly adult anonymous Signal Bearer", "average build", "charcoal hooded coat", "dark grey trousers", "worn black trainers", "face obscured", "pale filament around the left wrist"]},
+    {"id": "cluster-a", "label": "Cluster A — origin and blue room", "lockedTokens": ["rain-dark apartment block", "cold blue modest room", "signal beginning as interference", "controlled first pulse"]},
+    {"id": "cluster-b", "label": "Cluster B — failure and staircase", "lockedTokens": ["industrial concrete", "restrained warning red", "failure becoming cyan-white structure", "signal moving through hidden infrastructure"]},
+    {"id": "cluster-c", "label": "Cluster C — people and cost", "lockedTokens": ["ordinary adult lives", "shared practical work", "cold measuring machinery", "dark glass reassembly without harm"]},
+    {"id": "cluster-d", "label": "Cluster D — language and relay", "lockedTokens": ["city responding to organised signal", "rooms awakening", "muted amber entering cold blue", "natural dawn next step"]}
+  ]
+}

@@ -60,7 +60,11 @@ The launcher opens `/?section=video` on the loopback Mission Control instance.
 
 On **Video**:
 
-1. Select the completed analysis, the intended content package, and **Veo 3.1 Fast · 1080p**. This is the default completion target. Current real packages are `The Glitch Is Me` and `Static Into Signal` (`The Signal Bearer`).
+1. Select the completed analysis, the intended content package, and a reviewed
+   1080p profile. **Static Into Signal uses Veo 3.1 Quality · 1080p** as its
+   completion profile; Fast remains the lower-cost option for a newly compiled
+   plan. Current real packages are `The Glitch Is Me` and `Static Into Signal`
+   (`The Signal Bearer`).
 2. Enter the GCP project and private GCS bucket. Audio is a local finishing input and is not part of the provider plan digest.
 3. Review the continuity profile. Keep the master seed locked for reproducible planning, or explicitly generate a new seed before compilation. Optionally attach one private JPEG/PNG first-frame reference; its hash and future GCS URI become part of the exact plan.
 4. Run **GCP readiness check**. It contacts only read-only GCP capability surfaces and explicitly does not submit a generation.
@@ -74,12 +78,20 @@ Mission Control reserves the request cost before every submission. The smoke sho
 
 Per-shot cards expose progress, safe failure/filter summaries and diagnostic IDs, verified preview media, accept/reject, and bounded retry. **Retry same setup** creates a new attempt with the same seed/reference/request and is blocked before submission when the next reservation would cross the approved maximum. **Generate new variation** changes the plan and requires a new digest-specific authorization. **Use previous accepted end frame** extracts and hash-binds a local keyframe for the declared next shot, also requiring fresh authorization.
 
-When all latest selected attempts are verified and a local audio master is bound, Mission Control automatically:
+When all latest selected attempts are verified, Mission Control stops in a
+truthful `review_ready` state. After a local audio master is bound, the visible
+local-finishing actions:
 
-1. resolves the complete 24 FPS audio-clock timeline;
-2. exports the project blueprint's validated event range as FCPXML 1.11, FCP 7 XML, CMX3600 EDL, edit sheet, markers, relink map, coverage report, and manifests;
-3. assembles and verifies a complete H.264/AAC preview with the local master;
+1. **Resolve timeline** creates the complete 24 FPS audio-clock timeline;
+2. **Export Resolve package** writes the project blueprint's validated event
+   range as FCPXML 1.11, FCP 7 XML, CMX3600 EDL, edit sheet, markers, relink map,
+   coverage report, and manifests;
+3. **Assemble full preview** creates and verifies a complete H.264/AAC preview
+   with the local master;
 4. exposes downloads and **Open output**.
+
+These actions are local-only. They never instantiate the provider client, submit
+a request, change authorization, or reserve additional spend.
 
 Use DaVinci Resolve only for final grading, transitions, overlays, titles, and other artistic touches.
 
@@ -93,14 +105,35 @@ Bind audio on the saved job's finishing card. **Use retained analysis audio** is
 - Resume or retry only from the same saved job. Do not delete `.trackprompt-data`, operation receipts, or verified clips to force a restart.
 - A changed prompt, input artifact, parameter, pricing snapshot, or profile produces a different plan digest and therefore requires a new exact plan review.
 - Provider access, fixed quota, or safety filtering can block a live batch without invalidating the local implementation or exports.
+- If the source analysis workspace was deleted by an older build, choose
+  **Repair legacy dependency** on the saved job. Existing verified clips remain
+  authoritative. Reattach the original audio only if necessary, then use
+  **Resolve timeline**, **Export Resolve package**, and **Assemble full preview**.
+  The repair receipt proves that plan digest, authorization, reservation,
+  provider operations, selected attempts, and clip hashes were not changed.
 
 ## Optional profiles
 
-Quality 1080p and standard 4K are explicit higher-cost profiles. A full 4K batch is not part of completion. For `Static Into Signal`, the operator selected a complete 16-shot Quality 1080p batch. At the 2026-08-13 snapshot rate, its base estimate is $25.60, its 1.5× conservative estimate is $38.40, and its hard authorization ceiling is $45.00. It requires a separately compiled and authorized exact plan.
+Quality 1080p and standard 4K are explicit higher-cost profiles. A full 4K batch
+is not part of completion. For `Static Into Signal`, the operator selected a
+complete 16-shot Quality 1080p batch. The tangible 2026-08-13 plan math is 16
+outputs × 8 seconds = 128 billed output-seconds; 128 × $0.20 = **$25.60 base**.
+The review adds a 50% contingency of **$12.80**, producing the **$38.40
+conservative estimate**. The **$45.00 hard ceiling** is a refusal boundary, not
+an expected charge: it is $6.60 above the conservative estimate and $19.40 above
+base. The exact plan requires its own digest-specific authorization.
 
 ## Static Into Signal checkpoint
 
-The package under `video-projects\static-into-signal\` uses the 218-second local master, exactly 16 Fast 1080p requests, `shot-001` as the same-plan paid smoke shot, deterministic cluster seeds, and project-owned editorial recurrence. The resolver returns shots 007 and 008 during chapter 07, ends chapter 06 on shot 012, begins chapter 08 on shot 015, and sustains shot 016 through the outro. It never automatically reverses human movement. Its standard output names are `trackprompt-timeline.fcpxml`, `trackprompt-timeline.xml`, `trackprompt-timeline.edl`, and `autonomous-preview-1080p.mp4`.
+The package under `video-projects\static-into-signal\` uses the 218-second local
+master, exactly 16 Quality 1080p requests in the operator-selected plan,
+`shot-001` as the same-plan paid smoke shot, deterministic cluster seeds, and
+project-owned editorial recurrence. The resolver returns shots 007 and 008
+during chapter 07, ends chapter 06 on shot 012, begins chapter 08 on shot 015,
+and sustains shot 016 through the outro. It never automatically reverses human
+movement. Its standard output names are `trackprompt-timeline.fcpxml`,
+`trackprompt-timeline.xml`, `trackprompt-timeline.edl`, and
+`autonomous-preview-1080p.mp4`.
 
 For the operator-selected Quality 1080p batch, stop after compilation until Mission Control shows the exact plan digest, all 16 sanitized request bodies, the $0.20-per-output-second snapshot rate, $25.60 base estimate, $38.40 conservative estimate, $45.00 maximum, and its digest-specific authorization phrase. Do not authorize from documentation or reuse a phrase from another plan.
 

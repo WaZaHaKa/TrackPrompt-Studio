@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wzhkmedia.local/schemas/trackprompt-local-project-package-1.0.0.json",
+  "title": "TrackPrompt Local Project Package",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "projectId",
+    "title",
+    "selectedProfileId",
+    "generationProfiles",
+    "requiredShotIds",
+    "timeline"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "projectId": {
+      "const": "the-riff-that-learned-to-breathe"
+    },
+    "title": {
+      "type": "string"
+    },
+    "selectedProfileId": {
+      "type": "string"
+    },
+    "generationProfiles": {
+      "type": "array",
+      "minItems": 1
+    },
+    "requiredShotIds": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "pattern": "^shot-[0-9]{3}$"
+      },
+      "uniqueItems": true
+    },
+    "timeline": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

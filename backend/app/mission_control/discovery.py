@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -15,6 +15,7 @@ from .models import (
     AuthorizationResult,
     CalibrationCandidate,
     CalibrationSummary,
+    OutputVariantSummary,
     ProfileSummary,
     ProfileValidation,
     ProjectSummary,
@@ -152,9 +153,78 @@ def _profile_scene_hash(profile: Mapping[str, Any]) -> str:
     ).upper()
 
 
+def _profile_scene_id(
+    profile: Mapping[str, Any],
+    scene_ids_by_sha256: Mapping[str, str] | None = None,
+) -> str:
+    """Return the explicit, discovered, or legacy-compatible scene ID."""
+
+    preset = _slug(_string(profile.get("preset")), "scene")
+    explicit = _string(profile.get("sceneId"))
+    if explicit:
+        return _slug(explicit, preset)
+    if scene_ids_by_sha256 is not None:
+        discovered = scene_ids_by_sha256.get(_profile_scene_hash(profile))
+        if discovered:
+            return discovered
+    return preset
+
+
 def _timeline(profile: Mapping[str, Any]) -> Mapping[str, Any]:
     value = profile.get("timeline")
     return cast(Mapping[str, Any], value) if isinstance(value, dict) else profile
+
+
+def _canonical_output_variant_ids(
+    profile: Mapping[str, Any],
+    requested_ids: Sequence[str] | None,
+) -> list[str] | None:
+    if requested_ids is None:
+        return None
+    if not requested_ids or len(set(requested_ids)) != len(requested_ids):
+        raise MissionControlError(
+            422,
+            "invalid_authorization_output_matrix",
+            "Authorization output matrix is invalid",
+            "Select at least one unique output variant.",
+            "Return to profile selection and choose the exact output matrix again.",
+        )
+    raw_variants = profile.get("outputVariants")
+    if raw_variants is None:
+        singular = profile.get("outputVariant")
+        raw_variants = [singular] if isinstance(singular, dict) else []
+    if not isinstance(raw_variants, list):
+        raw_variants = []
+    declarations = [
+        value
+        for value in raw_variants
+        if isinstance(value, dict) and isinstance(value.get("id"), str)
+    ]
+    declared_ids = [cast(str, value["id"]) for value in declarations]
+    requested = set(requested_ids)
+    unknown = requested - set(declared_ids)
+    if unknown:
+        raise MissionControlError(
+            422,
+            "invalid_authorization_output_matrix",
+            "Authorization output matrix is invalid",
+            f"Unknown output variants were selected: {', '.join(sorted(unknown))}.",
+            "Return to profile selection and choose variants declared by this profile.",
+        )
+    missing_required = [
+        cast(str, value["id"])
+        for value in declarations
+        if value.get("required") is True and value["id"] not in requested
+    ]
+    if missing_required:
+        raise MissionControlError(
+            422,
+            "invalid_authorization_output_matrix",
+            "Authorization output matrix is invalid",
+            f"Required output variants are missing: {', '.join(missing_required)}.",
+            "Restore the required output variants before authorizing.",
+        )
+    return [variant_id for variant_id in declared_ids if variant_id in requested]
 
 
 def _authorization_paths(profile_path: Path) -> tuple[Path, Path]:
@@ -165,7 +235,12 @@ def _authorization_paths(profile_path: Path) -> tuple[Path, Path]:
     )
 
 
-def authorization_token(profile: Mapping[str, Any], profile_hash: str, scene_hash: str) -> str:
+def authorization_token(
+    profile: Mapping[str, Any],
+    profile_hash: str,
+    scene_hash: str,
+    enabled_output_variant_ids: Sequence[str] | None = None,
+) -> str:
     authorization = _mapping(profile.get("authorization"))
     project = _string(authorization.get("project")) or _string(profile.get("project"), "TRACKPROMPT")
     preset = _string(authorization.get("preset")) or _string(profile.get("preset"), "CUSTOM")
@@ -179,28 +254,79 @@ def authorization_token(profile: Mapping[str, Any], profile_hash: str, scene_has
             "The saved profile contains an unsafe or empty authorization identity.",
             "Repair and resave the profile through the validated profile tooling.",
         )
-    return (
+    token = (
         f"AUTHORIZE FULL RENDER: {values[0]} | {values[1]} | {values[2]} | "
         f"SCENE {scene_hash[:12]} | PROFILE {profile_hash[:12]}"
     )
+    if enabled_output_variant_ids is not None:
+        normalized = tuple(item.strip() for item in enabled_output_variant_ids)
+        if (
+            not normalized
+            or len(set(normalized)) != len(normalized)
+            or any(
+                not item or any(character in item for character in "\r\n|,")
+                for item in normalized
+            )
+        ):
+            raise MissionControlError(
+                422,
+                "unsafe_authorization_output_matrix",
+                "Authorization output matrix is invalid",
+                "The selected output variants are empty, duplicated, or unsafe.",
+                "Return to profile selection and choose the exact output matrix again.",
+            )
+        token += f" | OUTPUTS {','.join(normalized)}"
+    return token
 
 
 def validate_authorization_record(
     profile_path: Path,
     scene_path: Path,
     profile: Mapping[str, Any],
+    *,
+    enabled_output_variant_ids: Sequence[str] | None = None,
 ) -> tuple[bool, list[str], str]:
     _request_path, record_path = _authorization_paths(profile_path)
     if not record_path.is_file():
         return False, ["No local authorization record exists."], ""
     profile_hash = sha256_file(profile_path)
     scene_hash = sha256_file(scene_path)
-    token = authorization_token(profile, profile_hash, scene_hash)
     issues: list[str] = []
     try:
         record = load_json_object(record_path, "Authorization record")
     except MissionControlError:
         return False, ["Authorization record is unreadable or invalid JSON."], ""
+    stored_matrix_value = record.get("enabledOutputVariantIds")
+    stored_matrix: tuple[str, ...] | None = None
+    if stored_matrix_value is not None:
+        if (
+            not isinstance(stored_matrix_value, list)
+            or not stored_matrix_value
+            or not all(isinstance(item, str) for item in stored_matrix_value)
+            or len(set(stored_matrix_value)) != len(stored_matrix_value)
+        ):
+            issues.append("Authorization record output-variant matrix is invalid.")
+        else:
+            stored_matrix = tuple(stored_matrix_value)
+    expected_matrix = (
+        tuple(enabled_output_variant_ids)
+        if enabled_output_variant_ids is not None
+        else stored_matrix
+    )
+    if enabled_output_variant_ids is not None and stored_matrix != expected_matrix:
+        issues.append(
+            "Authorization record output-variant matrix does not match the selected job."
+        )
+    try:
+        token = authorization_token(
+            profile,
+            profile_hash,
+            scene_hash,
+            expected_matrix,
+        )
+    except MissionControlError:
+        issues.append("Authorization record output-variant matrix is unsafe.")
+        token = ""
     if record.get("kind") != _PROFILE_AUTHORIZATION_KIND:
         issues.append("Authorization record kind is unsupported.")
     if record.get("status") != "authorized":
@@ -226,6 +352,54 @@ def validate_authorization_record(
 class MissionDiscovery:
     def __init__(self, config: MissionControlConfig) -> None:
         self.config = config
+        self._packaged_scene_paths: dict[str, Path] | None = None
+
+    def _scene_paths_from_package_manifests(self) -> dict[str, Path]:
+        """Resolve ignored scene artifacts through committed, hash-bound manifests."""
+
+        if self._packaged_scene_paths is not None:
+            return self._packaged_scene_paths
+        result: dict[str, Path] = {}
+        production_root = self.config.repository_root / "production"
+        if not production_root.is_dir():
+            self._packaged_scene_paths = result
+            return result
+        repository_root = self.config.repository_root.resolve()
+        for manifest_path in sorted(production_root.rglob("package-manifest*.json")):
+            try:
+                manifest = load_json_object(manifest_path, "Render package manifest")
+            except MissionControlError:
+                continue
+            artifacts = manifest.get("artifacts")
+            if not isinstance(artifacts, list):
+                continue
+            for value in artifacts:
+                if not isinstance(value, dict):
+                    continue
+                artifact_path = value.get("path")
+                artifact_sha256 = _string(value.get("sha256")).upper()
+                if (
+                    not isinstance(artifact_path, str)
+                    or not artifact_path.strip()
+                    or not _SHA256_RE.fullmatch(artifact_sha256)
+                ):
+                    continue
+                relative_path = Path(artifact_path)
+                if relative_path.is_absolute() or relative_path.suffix.casefold() != ".blend":
+                    continue
+                try:
+                    candidate = (repository_root / relative_path).resolve(strict=True)
+                    candidate.relative_to(repository_root)
+                    if (
+                        candidate.is_file()
+                        and not candidate.is_symlink()
+                        and sha256_file(candidate) == artifact_sha256
+                    ):
+                        result.setdefault(artifact_sha256, candidate)
+                except (OSError, ValueError, MissionControlError):
+                    continue
+        self._packaged_scene_paths = result
+        return result
 
     def _profile_files(self) -> Iterable[Path]:
         if not self.config.profile_root.is_dir():
@@ -248,7 +422,86 @@ class MissionDiscovery:
                 "The JSON file does not contain a profileId.",
                 "Select a saved render profile.",
             )
+        if _profile_scene_path(profile) is None:
+            packaged_scene = self._scene_paths_from_package_manifests().get(
+                _profile_scene_hash(profile)
+            )
+            if packaged_scene is not None:
+                # Runtime-only enrichment preserves the immutable profile bytes
+                # while connecting its declared scene hash to a packaged artifact.
+                profile["approvedScenePath"] = str(packaged_scene)
         return profile, sha256_file(path)
+
+    def _scene_ids_by_sha256(self) -> dict[str, str]:
+        """Disambiguate different authored scenes while preserving legacy IDs.
+
+        A single scene under a project/preset keeps the historical preset ID,
+        including singular-output profiles. When multiple scene hashes share a
+        project/preset, their singular output-variant IDs provide stable,
+        generic discriminators. Hash suffixes are used only for ambiguous
+        declarations.
+        """
+
+        rows: list[tuple[str, str, str, str | None]] = []
+        for profile_path in self._profile_files():
+            try:
+                profile, _saved_hash = self._profile_row(profile_path)
+            except MissionControlError:
+                continue
+            scene_sha256 = _profile_scene_hash(profile)
+            if _SHA256_RE.fullmatch(scene_sha256) is None:
+                continue
+            project = _slug(_string(profile.get("project")), "trackprompt")
+            preset = _slug(_string(profile.get("preset")), "scene")
+            explicit = _string(profile.get("sceneId"))
+            output_variant = profile.get("outputVariant")
+            variant_id = (
+                _string(output_variant.get("id"))
+                if isinstance(output_variant, dict)
+                else ""
+            )
+            rows.append(
+                (
+                    scene_sha256,
+                    project,
+                    preset,
+                    _slug(explicit, preset)
+                    if explicit
+                    else _slug(variant_id, "variant")
+                    if variant_id
+                    else None,
+                )
+            )
+
+        grouped_hashes: dict[tuple[str, str], set[str]] = {}
+        for scene_sha256, project, preset, _discriminator in rows:
+            grouped_hashes.setdefault((project, preset), set()).add(scene_sha256)
+
+        candidates: dict[str, str] = {}
+        for scene_sha256, project, preset, discriminator in rows:
+            group = grouped_hashes[(project, preset)]
+            candidate = (
+                preset
+                if len(group) == 1
+                else _slug(f"{preset}-{discriminator}", preset)
+                if discriminator
+                else f"{preset}-{scene_sha256[:12].lower()}"
+            )
+            existing = candidates.get(scene_sha256)
+            if existing is None or candidate < existing:
+                candidates[scene_sha256] = candidate
+
+        hashes_by_candidate: dict[str, set[str]] = {}
+        for scene_sha256, candidate in candidates.items():
+            hashes_by_candidate.setdefault(candidate, set()).add(scene_sha256)
+        return {
+            scene_sha256: (
+                candidate
+                if len(hashes_by_candidate[candidate]) == 1
+                else f"{candidate}-{scene_sha256[:12].lower()}"
+            )
+            for scene_sha256, candidate in candidates.items()
+        }
 
     def recommended_profile_id(self) -> str | None:
         profiles = []
@@ -273,6 +526,7 @@ class MissionDiscovery:
 
     def list_scenes(self) -> list[SceneSummary]:
         by_hash: dict[str, SceneSummary] = {}
+        scene_ids_by_sha256 = self._scene_ids_by_sha256()
         for profile_path in self._profile_files():
             try:
                 profile, _profile_hash = self._profile_row(profile_path)
@@ -285,6 +539,7 @@ class MissionDiscovery:
                     continue
                 project = _slug(_string(profile.get("project")), "trackprompt")
                 preset = _slug(_string(profile.get("preset")), "scene")
+                scene_id = _profile_scene_id(profile, scene_ids_by_sha256)
                 timeline = _timeline(profile)
                 manifest_path_raw = _string(profile.get("sceneManifestPath"))
                 manifest_path = Path(manifest_path_raw) if manifest_path_raw else None
@@ -293,7 +548,7 @@ class MissionDiscovery:
                     manifest_hash = sha256_file(manifest_path)
                 preview = self._scene_preview(scene_path)
                 by_hash[actual_hash] = SceneSummary(
-                    id=preset,
+                    id=scene_id,
                     project_id=project,
                     display_name="Trip to Andromeda" if project == "trip-to-andromeda" else preset.replace("-", " ").title(),
                     preset=preset,
@@ -343,12 +598,13 @@ class MissionDiscovery:
         profile: dict[str, Any],
         saved_hash: str,
         recommended_id: str | None,
+        scene_ids_by_sha256: Mapping[str, str],
     ) -> ProfileSummary:
         profile_id = _string(profile.get("profileId"))
         scene_path = _profile_scene_path(profile)
         scene_expected_hash = _profile_scene_hash(profile)
         project = _slug(_string(profile.get("project")), "trackprompt")
-        preset = _slug(_string(profile.get("preset")), "scene")
+        scene_id = _profile_scene_id(profile, scene_ids_by_sha256)
         timeline = _timeline(profile)
         resolution = _mapping(profile.get("resolution"))
         frame_start = _integer(_first(timeline, "frameStart", default=profile.get("frameStart")), 1)
@@ -382,6 +638,58 @@ class MissionDiscovery:
         height = _integer(resolution.get("height"))
         output_variant = profile.get("outputVariant")
         output_variant_settings = output_variant if isinstance(output_variant, dict) else {}
+        declared_output_variants = profile.get("outputVariants")
+        singular_output_variant = (
+            declared_output_variants is None and bool(output_variant_settings)
+        )
+        output_variant_rows = (
+            declared_output_variants
+            if isinstance(declared_output_variants, list)
+            else [output_variant_settings]
+            if output_variant_settings
+            else []
+        )
+        output_variants: list[OutputVariantSummary] = []
+        for raw_variant in output_variant_rows:
+            if not isinstance(raw_variant, dict):
+                continue
+            variant_id = _string(raw_variant.get("id"))
+            if not variant_id:
+                continue
+            required = raw_variant.get("required", singular_output_variant)
+            required = required if isinstance(required, bool) else False
+            enabled_value = raw_variant.get(
+                "enabledByDefault",
+                required
+                if singular_output_variant
+                else raw_variant.get("enabled", required),
+            )
+            enabled_by_default = (
+                enabled_value if isinstance(enabled_value, bool) else required
+            )
+            variant_width = _integer(raw_variant.get("width"), width)
+            variant_height = _integer(raw_variant.get("height"), height)
+            variant_fps = _number(raw_variant.get("fps")) or float(
+                _number(_first(timeline, "fps", default=profile.get("fps"))) or 30.0
+            )
+            output_variants.append(
+                OutputVariantSummary(
+                    id=variant_id,
+                    enabled_by_default=enabled_by_default,
+                    required=required,
+                    width=variant_width,
+                    height=variant_height,
+                    fps=float(variant_fps),
+                    deliverable_role=_string(
+                        raw_variant.get("deliverableRole"),
+                        "primary-master" if required else "optional-deliverable",
+                    ),
+                    composition_profile_id=_string(
+                        raw_variant.get("compositionProfileId"),
+                        f"{variant_id}-composition",
+                    ),
+                )
+            )
         composition_profile = profile.get("compositionProfile")
         composition_settings = (
             composition_profile if isinstance(composition_profile, dict) else {}
@@ -389,7 +697,7 @@ class MissionDiscovery:
         return ProfileSummary(
             id=profile_id,
             project_id=project,
-            scene_id=preset,
+            scene_id=scene_id,
             display_name=_string(profile.get("displayName"), profile_id),
             path=str(path.resolve()),
             saved_file_sha256=saved_hash,
@@ -431,6 +739,7 @@ class MissionDiscovery:
                 ),
                 "primary",
             ),
+            output_variants=output_variants,
             composition_profile_id=_string(
                 _first(
                     composition_settings,
@@ -453,11 +762,20 @@ class MissionDiscovery:
 
     def list_profiles(self) -> list[ProfileSummary]:
         recommended_id = self.recommended_profile_id()
+        scene_ids_by_sha256 = self._scene_ids_by_sha256()
         profiles: list[ProfileSummary] = []
         for path in self._profile_files():
             try:
                 profile, saved_hash = self._profile_row(path)
-                profiles.append(self._profile_summary(path, profile, saved_hash, recommended_id))
+                profiles.append(
+                    self._profile_summary(
+                        path,
+                        profile,
+                        saved_hash,
+                        recommended_id,
+                        scene_ids_by_sha256,
+                    )
+                )
             except MissionControlError:
                 continue
         profiles.sort(
@@ -555,10 +873,15 @@ class MissionDiscovery:
         profile_id: str,
         scene_id: str,
         *,
+        enabled_output_variant_ids: list[str] | None = None,
         settings_and_hashes_reviewed: bool,
         production_render_authorized: bool,
     ) -> AuthorizationResult:
         profile_path, profile, profile_hash = self.profile_source(profile_id)
+        enabled_output_variant_ids = _canonical_output_variant_ids(
+            profile,
+            enabled_output_variant_ids,
+        )
         scene = self.get_scene(scene_id)
         scene_path = Path(scene.path)
         expected_scene_path = _profile_scene_path(profile)
@@ -579,7 +902,12 @@ class MissionDiscovery:
                 "The approved scene content changed after this profile was saved.",
                 "Restore the approved scene before authorizing.",
             )
-        token = authorization_token(profile, profile_hash, scene_hash)
+        token = authorization_token(
+            profile,
+            profile_hash,
+            scene_hash,
+            enabled_output_variant_ids,
+        )
         requested_at = datetime.now(UTC)
         request_payload: dict[str, Any] = {
             "schemaVersion": "1.1.0",
@@ -594,6 +922,7 @@ class MissionDiscovery:
                 "sha256": profile_hash,
             },
             "scene": {"path": str(scene_path), "sha256": scene_hash},
+            "enabledOutputVariantIds": enabled_output_variant_ids,
             "tokenSha256": sha256_text(token),
             "tokenPreview": f"SCENE {scene_hash[:12]} | PROFILE {profile_hash[:12]}",
             "confirmations": {
@@ -630,6 +959,7 @@ class MissionDiscovery:
                 "sha256": profile_hash,
             },
             "scene": {"path": str(scene_path), "sha256": scene_hash},
+            "enabledOutputVariantIds": enabled_output_variant_ids,
             "confirmations": {
                 "settingsAndHashesReviewed": True,
                 "productionRenderAuthorized": True,
@@ -642,6 +972,7 @@ class MissionDiscovery:
             profile_path,
             scene_path,
             profile,
+            enabled_output_variant_ids=enabled_output_variant_ids,
         )
         if not valid or validated_token != token:
             raise MissionControlError(
@@ -662,6 +993,7 @@ class MissionDiscovery:
             token_sha256=sha256_text(token),
             record_path=str(record_path),
             authorized_at=authorized_at,
+            enabled_output_variant_ids=enabled_output_variant_ids or [],
         )
 
     def list_projects(self) -> list[ProjectSummary]:

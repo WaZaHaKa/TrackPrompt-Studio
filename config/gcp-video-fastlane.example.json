@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "1.0.0",
+  "gcpProjectId": "replace-with-your-project-id",
+  "gcsBucket": "replace-with-a-globally-unique-bucket-name",
+  "region": "us-central1",
+  "defaultProfile": "fast-1080p",
+  "notes": "This file contains no credentials. Authentication uses the active gcloud account. Do not commit service-account JSON keys."
+}

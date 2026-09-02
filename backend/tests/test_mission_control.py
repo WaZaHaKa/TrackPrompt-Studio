@@ -22,9 +22,15 @@ import app.mission_control.outputs as outputs_module
 import app.mission_control.renderers as renderers_module
 import app.mission_control.service as service_module
 from app.mission_control.config import MissionControlConfig
-from app.mission_control.discovery import load_json_object, sha256_file
+from app.mission_control.discovery import (
+    load_json_object,
+    sha256_file,
+    validate_authorization_record,
+)
 from app.mission_control.errors import MissionControlError
 from app.mission_control.models import (
+    CancelRenderRequest,
+    CancelStopRequest,
     EncodeReadiness,
     EncodeStartRequest,
     FakeRenderOptions,
@@ -38,6 +44,9 @@ from app.mission_control.models import (
     RendererKind,
     RenderIdentity,
     ResumeRequest,
+    RetryCurrentChunkRequest,
+    RetryFailedRenderRequest,
+    SafeStopStatus,
     StartFakeRenderRequest,
     StartRenderRequest,
 )
@@ -278,7 +287,7 @@ def test_production_preview_thumbnail_is_bounded_atomic_and_cached(
         Path(args[-1]).write_bytes(renderers_module._FAKE_PREVIEW_PNG)
         return subprocess.CompletedProcess(args, 0, b"", b"")
 
-    monkeypatch.setattr(service_module.shutil, "which", lambda _name: "ffmpeg")
+    monkeypatch.setattr(service, "_ffmpeg_path", lambda: Path("ffmpeg"))
     monkeypatch.setattr(service_module.subprocess, "run", fake_run)
 
     first = service._preview_thumbnail(job, source)
@@ -398,8 +407,14 @@ def _write_render_manifest(
             "frameStart": job.frame_start,
             "frameEnd": job.frame_end,
             "frameCount": job.total_frame_count,
+            "fps": 30,
+            "width": 1280,
+            "height": 720,
             "framesSubdirectory": "frames",
             "filenamePattern": "frame_%06d.png",
+            "format": "PNG",
+            "bitDepth": 8,
+            "colorMode": "RGB",
         },
         "frameSet": {
             "complete": complete,
@@ -534,6 +549,59 @@ def test_authorization_requires_both_confirmations_and_preserves_profile_bytes(
         "settingsAndHashesReviewed": True,
     }
     assert service.profile(PROFILE_ID).authorized is True
+
+
+def test_authorization_binds_the_exact_enabled_output_variant_matrix(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+) -> None:
+    profile_path = _copied_profile(service.config)
+    payload = load_json_object(profile_path, "Render profile")
+    payload["outputVariant"] = {
+        "id": "horizontal-16x9-1080p",
+        "enabled": True,
+        "enabledByDefault": True,
+        "required": True,
+        "width": 1280,
+        "height": 720,
+        "fps": 30,
+        "compositionMode": "authored",
+        "deliverableRole": "primary-master",
+    }
+    profile_path.write_text(
+        json.dumps(payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    result = service.authorize_profile(
+        PROFILE_ID,
+        SCENE_ID,
+        enabled_output_variant_ids=["horizontal-16x9-1080p"],
+        settings_and_hashes_reviewed=True,
+        production_render_authorized=True,
+    )
+    assert result.enabled_output_variant_ids == ["horizontal-16x9-1080p"]
+    assert result.authorization_token.endswith(
+        "| OUTPUTS horizontal-16x9-1080p"
+    )
+
+    valid, issues, _token = validate_authorization_record(
+        profile_path,
+        mission_fixture.scene_path,
+        payload,
+        enabled_output_variant_ids=["horizontal-16x9-1080p"],
+    )
+    assert valid is True
+    assert issues == []
+
+    changed_valid, changed_issues, _changed_token = validate_authorization_record(
+        profile_path,
+        mission_fixture.scene_path,
+        payload,
+        enabled_output_variant_ids=["vertical-9x16-1080p"],
+    )
+    assert changed_valid is False
+    assert any("output-variant matrix" in issue for issue in changed_issues)
 
 
 def test_python_authorization_record_passes_existing_powershell_validator(
@@ -854,6 +922,396 @@ async def test_fake_render_stop_resume_persistence_and_event_replay(
 
 
 @pytest.mark.asyncio
+async def test_pending_fake_render_stop_can_be_cancelled_and_requested_again(
+    service: MissionControlService,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    output = tmp_path / "fake-cancel-stop" / "render"
+    output.mkdir(parents=True)
+    request = StartFakeRenderRequest(
+        project_id="trip-to-andromeda",
+        scene_id=SCENE_ID,
+        profile_id=PROFILE_ID,
+        output_directory=str(output),
+        renderer=RendererKind.FAKE,
+        fake=FakeRenderOptions(
+            total_frames=30,
+            frames_per_chunk=10,
+            step_delay_seconds=0.03,
+        ),
+    )
+    job = await service.start_render(request, fake_options=request.fake)
+    await _wait_for_state(service, job.id, {JobState.RUNNING})
+
+    original_add_log = service.add_log
+    control_states_at_log: list[tuple[str, JobState, SafeStopStatus]] = []
+
+    async def observe_control_state(
+        job_id: str,
+        level: str,
+        message: str,
+    ) -> object:
+        if "current chunk was requested" in message or "request was cancelled" in message:
+            current = service.get_job(job_id)
+            control_states_at_log.append(
+                (message, current.state, current.safe_stop_status)
+            )
+        return await original_add_log(job_id, level, message)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(service, "add_log", observe_control_state)
+
+    requested = await service.request_stop_after_chunk(job.id)
+    assert requested.state == JobState.STOP_REQUESTED
+
+    with pytest.raises(MissionControlError) as unconfirmed:
+        await service.cancel_stop(job.id, CancelStopRequest())
+    assert unconfirmed.value.error.code == "cancel_stop_confirmation_required"
+
+    continuing = await service.cancel_stop(
+        job.id,
+        CancelStopRequest(operator_confirmed=True),
+    )
+    assert continuing.state == JobState.RUNNING
+    assert continuing.safe_stop_status == SafeStopStatus.NONE
+    assert control_states_at_log[:2] == [
+        (
+            "Stop after the current chunk was requested.",
+            JobState.STOP_REQUESTED,
+            SafeStopStatus.REQUESTED,
+        ),
+        (
+            "Pending safe-stop request was cancelled.",
+            JobState.RUNNING,
+            SafeStopStatus.NONE,
+        ),
+    ]
+
+    requested_again = await service.request_stop_after_chunk(job.id)
+    assert requested_again.state == JobState.STOP_REQUESTED
+    paused = await _wait_for_state(service, job.id, {JobState.PAUSED_SAFELY})
+    assert paused.safe_stop_status == SafeStopStatus.PAUSED
+    assert paused.inflight_frame_count == 0
+
+
+@pytest.mark.asyncio
+async def test_retry_current_fake_chunk_requeues_exact_bounds_and_preserves_prior_chunk(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    output = tmp_path / "fake-retry-current" / "render"
+    output.mkdir(parents=True)
+    request = StartFakeRenderRequest(
+        project_id="trip-to-andromeda",
+        scene_id=SCENE_ID,
+        profile_id=PROFILE_ID,
+        output_directory=str(output),
+        renderer=RendererKind.FAKE,
+        fake=FakeRenderOptions(
+            total_frames=20,
+            frames_per_chunk=5,
+            step_delay_seconds=0.15,
+            long_frame_at=7,
+        ),
+    )
+    started = await service.start_render(request, fake_options=request.fake)
+    deadline = asyncio.get_running_loop().time() + 5
+    active: JobRecord | None = None
+    while asyncio.get_running_loop().time() < deadline:
+        candidate = service.get_job(started.id)
+        if (
+            candidate.published_frame_count == 5
+            and candidate.chunk_start == 6
+            and candidate.chunk_end == 10
+            and candidate.inflight_frame_count > 0
+        ):
+            active = candidate
+            break
+        await asyncio.sleep(0.01)
+    assert active is not None
+    prior_chunk = output / "frames" / "frame_000005.png"
+    prior_chunk_bytes = prior_chunk.read_bytes()
+
+    requested = await service.retry_current_chunk(
+        started.id,
+        RetryCurrentChunkRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+
+    assert requested.state == JobState.STARTING
+    assert requested.retry_count == 1
+    assert requested.published_frame_count == 5
+    assert requested.validated_frame_count == 5
+    assert prior_chunk.read_bytes() == prior_chunk_bytes
+    assert any(
+        event.state == JobState.RETRY_REQUESTED
+        for event in service.events_after(0, job_id=started.id)
+    )
+
+    complete = await _wait_for_state(service, started.id, {JobState.COMPLETE})
+    assert complete.published_frame_count == 20
+    assert complete.retry_count == 1
+    assert prior_chunk.read_bytes() == prior_chunk_bytes
+
+
+@pytest.mark.asyncio
+async def test_retry_current_chunk_reuses_exact_failed_identity(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    output = tmp_path / "fake-retry-failed-current" / "render"
+    output.mkdir(parents=True)
+    request = StartFakeRenderRequest(
+        project_id="trip-to-andromeda",
+        scene_id=SCENE_ID,
+        profile_id=PROFILE_ID,
+        output_directory=str(output),
+        renderer=RendererKind.FAKE,
+        fake=FakeRenderOptions(
+            total_frames=20,
+            frames_per_chunk=5,
+            fail_at_frame=7,
+        ),
+    )
+    started = await service.start_render(request, fake_options=request.fake)
+    failed = await _wait_for_state(service, started.id, {JobState.FAILED})
+    assert failed.published_frame_count == 5
+    prior_chunk = output / "frames" / "frame_000005.png"
+    prior_chunk_bytes = prior_chunk.read_bytes()
+
+    retried = await service.retry_current_chunk(
+        started.id,
+        RetryCurrentChunkRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+
+    assert retried.state == JobState.STARTING
+    assert retried.identity == failed.identity
+    assert retried.retry_count == 1
+    assert retried.published_frame_count == 5
+    complete = await _wait_for_state(service, started.id, {JobState.COMPLETE})
+    assert complete.published_frame_count == 20
+    assert prior_chunk.read_bytes() == prior_chunk_bytes
+
+
+def test_persisted_retry_request_recovers_as_exact_resumable_without_mutating_progress(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "persisted-retry-request" / "render",
+        job_id="persisted-retry-request",
+        renderer=RendererKind.FAKE,
+        total_frames=20,
+    )
+    pending = job.model_copy(
+        update={
+            "state": JobState.RETRY_REQUESTED,
+            "process_id": None,
+            "renderer_active": False,
+            "watcher_active": False,
+            "published_frame_count": 5,
+            "validated_frame_count": 5,
+            "rendered_frame_count": 6,
+            "inflight_frame_count": 1,
+            "chunk_start": 6,
+            "chunk_end": 10,
+            "chunks_completed": 1,
+            "chunks_total": 4,
+        }
+    )
+    service.store.put_job(pending)
+
+    service.close()
+    restarted = MissionControlService(service.config)
+    try:
+        recovered = restarted.get_job(job.id)
+        assert recovered.state == JobState.RESUMABLE
+        assert recovered.published_frame_count == 5
+        assert recovered.validated_frame_count == 5
+        assert recovered.chunk_start == 6
+        assert recovered.chunk_end == 10
+        assert recovered.warning is not None
+    finally:
+        restarted.close()
+
+
+@pytest.mark.asyncio
+async def test_production_current_chunk_retry_waits_for_watcher_exit_then_restarts_exact_job(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "production-retry-current" / "render",
+        job_id="production-retry-current",
+        total_frames=13_029,
+    )
+    manifest_path = _write_render_manifest(
+        job,
+        mission_fixture.authorization_token,
+        valid_frames=[1, 2, 3, 4, 5],
+        complete=False,
+    )
+    manifest_before = manifest_path.read_bytes()
+    active = await service.update_job(
+        job.id,
+        process_id=4321,
+        renderer_active=True,
+        watcher_active=True,
+        rendered_frame_count=6,
+        inflight_frame_count=1,
+        validated_frame_count=5,
+        published_frame_count=5,
+        chunk_start=6,
+        chunk_end=10,
+        chunks_completed=1,
+        chunks_total=22,
+    )
+    stop_calls: list[tuple[int | None, int | None]] = []
+
+    async def capture_attempt_stop(current: JobRecord) -> None:
+        stop_calls.append((current.chunk_start, current.chunk_end))
+
+    monkeypatch.setattr(
+        service.production_renderer,
+        "request_retry_current_chunk",
+        capture_attempt_stop,
+    )
+    requested = await service.retry_current_chunk(
+        active.id,
+        RetryCurrentChunkRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+
+    assert requested.state == JobState.RETRY_REQUESTED
+    assert stop_calls == [(6, 10)]
+    assert requested.published_frame_count == 5
+    assert requested.validated_frame_count == 5
+    assert manifest_path.read_bytes() == manifest_before
+
+    await service.production_renderer._reconcile_exit(service, job.id, 1)
+    after_exit = service.get_job(job.id)
+    assert after_exit.state == JobState.RETRY_REQUESTED
+    assert after_exit.renderer_active is False
+    assert after_exit.watcher_active is False
+    started: list[str] = []
+
+    def capture_start(
+        _controller: object,
+        restarted: JobRecord,
+        **_kwargs: object,
+    ) -> None:
+        started.append(restarted.id)
+
+    monkeypatch.setattr(service.production_renderer, "start", capture_start)
+    restarted = await service.restart_retry_current_chunk(job.id)
+
+    assert restarted.state == JobState.STARTING
+    assert restarted.retry_count == 1
+    assert restarted.published_frame_count == 5
+    assert restarted.identity == job.identity
+    assert started == [job.id]
+    assert manifest_path.read_bytes() == manifest_before
+
+
+@pytest.mark.asyncio
+async def test_fake_render_cancel_is_identity_safe_terminal_and_preserves_frames(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    output = tmp_path / "fake-cancel" / "render"
+    output.mkdir(parents=True)
+    request = StartFakeRenderRequest(
+        project_id="trip-to-andromeda",
+        scene_id=SCENE_ID,
+        profile_id=PROFILE_ID,
+        output_directory=str(output),
+        renderer=RendererKind.FAKE,
+        fake=FakeRenderOptions(
+            total_frames=30,
+            frames_per_chunk=5,
+            step_delay_seconds=0.03,
+        ),
+    )
+    job = await service.start_render(request, fake_options=request.fake)
+    await _wait_for_state(service, job.id, {JobState.RUNNING})
+
+    with pytest.raises(MissionControlError) as unconfirmed:
+        await service.cancel_render(
+            job.id,
+            CancelRenderRequest(
+                scene_sha256=mission_fixture.scene_sha256,
+                profile_sha256=mission_fixture.profile_sha256,
+            ),
+        )
+    assert unconfirmed.value.error.code == "cancel_render_confirmation_required"
+
+    with pytest.raises(MissionControlError) as mismatched:
+        await service.cancel_render(
+            job.id,
+            CancelRenderRequest(
+                scene_sha256="0" * 64,
+                profile_sha256=mission_fixture.profile_sha256,
+                operator_confirmed=True,
+            ),
+        )
+    assert mismatched.value.error.code == "cancel_render_identity_mismatch"
+
+    requested = await service.cancel_render(
+        job.id,
+        CancelRenderRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+    assert requested.state == JobState.CANCEL_REQUESTED
+    cancelled = await _wait_for_state(service, job.id, {JobState.CANCELLED})
+    assert cancelled.completed_at is not None
+    assert cancelled.published_frame_count >= 5
+    assert cancelled.validated_frame_count == cancelled.published_frame_count
+    assert cancelled.inflight_frame_count == 0
+    assert cancelled.safe_stop_status.value == "none"
+    assert cancelled.latest_frame_artifact is not None
+    published = output / cancelled.latest_frame_artifact
+    published_hash = hashlib.sha256(published.read_bytes()).hexdigest()
+
+    service.close()
+    restarted = MissionControlService(service.config)
+    try:
+        persisted = restarted.get_job(job.id)
+        assert persisted.state == JobState.CANCELLED
+        assert persisted.published_frame_count == cancelled.published_frame_count
+        assert hashlib.sha256(published.read_bytes()).hexdigest() == published_hash
+    finally:
+        restarted.close()
+
+
+@pytest.mark.asyncio
 async def test_fake_renderer_failure_is_persisted(
     service: MissionControlService,
     tmp_path: Path,
@@ -874,6 +1332,73 @@ async def test_fake_renderer_failure_is_persisted(
     assert failed.error is not None
     assert failed.error.code == "fake_renderer_failure"
     assert service.logs(job.id, after_sequence=0, limit=100).items[-1].level == "error"
+
+
+@pytest.mark.asyncio
+async def test_failed_fake_render_retry_is_exact_counted_and_resumes_missing_work(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    output = tmp_path / "fake-retry" / "render"
+    output.mkdir(parents=True)
+    request = StartFakeRenderRequest(
+        project_id="trip-to-andromeda",
+        scene_id=SCENE_ID,
+        profile_id=PROFILE_ID,
+        output_directory=str(output),
+        renderer=RendererKind.FAKE,
+        fake=FakeRenderOptions(
+            total_frames=6,
+            frames_per_chunk=2,
+            fail_at_frame=3,
+        ),
+    )
+    job = await service.start_render(request, fake_options=request.fake)
+    failed = await _wait_for_state(service, job.id, {JobState.FAILED})
+    assert failed.published_frame_count == 2
+    assert failed.failure_count == 1
+
+    with pytest.raises(MissionControlError) as ordinary_resume:
+        await service.resume(
+            job.id,
+            ResumeRequest(
+                scene_sha256=mission_fixture.scene_sha256,
+                profile_sha256=mission_fixture.profile_sha256,
+            ),
+        )
+    assert ordinary_resume.value.error.code == "render_not_resumable"
+
+    with pytest.raises(MissionControlError) as mismatched:
+        await service.retry_failed(
+            job.id,
+            RetryFailedRenderRequest(
+                scene_sha256="0" * 64,
+                profile_sha256=mission_fixture.profile_sha256,
+                operator_confirmed=True,
+            ),
+        )
+    assert mismatched.value.error.code == "retry_identity_mismatch"
+    assert service.get_job(job.id).retry_count == 0
+
+    await asyncio.sleep(0)
+    retried = await service.retry_failed(
+        job.id,
+        RetryFailedRenderRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+    assert retried.state == JobState.STARTING
+    assert retried.retry_count == 1
+    assert retried.failure_count == 1
+    complete = await _wait_for_state(service, job.id, {JobState.COMPLETE})
+    assert complete.published_frame_count == 6
+    assert complete.validated_frame_count == 6
+    assert complete.retry_count == 1
+    assert complete.failure_count == 1
 
 
 @pytest.mark.asyncio
@@ -954,6 +1479,102 @@ async def test_production_exit_zero_never_fabricates_completion(
     paused = service.get_job(paused_job.id)
     assert paused.state == JobState.PAUSED_SAFELY
     assert paused.published_frame_count == 2
+
+
+@pytest.mark.asyncio
+async def test_production_cancel_reconciles_at_safe_boundary_without_deleting_output(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    tmp_path: Path,
+) -> None:
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "cancelled-production" / "render",
+        job_id="cancelled-production-job",
+    )
+    stopped_at = "2026-07-21T10:00:00+00:00"
+    manifest_path = _write_render_manifest(
+        job,
+        mission_fixture.authorization_token,
+        valid_frames=[1, 2],
+        complete=False,
+        stopped_at=stopped_at,
+        updated_at=stopped_at,
+    )
+    manifest_before = manifest_path.read_bytes()
+    await service.update_job(
+        job.id,
+        state=JobState.CANCEL_REQUESTED,
+        safe_stop_status=SafeStopStatus.REQUESTED,
+    )
+
+    await service.production_renderer._reconcile_exit(service, job.id, 0)
+
+    cancelled = service.get_job(job.id)
+    assert cancelled.state == JobState.CANCELLED
+    assert cancelled.completed_at is not None
+    assert cancelled.published_frame_count == 2
+    assert cancelled.validated_frame_count == 2
+    assert cancelled.inflight_frame_count == 0
+    assert cancelled.safe_stop_status.value == "none"
+    assert cancelled.error is None
+    assert manifest_path.read_bytes() == manifest_before
+
+
+@pytest.mark.asyncio
+async def test_failed_production_retry_preserves_manifest_and_resumes_exact_identity(
+    service: MissionControlService,
+    mission_fixture: MissionFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _authorize(service)
+    job = _stored_job(
+        service,
+        mission_fixture,
+        tmp_path / "retry-production" / "render",
+        job_id="retry-production-job",
+        total_frames=13_029,
+    )
+    manifest_path = _write_render_manifest(
+        job,
+        mission_fixture.authorization_token,
+        valid_frames=[1, 2],
+        complete=False,
+    )
+    manifest_before = manifest_path.read_bytes()
+    await service.production_renderer._reconcile_exit(service, job.id, 7)
+    failed = service.get_job(job.id)
+    assert failed.state == JobState.FAILED
+    assert failed.failure_count == 1
+
+    started: list[str] = []
+
+    def capture_start(
+        _controller: object,
+        restarted: JobRecord,
+        **_kwargs: object,
+    ) -> None:
+        started.append(restarted.id)
+
+    monkeypatch.setattr(service.production_renderer, "start", capture_start)
+    retried = await service.retry_failed(
+        job.id,
+        RetryFailedRenderRequest(
+            scene_sha256=mission_fixture.scene_sha256,
+            profile_sha256=mission_fixture.profile_sha256,
+            operator_confirmed=True,
+        ),
+    )
+
+    assert retried.state == JobState.STARTING
+    assert retried.retry_count == 1
+    assert retried.failure_count == 1
+    assert retried.published_frame_count == 2
+    assert retried.validated_frame_count == 2
+    assert started == [job.id]
+    assert manifest_path.read_bytes() == manifest_before
 
 
 @pytest.mark.asyncio

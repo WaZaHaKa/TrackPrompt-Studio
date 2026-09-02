@@ -7,20 +7,27 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from trackprompt_visualizer import andromeda_story_v2 as story_module
+from trackprompt_visualizer import mcp_entrypoints
 from trackprompt_visualizer.andromeda_story_v2 import (
+    ANDROMEDA_V2_BUILDER_ID,
     ANDROMEDA_V2_FRAME_END,
     ANDROMEDA_V2_FRAME_START,
     ANDROMEDA_V2_SHOT_COUNT,
     ANIMATIC_FAST_MODE,
     MASTER_MODE,
+    _animate_shot_story_visibility,
     _apply_and_read_setting,
     _arguments,
     _bounded_lighting_plan,
     _intentional_cut_frames,
     _normalize_animation_interpolation,
+    _protagonist_transform,
     _story_animation_plan,
     build_and_save_andromeda_v2_master,
     build_andromeda_v2_scene_spec,
+    build_protagonist_component_story_plan,
+    build_shot_story_action_plan,
     configure_render_mode,
     load_and_validate_visual_cues,
     load_andromeda_v2_source_contracts,
@@ -76,6 +83,7 @@ def test_scene_spec_is_deterministic_complete_and_not_authorized() -> None:
     assert first == second
     assert first["frameStart"] == ANDROMEDA_V2_FRAME_START
     assert first["frameEnd"] == ANDROMEDA_V2_FRAME_END
+    assert first["builderId"] == ANDROMEDA_V2_BUILDER_ID
     assert first["shotCount"] == ANDROMEDA_V2_SHOT_COUNT
     assert first["actOrder"] == [
         "signal",
@@ -91,7 +99,191 @@ def test_scene_spec_is_deterministic_complete_and_not_authorized() -> None:
     assert first["renderStarted"] is False
     assert len(first["complexityByShot"]) == ANDROMEDA_V2_SHOT_COUNT
     assert len(first["compositionProfiles"]) == 14
+    assert first["storyActionCount"] == ANDROMEDA_V2_SHOT_COUNT
+    assert len(first["storyActionPlanSha256"]) == 64
     assert len(first["canonicalSha256"]) == 64
+
+
+def test_every_authored_story_field_drives_a_deterministic_action() -> None:
+    shots = load_andromeda_v2_source_contracts(REPOSITORY_ROOT)["shots"]["shots"]
+    first = build_shot_story_action_plan(shots)
+    second = build_shot_story_action_plan(shots)
+    assert first == second
+    assert len(first["shotActions"]) == ANDROMEDA_V2_SHOT_COUNT
+    assert len(
+        {
+            action["actionSignatureSha256"]
+            for action in first["shotActions"]
+        }
+    ) == ANDROMEDA_V2_SHOT_COUNT
+
+    by_sequence = {
+        action["sequence"]: action for action in first["shotActions"]
+    }
+    assert by_sequence[23]["actionFamily"] == "fracture-impact"
+    assert by_sequence[27]["actionFamily"] == "component-release"
+    assert by_sequence[28]["actionFamily"] == "route-repair"
+    assert by_sequence[29]["actionFamily"] == "aperture-rebirth"
+    assert by_sequence[30]["actionFamily"] == "transformed-release"
+    assert by_sequence[35]["actionFamily"] == "arrival-settle"
+    for shot, action in zip(shots, first["shotActions"], strict=True):
+        assert action["storyPurpose"] == shot["storyPurpose"]
+        assert action["secondaryNarrativeAction"] == (
+            shot["secondaryNarrativeAction"]
+        )
+        assert action["dominantShape"]["id"] == shot["dominantShape"]
+        assert [
+            landmark["id"] for landmark in action["requiredLandmarks"]
+        ] == shot["requiredLandmarks"]
+        assert len(action["controllerStates"]) == 3
+
+    purpose_changed = json.loads(json.dumps(shots))
+    purpose_changed[0]["storyPurpose"] += " Purpose-specific physical beat."
+    secondary_changed = json.loads(json.dumps(shots))
+    secondary_changed[0]["secondaryNarrativeAction"] += " Secondary beat."
+    dominant_changed = json.loads(json.dumps(shots))
+    dominant_changed[0]["dominantShape"] = "nested-ring-purpose-test"
+    landmark_changed = json.loads(json.dumps(shots))
+    landmark_changed[0]["requiredLandmarks"][0] = "crystal-purpose-test"
+
+    baseline = first["shotActions"][0]
+    assert (
+        build_shot_story_action_plan(purpose_changed)["shotActions"][0][
+            "actionSignatureSha256"
+        ]
+        != baseline["actionSignatureSha256"]
+    )
+    assert (
+        build_shot_story_action_plan(secondary_changed)["shotActions"][0][
+            "actionSignatureSha256"
+        ]
+        != baseline["actionSignatureSha256"]
+    )
+    assert (
+        build_shot_story_action_plan(dominant_changed)["shotActions"][0][
+            "dominantShape"
+        ]["geometryKind"]
+        == "ring"
+    )
+    assert (
+        build_shot_story_action_plan(landmark_changed)["shotActions"][0][
+            "requiredLandmarks"
+        ][0]["id"]
+        == "crystal-purpose-test"
+    )
+
+
+def test_component_damage_and_transformation_persist_through_arrival() -> None:
+    shots = load_andromeda_v2_source_contracts(REPOSITORY_ROOT)["shots"]["shots"]
+    plan = build_protagonist_component_story_plan(shots)
+    assert plan["damageBeginsFrame"] == shots[22]["frameStart"]
+    assert plan["damagePersistsUntilFrame"] == shots[26]["frameEnd"]
+    assert plan["transformationCompletesFrame"] == shots[29]["frameEnd"]
+    assert plan["transformationPersistsThroughFrame"] == ANDROMEDA_V2_FRAME_END
+
+    components = plan["components"]
+    assert components["damaged-armor-plate"][-1] == {
+        "frame": ANDROMEDA_V2_FRAME_END,
+        "stage": "removed-through-arrival",
+        "scaleMultiplier": (0.001, 0.001, 0.001),
+        "locationOffset": (2.42, 1.24, 1.46),
+        "rotationOffset": (1.42, 0.92, 1.34),
+    }
+    assert components["damaged-crystal-route"][-1]["stage"] == (
+        "retired-through-arrival"
+    )
+    assert components["repaired-crystal-bridge"][-1]["stage"] == (
+        "arrival-functional-route"
+    )
+    assert components["front-aperture"][-1]["stage"] == (
+        "protected-arrival-aperture"
+    )
+    for component_id in ("transformed-fin-left", "transformed-fin-right"):
+        assert components[component_id][0]["scaleMultiplier"] == (
+            0.001,
+            0.001,
+            0.001,
+        )
+        assert components[component_id][-1]["frame"] == ANDROMEDA_V2_FRAME_END
+        assert components[component_id][-1]["scaleMultiplier"] == (
+            1.0,
+            1.0,
+            1.0,
+        )
+
+    transformed = _protagonist_transform(
+        frame=shots[29]["frameEnd"],
+        location=(0.0, 0.0, 0.0),
+        sequence=30,
+        protagonist_state="transformed",
+        midpoint=False,
+    )
+    arrived = _protagonist_transform(
+        frame=ANDROMEDA_V2_FRAME_END,
+        location=(0.0, 0.0, 0.0),
+        sequence=35,
+        protagonist_state="arrived",
+        midpoint=False,
+    )
+    assert transformed["scale"] == (1.08, 1.16, 0.98)
+    assert arrived["scale"] == transformed["scale"]
+
+
+def test_mcp_entrypoint_builds_v2_without_starting_a_render(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "andromeda-v2-mcp.blend"
+    captured: dict[str, object] = {}
+
+    def fake_builder(
+        repository_root: Path,
+        output_blend: Path,
+        **kwargs: object,
+    ) -> dict[str, object]:
+        captured["repositoryRoot"] = repository_root
+        captured["outputBlend"] = output_blend
+        captured.update(kwargs)
+        return {
+            "ok": True,
+            "builderId": ANDROMEDA_V2_BUILDER_ID,
+            "renderStarted": False,
+        }
+
+    monkeypatch.setattr(
+        story_module,
+        "build_and_save_andromeda_v2_master",
+        fake_builder,
+    )
+    result = mcp_entrypoints.build_andromeda_v2_master_scene(
+        str(REPOSITORY_ROOT),
+        str(output),
+        composition_id=VERTICAL_VARIANT_ID,
+        render_mode=ANIMATIC_FAST_MODE,
+    )
+    assert result == {
+        "ok": True,
+        "builderId": ANDROMEDA_V2_BUILDER_ID,
+        "renderStarted": False,
+    }
+    assert captured["repositoryRoot"] == REPOSITORY_ROOT.resolve()
+    assert captured["outputBlend"] == output.resolve()
+    assert captured["composition_id"] == VERTICAL_VARIANT_ID
+    assert captured["render_mode"] == ANIMATIC_FAST_MODE
+    assert captured["audio_path"] is None
+    assert captured["visual_cues_path"] is None
+
+    invalid = mcp_entrypoints.build_andromeda_v2_master_scene(
+        "relative-repository",
+        str(tmp_path / "invalid.blend"),
+    )
+    assert invalid == {
+        "ok": False,
+        "error": {
+            "code": "validation_failed",
+            "message": "Repository root path must be absolute.",
+        },
+    }
 
 
 def test_compositions_are_native_independent_and_protect_landmarks() -> None:
@@ -308,11 +500,22 @@ def test_animation_keyframes_are_normalized_to_linear() -> None:
         SimpleNamespace(interpolation="CONSTANT"),
     ]
     data_points = [SimpleNamespace(interpolation="BEZIER")]
+    visibility_points = [
+        SimpleNamespace(interpolation="BEZIER"),
+        SimpleNamespace(interpolation="LINEAR"),
+    ]
     obj = SimpleNamespace(
         animation_data=SimpleNamespace(
             action=SimpleNamespace(
                 fcurves=[
-                    SimpleNamespace(keyframe_points=object_points),
+                    SimpleNamespace(
+                        data_path="location",
+                        keyframe_points=object_points,
+                    ),
+                    SimpleNamespace(
+                        data_path="hide_render",
+                        keyframe_points=visibility_points,
+                    ),
                 ]
             )
         ),
@@ -326,11 +529,76 @@ def test_animation_keyframes_are_normalized_to_linear() -> None:
             )
         ),
     )
-    assert _normalize_animation_interpolation([obj, obj]) == 3
+    assert _normalize_animation_interpolation([obj, obj]) == 5
     assert all(
         point.interpolation == "LINEAR"
         for point in [*object_points, *data_points]
     )
+    assert all(point.interpolation == "CONSTANT" for point in visibility_points)
+
+
+def test_shot_story_visibility_is_exact_and_hidden_outside_the_shot() -> None:
+    class FakeObject(dict[str, object]):
+        def __init__(self) -> None:
+            super().__init__()
+            self.hide_render = False
+            self.hide_viewport = False
+            self.keys: list[tuple[str, int, bool]] = []
+
+        def keyframe_insert(self, data_path: str, *, frame: int) -> None:
+            self.keys.append((data_path, frame, bool(getattr(self, data_path))))
+
+    first = FakeObject()
+    middle = FakeObject()
+    last = FakeObject()
+    plan = {
+        "shotActions": [
+            {"shotId": "first", "frameStart": 1, "frameEnd": 10},
+            {"shotId": "middle", "frameStart": 11, "frameEnd": 20},
+            {"shotId": "last", "frameStart": 21, "frameEnd": 30},
+        ]
+    }
+    count = _animate_shot_story_visibility(
+        {"first": [first], "middle": [middle], "last": [last]},
+        plan,
+        scene_frame_start=1,
+        scene_frame_end=30,
+    )
+
+    assert count == 24
+    assert first.keys == [
+        ("hide_render", 1, False),
+        ("hide_viewport", 1, False),
+        ("hide_render", 10, False),
+        ("hide_viewport", 10, False),
+        ("hide_render", 11, True),
+        ("hide_viewport", 11, True),
+    ]
+    assert middle.keys == [
+        ("hide_render", 1, True),
+        ("hide_viewport", 1, True),
+        ("hide_render", 10, True),
+        ("hide_viewport", 10, True),
+        ("hide_render", 11, False),
+        ("hide_viewport", 11, False),
+        ("hide_render", 20, False),
+        ("hide_viewport", 20, False),
+        ("hide_render", 21, True),
+        ("hide_viewport", 21, True),
+    ]
+    assert last.keys == [
+        ("hide_render", 1, True),
+        ("hide_viewport", 1, True),
+        ("hide_render", 20, True),
+        ("hide_viewport", 20, True),
+        ("hide_render", 21, False),
+        ("hide_viewport", 21, False),
+        ("hide_render", 30, False),
+        ("hide_viewport", 30, False),
+    ]
+    assert middle["trackprompt_visibility_policy"] == "current-shot-only"
+    assert middle["trackprompt_visibility_frame_start"] == 11
+    assert middle["trackprompt_visibility_frame_end"] == 20
 
 
 def test_animation_keyframes_support_blender_52_layered_actions() -> None:
@@ -438,6 +706,8 @@ def test_render_modes_configure_but_never_start_rendering() -> None:
     builder_source = inspect.getsource(build_and_save_andromeda_v2_master)
     assert "bpy.ops.render" not in builder_source
     assert "save_as_mainfile" in builder_source
+    assert '"builderSourceSha256": builder_source_sha256' in builder_source
+    assert "trackprompt_builder_source_sha256" in builder_source
 
 
 def test_master_render_mode_fails_closed_when_locked_settings_are_unavailable() -> None:

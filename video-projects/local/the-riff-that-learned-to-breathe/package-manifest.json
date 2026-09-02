@@ -1,0 +1,279 @@
+{
+  "schemaVersion": "1.0.0",
+  "packageId": "the-riff-that-learned-to-breathe",
+  "title": "The Riff That Learned to Breathe",
+  "createdAtUtc": "2026-08-21T17:41:23+00:00",
+  "fileCountExcludingManifestAndChecksums": 54,
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 61,
+      "sha256": "13c15dd26bb3860a268b0c9597d9a651018f9ac04106ba63d887ee8d67e95cad"
+    },
+    {
+      "path": "CODEX_IMPLEMENTATION_PROMPT.md",
+      "bytes": 15045,
+      "sha256": "2c0e6d1d2d25402acb0ce6b91ba1963a1ae8b49632f058a46252528fde116152"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4305,
+      "sha256": "206dcdbb632ec193d319c8cecda28afb718c1b430c203bba90ec2203d2547af9"
+    },
+    {
+      "path": "USER_ACTIONS.md",
+      "bytes": 831,
+      "sha256": "8516b1a5622951fbf471b62582def5798d40eeccf04749e1339ddc5fc287ec86"
+    },
+    {
+      "path": "audio/PUT_TRACK_HERE.txt",
+      "bytes": 196,
+      "sha256": "c1fdd1d39fa3547344023f37c54f8b815ea7261cfc5050222b067b2d78983ea5"
+    },
+    {
+      "path": "chapter-map.json",
+      "bytes": 1839,
+      "sha256": "32acb350f399f48cafeffcad3fd1dd69ab7a79ea4f17570c13f1f2996e15ddaa"
+    },
+    {
+      "path": "continuity-profile.json",
+      "bytes": 5078,
+      "sha256": "e525859b2b996f48c38ee7f8c4d1168dac8b45641c7bcbf68711596ccde2d26f"
+    },
+    {
+      "path": "creative-bible.json",
+      "bytes": 4516,
+      "sha256": "f98877f26463cb1c86e3e878a805f3dddc012de7dbb83deb69d2b4c0063ed1c3"
+    },
+    {
+      "path": "docs/LOCAL_PIPELINE.md",
+      "bytes": 2351,
+      "sha256": "ee8effdebce768c2cc285d0e97eabcfe90eb6aeae643e7326cf48a1de96cb20a"
+    },
+    {
+      "path": "docs/MODEL_SELECTION.md",
+      "bytes": 1730,
+      "sha256": "a26885f9b86f4163fa91e99217170774330b9b0e565c1c73482a0ee85978551c"
+    },
+    {
+      "path": "docs/SOURCES.md",
+      "bytes": 837,
+      "sha256": "f99cf85426cb7400b564e0d18167f05cf3f29b3f684e9df713861d6fdb9aa7d8"
+    },
+    {
+      "path": "docs/YOUTUBE_RELEASE_STRATEGY.md",
+      "bytes": 2194,
+      "sha256": "34c1070557a5e6fc47d2be10b21950ba8cf7a75e9a6411b60f84b4bd72e5fb4f"
+    },
+    {
+      "path": "edit-blueprint.json",
+      "bytes": 7914,
+      "sha256": "d3a184f36c3ffc4284587584bae7a0a54bdc1b8404f9b19b180d42ebbe91c3ac"
+    },
+    {
+      "path": "expected-output-tree.txt",
+      "bytes": 2309,
+      "sha256": "f00d3916dd82de384e5f15837738d37719a37bdb85019710f2c4c5a1ba31d2d1"
+    },
+    {
+      "path": "hardware-policy.json",
+      "bytes": 2171,
+      "sha256": "bc22d3f6dbfd9392bfbdfce503a28ebf42e9d03a710fe3f6c9b6dac098b8866d"
+    },
+    {
+      "path": "model-profile.json",
+      "bytes": 3113,
+      "sha256": "29cb29d1c845a998c50aa80d8019623f7032f7ea9cac384e79016c44c70c568b"
+    },
+    {
+      "path": "persistent-analysis-policy.json",
+      "bytes": 1542,
+      "sha256": "c813740d7247d4cdc6b6088aba646c427e628e46eb6a18bb8b8c12557041584b"
+    },
+    {
+      "path": "project-config.json",
+      "bytes": 3013,
+      "sha256": "54d303fbf27c5521ee3ffef8f128c9d070aaf54df5faab384e19537c4b7eebac"
+    },
+    {
+      "path": "prompts/character-reference-prompts.md",
+      "bytes": 2956,
+      "sha256": "0b8a5322c353032742a576c529df78f4e8172886d33baa0de557c0fe584bd428"
+    },
+    {
+      "path": "prompts/global-negative.txt",
+      "bytes": 779,
+      "sha256": "b3931d975c8af83f5d6714dbb0f7816bbed10fac756a8ec5cf9b2188051a7069"
+    },
+    {
+      "path": "prompts/individual/shot-001.txt",
+      "bytes": 2721,
+      "sha256": "3b5dd4c9586cabcf1b1f49ef0710f98ce757ca7be7ebf3b1bf966f556cc71e14"
+    },
+    {
+      "path": "prompts/individual/shot-002.txt",
+      "bytes": 2775,
+      "sha256": "10bf45de5ba2041ce339a6e895f758cfc268b87829a4bb4b76291bba668e7252"
+    },
+    {
+      "path": "prompts/individual/shot-003.txt",
+      "bytes": 2766,
+      "sha256": "70dee5a17a49037cd99e200c29318fb6add8d1bc48f85d7f8b7061d26b4a5ac9"
+    },
+    {
+      "path": "prompts/individual/shot-004.txt",
+      "bytes": 2736,
+      "sha256": "510d4600583aa127c3419bf3b281b4ee6f43a6b19999fe5bcdab32b8182f7b30"
+    },
+    {
+      "path": "prompts/individual/shot-005.txt",
+      "bytes": 2697,
+      "sha256": "0bfd3f465593f463f00a474503add03e53b040ca2c41182e04936c1b1ebbe44f"
+    },
+    {
+      "path": "prompts/individual/shot-006.txt",
+      "bytes": 2577,
+      "sha256": "4651c239e09cbb24cbad1a55deb4a225e9423a0fdf7e461d1f4c08ed196b91d8"
+    },
+    {
+      "path": "prompts/individual/shot-007.txt",
+      "bytes": 2701,
+      "sha256": "b11066af91e744f9f3faa2fa7c67e2c6d220f5d0a784b1be633ecc531c571f80"
+    },
+    {
+      "path": "prompts/individual/shot-008.txt",
+      "bytes": 2576,
+      "sha256": "321bb161081eeed6bdcd57512e6d7ec81676a0ffad298b1f6ab780273f60a92b"
+    },
+    {
+      "path": "prompts/individual/shot-009.txt",
+      "bytes": 2678,
+      "sha256": "4dfbb1b7cc32ef17792063999f25cced85ea8d5164201d61100f6ec88ff15e8f"
+    },
+    {
+      "path": "prompts/individual/shot-010.txt",
+      "bytes": 3003,
+      "sha256": "4dee3b3f5dc099c418b879b73d7f98d57febb6e058827263115299fdba438c2f"
+    },
+    {
+      "path": "prompts/individual/shot-011.txt",
+      "bytes": 2773,
+      "sha256": "56cd5096eabf374b63d73a3f117e072fe5736499defe4eafc48a9d7d9bea99c2"
+    },
+    {
+      "path": "prompts/individual/shot-012.txt",
+      "bytes": 2644,
+      "sha256": "c72eeb064543b41258bb7937acf9fc4919c0491bc5cd0421867bb2288b9b272e"
+    },
+    {
+      "path": "prompts/individual/shot-013.txt",
+      "bytes": 2968,
+      "sha256": "88c4adb99bf748ed7359e957dd1025baa77fdb6823575935a6fe0639005b167f"
+    },
+    {
+      "path": "prompts/individual/shot-014.txt",
+      "bytes": 2567,
+      "sha256": "e6e93a87e40dfb54cabdd07290601c2c28632d4da8b75736a221b20e1a56bdbb"
+    },
+    {
+      "path": "prompts/individual/shot-015.txt",
+      "bytes": 2792,
+      "sha256": "d262eca9b504e5e28c574685d7978925cade9cb2792b778467c1640d132efbd1"
+    },
+    {
+      "path": "prompts/individual/shot-016.txt",
+      "bytes": 2354,
+      "sha256": "1b6de767e092d6ec8c82ca0744eb7b6e5ac277ae4e2e0754ff735e8808248ff7"
+    },
+    {
+      "path": "prompts/master-style-prefix.txt",
+      "bytes": 324,
+      "sha256": "5acd4a5f0cbfc4ffcef410b1a9fc84fc8173de709e8d2723406ff725093a83b0"
+    },
+    {
+      "path": "prompts/scene-prompts.json",
+      "bytes": 38175,
+      "sha256": "72938c9d6ef5d0f2d4152ac3466c35768160c4590e459b0cd3c9caac583b5ed7"
+    },
+    {
+      "path": "prompts/scene-prompts.md",
+      "bytes": 37838,
+      "sha256": "62c8dcad06f8f709003e41ea698a58940eacb351fcd32006b6271f4f5f2d7991"
+    },
+    {
+      "path": "prompts/transition-prompts.json",
+      "bytes": 9163,
+      "sha256": "ed6619e2a4de323c3cf2a4159a9c3d52c30733487ab9c9caf734619536824396"
+    },
+    {
+      "path": "references/README.md",
+      "bytes": 300,
+      "sha256": "80602401fe6d48dfd5f45baab9fd1799b68d92b6e02e43fe910e942a27059204"
+    },
+    {
+      "path": "render-plan.json",
+      "bytes": 2657,
+      "sha256": "cbe1fe0d2ae6c9178d39f4bd7058c0355224f046099fee80b8db03082964455d"
+    },
+    {
+      "path": "rights-and-credits.json",
+      "bytes": 1618,
+      "sha256": "db7d88bbd21de35920c508dcba7a599f91e661049e872717527f1cdcc74a94ae"
+    },
+    {
+      "path": "schemas/project-package.schema.json",
+      "bytes": 1007,
+      "sha256": "5a4c0e5d768e375e7152bb8e211550c133315582111da1553896d2e5b82d1220"
+    },
+    {
+      "path": "schemas/shot-bank.schema.json",
+      "bytes": 1908,
+      "sha256": "83fa8b96d445a77fb997677d9d4455e6815b5891cc5c41c547f9efe2c6cc76a6"
+    },
+    {
+      "path": "scripts/Validate-Package.ps1",
+      "bytes": 3558,
+      "sha256": "74ca2750c186df14b1782a28c41909dba923ec2ae41e278e7b2908a7bf301c62"
+    },
+    {
+      "path": "scripts/validate_package.py",
+      "bytes": 2074,
+      "sha256": "8bb24854229c1ce24d73438c29163e7516149981139693a1e6e9e3345139cb30"
+    },
+    {
+      "path": "shot-bank.json",
+      "bytes": 59607,
+      "sha256": "6fbfdb71d590ba89e282f3148ef7905dc4ff8b29d8f3984003a51dc99d7cd2a5"
+    },
+    {
+      "path": "timing/audio-analysis-contract.json",
+      "bytes": 827,
+      "sha256": "4ae14561430916f7df294ccfff6b71b4d0fefdf63001be59395ef1d8c2c3a346"
+    },
+    {
+      "path": "timing/beat-markers.template.csv",
+      "bytes": 1144,
+      "sha256": "62b18712410331aef6e47192e9e77e618f4d9653f2a0d2b2e4c2b0d5438ef964"
+    },
+    {
+      "path": "timing/provisional-timeline.json",
+      "bytes": 3713,
+      "sha256": "3e2f5206b6f5723cfc2fa527998549fc3ee5995f283a4a6ff1478ec5e3ec1e66"
+    },
+    {
+      "path": "timing/sync-policy.json",
+      "bytes": 1188,
+      "sha256": "55d503036f8a754bf1d738a1f9b5133621f35f53d052708e052c9bad73967d4a"
+    },
+    {
+      "path": "workflows/comfyui-wan22-i2v-a14b-workflow-contract.json",
+      "bytes": 2179,
+      "sha256": "36d003203e3c9fae4abd4daa9d998ff9f15b2647d700ee8f35adef08d5e99dab"
+    },
+    {
+      "path": "workflows/official-workflow-reference.json",
+      "bytes": 1323,
+      "sha256": "3468880b7df8873a02b1aba65e0123c0d05b7e6adcef52c0fef2a7c915313192"
+    }
+  ]
+}

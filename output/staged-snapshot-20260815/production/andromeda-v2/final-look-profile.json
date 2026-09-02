@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0.0",
+  "profileId": "andromeda-r13.1-final-look-v1",
+  "projectId": "trip-to-andromeda-v2",
+  "sourceAcceptanceId": "andromeda-r13.1-owner-creative-acceptance-v1",
+  "sourceRevision": "andromeda-r13.1-selected-refinement",
+  "status": "locked-for-story-production",
+  "locked": true,
+  "previewOnly": false,
+  "aspectNeutral": true,
+  "compositionPolicy": "native-authored-per-output-variant",
+  "selectedLanguage": {
+    "protagonistDesign": "protagonist-b-ancient-engine",
+    "architecturalMaterialLanguage": "weathered-stone-metal-crystal-v1",
+    "gateConstruction": "nested-ring-monolith-v1",
+    "exposureLightingTreatment": "restrained-teal-cyan-amber-v1"
+  },
+  "protagonist": {
+    "silhouetteReference": "protagonist-a-directional-shell",
+    "identity": "protagonist-b-ancient-engine",
+    "frontBackOrientation": "clear-directional-front-and-back",
+    "majorArmorBands": 1,
+    "transparentAtmosphereLayers": 1,
+    "integratedFrontAperture": true,
+    "asymmetricOrientationCues": true,
+    "restrainedRearWake": true,
+    "wireCage": false,
+    "hudOverlay": false,
+    "boundedCompression": true
+  },
+  "architecture": {
+    "connectedSupports": true,
+    "railsAndConduits": true,
+    "repeatedStructuralRhythm": true,
+    "functionalCrystalRouting": true,
+    "floatingPanelField": false,
+    "proceduralBlockoutAcceptedAsFinal": false
+  },
+  "gate": {
+    "outerMonolith": true,
+    "movingLockRings": true,
+    "localizedMembrane": true,
+    "destinationDepth": true,
+    "closingMechanism": true,
+    "uniformCyanWash": false,
+    "localizedDeformationOnly": true,
+    "localizedMembraneCount": 1
+  },
+  "lighting": {
+    "palette": "restrained-teal-cyan-amber-v1",
+    "exposurePolicy": "subject-first-highlight-protected",
+    "contrast": "agx-medium-high-contrast",
+    "unmotivatedFullFrameWash": false,
+    "featurelessWhiteWash": false
+  },
+  "materialHierarchy": {
+    "primaryStructure": "weathered-stone",
+    "secondaryStructure": "aged-metal",
+    "signalMaterial": "functional-crystal",
+    "hierarchyIsCoherent": true
+  },
+  "motion": {
+    "protagonistMovement": "independent-authored",
+    "cameraLag": "authored",
+    "foregroundParallax": "authored",
+    "localizedDeformation": true,
+    "rawAudioControlsMajorCameraTravel": false,
+    "rawAudioControlsMajorProtagonistTravel": false
+  },
+  "transparency": {
+    "blendMode": "DITHERED",
+    "maximumLayers": 2,
+    "localizedGateMembranes": 1,
+    "frameFillingTransparentVolume": false
+  },
+  "renderBaseline": {
+    "blenderVersion": "5.2",
+    "renderEngine": "BLENDER_EEVEE",
+    "temporalSamples": 64,
+    "volumetricSamples": 32,
+    "temporalAntialiasing": true,
+    "temporalReprojection": true,
+    "colorManagement": "AgX Medium High Contrast",
+    "transparencyMode": "DITHERED",
+    "motionBlur": false,
+    "maximumTransparentLayers": 2,
+    "localizedGateMembranes": 1,
+    "compositorDenoising": false
+  },
+  "controlledShotVariance": {
+    "sharedInvariants": [
+      "renderer-and-color-management",
+      "material-and-lighting-grammar",
+      "motion-constraints",
+      "protagonist-architecture-and-gate-systems"
+    ],
+    "authoredPerShotOrVariant": [
+      "lens-and-camera-distance",
+      "composition-and-palette-emphasis",
+      "subject-occupancy-and-foreground-placement",
+      "narrative-action"
+    ]
+  },
+  "productionAuthorization": false
+}

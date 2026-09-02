@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-011 — Keep the Heart
+Provisional timing: 89.000–98.000 s
+Seed: 24081011
+
+NARRATIVE INTENT
+Resolve the central question: change the form, keep the musical heart.
+
+KEYFRAME PROMPT
+Macro view of The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos carefully placing the original warm amber mechanical heart back inside the transformed paper-and-fabric body of the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged. Fine metal ribs remain beneath the soft feathers. The Architect's rust-colored sleeve is visible at the edge of frame, helping steady the bird. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+The Listener lowers the glowing heart into the bird while the Architect steadies one wing. The heart clicks gently into place, sends a slow amber pulse through metal ribs and paper feathers, and the bird takes one deep breath. Use a steady macro push and end as a circular pulse expands beyond frame.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+architect-identity, listener-identity, origami-bird-hybrid, amber-heart
+
+TRANSITION IN
+paper tear folds into a macro frame around the heart
+
+TRANSITION OUT
+the expanding amber heartbeat becomes the arch of a floating bridge
+
+ACCEPTANCE NOTES
+- Both sleeves and hands should stay anatomically stable.
+- The original heart is explicitly preserved.

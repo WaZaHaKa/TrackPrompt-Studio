@@ -22,8 +22,10 @@ import {
   StatusBadge,
 } from '../components'
 import type { StructuredError } from '../types'
+import { LocalVideoProviderPanel } from './LocalVideoProviderPanel'
 import {
   type VideoCatalog,
+  type VideoAudioSelection,
   type VideoDoctorResult,
   type VideoJob,
   type VideoProfile,
@@ -68,6 +70,8 @@ export function VideoGenerationScreen() {
   const [seedLocked, setSeedLocked] = useState(true)
   const [referenceImagePath, setReferenceImagePath] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const [audioRevision, setAudioRevision] = useState<VideoAudioSelection['error']>(null)
+  const [audioRevisionConfirmation, setAudioRevisionConfirmation] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<StructuredError | null>(null)
   const lastSequence = useRef(0)
@@ -235,13 +239,24 @@ export function VideoGenerationScreen() {
     }
   }
 
-  const pickAudio = async (): Promise<void> => {
+  const pickAudio = async (revisionConfirmation?: string): Promise<void> => {
     if (!job) return
     setBusy('audio-selecting')
     setError(null)
     try {
-      const selected = await videoGenerationClient.selectAudio(job.jobId)
-      if (selected.selected) await refreshJob(job.jobId)
+      const selected = await videoGenerationClient.selectAudio(
+        job.jobId,
+        null,
+        revisionConfirmation ? { confirmation: revisionConfirmation } : undefined,
+      )
+      if (selected.error?.code === 'audio_hash_mismatch_confirmation_required') {
+        setAudioRevision(selected.error)
+        setAudioRevisionConfirmation('')
+      } else if (selected.selected) {
+        setAudioRevision(null)
+        setAudioRevisionConfirmation('')
+        await refreshJob(job.jobId)
+      }
     } catch (caught) {
       setError(errorFromUnknown(caught, 'Audio selection failed'))
     } finally {
@@ -307,6 +322,8 @@ export function VideoGenerationScreen() {
 
   return (
     <div className="mc-page mc-video-page">
+      <LocalVideoProviderPanel />
+
       <SectionHeading
         eyebrow="GCP Veo 3.1 · exact-batch workflow"
         title="Generate the complete music video"
@@ -324,7 +341,7 @@ export function VideoGenerationScreen() {
         <div className="mc-video-form-grid">
           <label className="mc-field">Track analysis
             <select value={analysisId} onChange={(event) => setAnalysisId(event.target.value)}>
-              {catalog?.analyses.map((analysis) => <option key={analysis.analysisJobId} value={analysis.analysisJobId}>{analysis.displayName}{analysis.retainedAudioAvailable ? ' · audio retained' : ''}</option>)}
+              {catalog?.analyses.map((analysis) => <option key={analysis.analysisJobId} value={analysis.analysisJobId}>{analysis.displayName}{analysis.archived ? ' · archived' : ''}{analysis.durationSeconds ? ` · ${Math.floor(analysis.durationSeconds / 60)}:${Math.round(analysis.durationSeconds % 60).toString().padStart(2, '0')}` : ''}{analysis.retainedAudioAvailable ? ' · audio retained' : ''}</option>)}
             </select>
           </label>
           <label className="mc-field">Content package
@@ -388,11 +405,12 @@ export function VideoGenerationScreen() {
           {job.state === 'authorized' ? <Notice tone="success" title="Exact batch authorized"><p>Start submits the smoke shot first. Mission Control automatically continues the unchanged remaining batch only after that clip passes technical verification.</p><Button tone="primary" busy={busy === 'start'} icon={<Play aria-hidden="true" />} onClick={() => { void run('start', () => videoGenerationClient.action(job.jobId, 'start')) }}>Start smoke shot and complete batch</Button></Notice> : null}
           {LIVE_STATES.has(job.state) ? <div className="mc-button-row"><Button tone="danger" busy={busy === 'cancel'} onClick={() => { void run('cancel', () => videoGenerationClient.action(job.jobId, 'cancel')) }}>Cancel batch safely</Button></div> : null}
           {job.error ? <Notice tone="error" title={label(job.error.code)}><p>{job.error.summary}</p>{job.error.httpStatus ? <p>HTTP {job.error.httpStatus}{job.error.providerStatus ? ` · ${job.error.providerStatus}` : ''}{job.error.diagnosticId ? ` · diagnostic ${job.error.diagnosticId}` : ''}</p> : null}{job.error.retryable || job.state.startsWith('blocked_') ? <Button busy={busy === 'resume'} onClick={() => { void run('resume', () => videoGenerationClient.action(job.jobId, 'resume')) }}>Resume exact plan</Button> : null}</Notice> : null}
+          {job.analysisDependency.legacyAnalysisMissing ? <Notice tone="warning" title="Legacy analysis workspace is unavailable"><p>Your generated clips are safe. Continue using the compiled video plan and reattach the original local audio master only if its durable binding is unavailable.</p><div className="mc-button-row"><Button busy={busy === 'repair-legacy'} onClick={() => { void run('repair-legacy', () => videoGenerationClient.repairLegacyDependency(job.jobId)) }}>Repair legacy dependency</Button><Button icon={<FolderOpen aria-hidden="true" />} busy={busy === 'audio-selecting'} onClick={() => { void pickAudio() }}>Reattach original audio</Button><Button disabled={!job.audioMasterBound || job.verifiedShotCount !== job.totalShotCount} onClick={() => { void run('resolve', () => videoGenerationClient.action(job.jobId, 'resolve')) }}>Resolve timeline</Button></div></Notice> : null}
         </section>
 
         <section className="mc-video-shot-grid" aria-label="Planned video shots">
           {job.shots.map((shot) => <article className="mc-card mc-video-shot" key={shot.shotId}>
-            <header><span className="mc-eyebrow">{String(shot.order).padStart(2, '0')} · {shot.chapterId}</span><StatusBadge tone={badgeTone(shot.state)}>{label(shot.state)}</StatusBadge></header>
+            <header><span className="mc-eyebrow">{String(shot.order).padStart(2, '0')} · {shot.chapterId}</span><span><StatusBadge tone={badgeTone(shot.state)}>{label(shot.state)}</StatusBadge> <StatusBadge tone={badgeTone(shot.reviewState)}>Review: {label(shot.reviewState)}</StatusBadge></span></header>
             <h2>{shot.title}</h2>
             {shot.clipUrl ? <video controls preload="metadata" src={shot.clipUrl} aria-label={`${shot.title} generated clip`} /> : <div className="mc-video-shot__placeholder"><Film aria-hidden="true" /><span>Clip not verified yet</span></div>}
             <p>{shot.prompt}</p>
@@ -423,6 +441,7 @@ export function VideoGenerationScreen() {
             </div>
           </div>
           {!job.audioMasterBound ? <Notice tone="warning" title="Audio master not bound"><p>Choose the original local master. Mission Control verifies it, stores an immutable private copy, and binds it to this job without changing the provider plan.</p></Notice> : null}
+          {audioRevision ? <Notice tone="warning" title="Selected audio differs from the original master"><p>Expected <code>{audioRevision.expectedHashPrefix ?? 'unknown'}</code>; selected <code>{audioRevision.selectedHashPrefix ?? 'unknown'}</code>. This can proceed only as a local delivery revision. It will not change prompts, clips, authorization, or provider cost.</p><label className="mc-field">Local-only confirmation phrase<input value={audioRevisionConfirmation} onChange={(event) => setAudioRevisionConfirmation(event.target.value)} autoComplete="off" spellCheck={false} /></label><code>{audioRevision.confirmationPhrase}</code><div className="mc-button-row"><Button tone="primary" disabled={audioRevisionConfirmation !== audioRevision.confirmationPhrase} onClick={() => { void pickAudio(audioRevisionConfirmation) }}>Reselect audio and confirm local revision</Button><Button tone="quiet" onClick={() => { setAudioRevision(null); setAudioRevisionConfirmation('') }}>Cancel</Button></div></Notice> : null}
           <div className="mc-button-row">
             <Button disabled={!job.audioMasterBound || job.verifiedShotCount !== job.totalShotCount} onClick={() => { void run('resolve', () => videoGenerationClient.action(job.jobId, 'resolve')) }}>Resolve timeline</Button>
             <Button disabled={!job.audioMasterBound || !job.artifacts.timelineReady} onClick={() => { void run('export', () => videoGenerationClient.action(job.jobId, 'export')) }}>Export Resolve package</Button>

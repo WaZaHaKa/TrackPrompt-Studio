@@ -1,0 +1,601 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-glitch-is-me",
+  "shotCount": 16,
+  "shots": [
+    {
+      "shotId": "shot-001",
+      "chapterId": "digital-ocean",
+      "order": 1,
+      "title": "Suspended Droplet in the Digital Ocean",
+      "narrativeIntent": "Open the film with a quiet impossible world that feels halfway between water and computation.",
+      "prompt": "Extreme macro view of one heavy water droplet falling in near darkness, then slowing until it hangs motionless above a black reflective ocean. Inside the droplet, tiny violet signal patterns drift like plankton. The camera makes an almost imperceptible push forward while concentric ripples move below without an obvious source.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, person, face, city skyline, literal circuit board",
+      "sourceSectionHints": [
+        "intro",
+        "ambient opening",
+        "low energy"
+      ],
+      "energyRange": [
+        0.0,
+        0.25
+      ],
+      "seed": 18031001,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "slow-push crop"
+      ],
+      "continuityTokens": [
+        "wet black ocean",
+        "violet signal plankton",
+        "restrained amber glint"
+      ],
+      "continuityGroupIds": ["world-global", "digital-ocean"],
+      "previousShotId": null,
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Droplet must remain coherent.",
+        "No text-like symbols inside the droplet.",
+        "Reserve empty space for the opening title added later in Resolve if desired."
+      ]
+    },
+    {
+      "shotId": "shot-002",
+      "chapterId": "digital-ocean",
+      "order": 2,
+      "title": "The Siren Materializes",
+      "narrativeIntent": "Introduce the recurring protagonist as a signal becoming human rather than a robot.",
+      "prompt": "Wide underwater-like chamber with no visible walls. The Quantum Siren gradually assembles from silver mist, fine static and transparent ribbons of water, first as a distant silhouette and then as a fully coherent adult woman. Her long black hair and charcoal fabric float gently. She opens her eyes near the end while the camera performs a slow half orbit.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, robot joints, metal body, superhero pose, dramatic mouth movement",
+      "sourceSectionHints": [
+        "intro",
+        "vocal entrance",
+        "awakening"
+      ],
+      "energyRange": [
+        0.1,
+        0.35
+      ],
+      "seed": 18031002,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "reverse for dream transition",
+        "alternate crop"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "charcoal floating fabric",
+        "translucent signal fractures"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "digital-ocean"],
+      "previousShotId": "shot-001",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Adult appearance must be unambiguous.",
+        "Face and costume become continuity reference for all later Siren shots."
+      ]
+    },
+    {
+      "shotId": "shot-003",
+      "chapterId": "the-flicker",
+      "order": 3,
+      "title": "Cold Flickering Room",
+      "narrativeIntent": "Show physical isolation inside an unstable digital frame.",
+      "prompt": "A sparse cold room made from wet concrete and smoked glass flickers between solid reality and a precise wireframe absence. The Quantum Siren sits alone at the far edge of a narrow bed, almost motionless, while the light above her fails in slow irregular pulses. The camera tracks laterally behind translucent foreground glass, producing deep parallax and emotional distance.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, cozy bedroom, furniture clutter, horror asylum, violent strobe",
+      "sourceSectionHints": [
+        "verse 1",
+        "flicker",
+        "intimate vocal"
+      ],
+      "energyRange": [
+        0.2,
+        0.45
+      ],
+      "seed": 18031003,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "horizontal crop push"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "wet concrete room",
+        "single failing practical light"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "flicker-room"],
+      "previousShotId": "shot-002",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Flicker must be slow enough for comfortable viewing.",
+        "Keep face readable when visible."
+      ]
+    },
+    {
+      "shotId": "shot-004",
+      "chapterId": "the-flicker",
+      "order": 4,
+      "title": "Impossible Smile Reconstruction",
+      "narrativeIntent": "Visualize an emotionally remembered person without creating a second identifiable character.",
+      "prompt": "In a black void, a graceful curve resembling a remembered smile forms from thousands of tiny luminous points and soft numerical geometry, but never becomes a complete human face. The Quantum Siren reaches toward it from the edge of frame; the shape ripples away before contact. Slow macro-to-medium rack focus, shallow depth of field, melancholy restraint.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable numbers, complete second face, floating emoji, literal hologram interface",
+      "sourceSectionHints": [
+        "verse 1",
+        "memory",
+        "touch"
+      ],
+      "energyRange": [
+        0.25,
+        0.5
+      ],
+      "seed": 18031004,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "mirror in Resolve"
+      ],
+      "continuityTokens": [
+        "violet point constellation",
+        "Siren hand",
+        "wet silver refraction"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "flicker-room"],
+      "previousShotId": "shot-003",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "The smile remains abstract and non-identifying.",
+        "Hand anatomy must be clean."
+      ]
+    },
+    {
+      "shotId": "shot-005",
+      "chapterId": "unsolvable-distance",
+      "order": 5,
+      "title": "The Distance Equation",
+      "narrativeIntent": "Turn emotional distance into impossible spatial mathematics during the first chorus.",
+      "prompt": "An immense dark chamber is divided by floating translucent planes that fold into an impossible geometric distance. The Quantum Siren stands on one side while a warm human-shaped glow, intentionally faceless and abstract, remains unreachable on the other. Every step she takes causes the space between them to expand. The camera cranes upward to reveal the repeating geometry.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable formulas, romantic embrace, detailed second person, sci-fi control room",
+      "sourceSectionHints": [
+        "chorus 1",
+        "distance",
+        "emotional lift"
+      ],
+      "energyRange": [
+        0.45,
+        0.75
+      ],
+      "seed": 18031005,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "speed ramp only in Resolve"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "translucent impossible planes",
+        "distant amber glow"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture"],
+      "previousShotId": "shot-004",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Keep the warm figure abstract.",
+        "Geometry should expand clearly without becoming frenetic."
+      ]
+    },
+    {
+      "shotId": "shot-006",
+      "chapterId": "unsolvable-distance",
+      "order": 6,
+      "title": "House Made of Bone",
+      "narrativeIntent": "Create the chorus's strongest recurring architectural symbol.",
+      "prompt": "A surreal cathedral-like house built from smooth bone-white arches floats above the digital ocean. The Quantum Siren walks through its open center as the structure slowly fractures into weightless ivory dust, exposing a starless void. The camera begins at human height and pulls back into a monumental wide shot while pieces drift in elegant slow motion.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, gore, skeleton bodies, skull pile, haunted-house cliché, violent collapse",
+      "sourceSectionHints": [
+        "chorus 1",
+        "house of bone",
+        "release"
+      ],
+      "energyRange": [
+        0.5,
+        0.8
+      ],
+      "seed": 18031006,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "reverse for reconstruction",
+        "alternate crop"
+      ],
+      "continuityTokens": [
+        "bone-white arches",
+        "Quantum Siren",
+        "black digital ocean"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture"],
+      "previousShotId": "shot-005",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Bone architecture must feel sculptural, not graphic or gory.",
+        "Capture a clean wide ending frame for reuse."
+      ]
+    },
+    {
+      "shotId": "shot-007",
+      "chapterId": "the-mirror",
+      "order": 7,
+      "title": "Mirror Without a Face",
+      "narrativeIntent": "Make the loss of self literal while preserving a refined dream-pop image.",
+      "prompt": "The Quantum Siren stands before a tall sheet of wet black glass in an empty violet chamber. Her body is reflected accurately, but where her reflected face should be there is only deep moving water and faint static. She slowly raises one hand; the reflection responds a fraction of a second late. The camera slides from profile toward the mirror without crossing the axis.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, horror face, eyeless monster, broken mirror shards, aggressive jump scare",
+      "sourceSectionHints": [
+        "verse 2",
+        "mirror",
+        "identity"
+      ],
+      "energyRange": [
+        0.3,
+        0.55
+      ],
+      "seed": 18031007,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "subtle zoom"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "wet black mirror",
+        "violet chamber"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "mirror-world"],
+      "previousShotId": "shot-006",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Delay in the reflection should be readable but subtle.",
+        "Real face must remain consistent."
+      ]
+    },
+    {
+      "shotId": "shot-008",
+      "chapterId": "the-mirror",
+      "order": 8,
+      "title": "Distant Crowd Through Blue Glass",
+      "narrativeIntent": "Contrast the protagonist's stillness with a life continuing far away.",
+      "prompt": "Viewed through thick rain-covered cobalt glass, a distant crowd flows through an unfamiliar town square as soft anonymous silhouettes. The Quantum Siren remains on the near side, perfectly still and separated from them by the glass. The camera slowly dollies backward, making her reflection merge with the moving crowd while none of the background people become individually identifiable.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, recognizable faces, branded storefronts, readable signs, busy tourist footage, upbeat mood",
+      "sourceSectionHints": [
+        "verse 2",
+        "distant town",
+        "crowd"
+      ],
+      "energyRange": [
+        0.3,
+        0.6
+      ],
+      "seed": 18031008,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "slow reverse"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "rain-covered cobalt glass",
+        "anonymous soft crowd"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "mirror-world"],
+      "previousShotId": "shot-007",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "No readable signage.",
+        "Background crowd must stay anonymous and non-distracting."
+      ]
+    },
+    {
+      "shotId": "shot-009",
+      "chapterId": "the-split",
+      "order": 9,
+      "title": "Cold Hand and Broken Microphone",
+      "narrativeIntent": "Strip the image down for the urgent spoken bridge.",
+      "prompt": "Near-total darkness. A pale adult hand belonging to the Quantum Siren reaches slowly across a wet black floor toward a broken vintage microphone with no logo. A thin cable disappears into darkness and emits one faint violet pulse. The camera is low and close, gliding beside the hand; reflected droplets tremble with each pulse.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, severed hand, injury, blood, branded microphone, concert stage, singer performance",
+      "sourceSectionHints": [
+        "bridge",
+        "spoken word",
+        "broken mic"
+      ],
+      "energyRange": [
+        0.35,
+        0.65
+      ],
+      "seed": 18031009,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "macro crop"
+      ],
+      "continuityTokens": [
+        "Siren hand",
+        "unbranded broken microphone",
+        "single violet pulse"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "split-corridor"],
+      "previousShotId": "shot-008",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Hand is attached/implied attached and never graphic.",
+        "Microphone must have no visible trademark."
+      ]
+    },
+    {
+      "shotId": "shot-010",
+      "chapterId": "the-split",
+      "order": 10,
+      "title": "Time Splits Out of Sync",
+      "narrativeIntent": "Represent the bridge's temporal fracture without a conventional glitch montage.",
+      "prompt": "The Quantum Siren walks through a narrow dark corridor while three translucent temporal echoes of her body separate by a few inches, each moving at a slightly different phase. The corridor itself remains stable, but droplets, fabric and her shadow fall out of synchronization. One slow forward tracking shot; the layers nearly reunite at the end and then miss.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, rapid glitch cuts, teleportation flash, multiple different women, clone army, strobing",
+      "sourceSectionHints": [
+        "bridge",
+        "time splitting",
+        "pulse wrong"
+      ],
+      "energyRange": [
+        0.45,
+        0.7
+      ],
+      "seed": 18031010,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "overlay with lower opacity"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "three temporal echoes",
+        "stable black corridor"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "split-corridor"],
+      "previousShotId": "shot-009",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "All echoes must clearly be the same adult protagonist.",
+        "Avoid severe flicker."
+      ]
+    },
+    {
+      "shotId": "shot-011",
+      "chapterId": "liquid-circuit",
+      "order": 11,
+      "title": "Liquid Guitar Filaments",
+      "narrativeIntent": "Translate the psychedelic delayed guitar solo into physical light and fluid motion.",
+      "prompt": "No literal musician. Long liquid filaments of silver, cobalt and violet light bend through a black volume like delayed guitar notes made visible. Each filament leaves a soft phasing echo, crosses another strand, then blooms into circular interference patterns above the digital ocean. The camera flies slowly between the strands in a graceful continuous arc.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, literal guitar, musician, music visualizer bars, equalizer, laser show, festival stage",
+      "sourceSectionHints": [
+        "guitar solo",
+        "psychedelic",
+        "instrumental"
+      ],
+      "energyRange": [
+        0.45,
+        0.75
+      ],
+      "seed": 18031011,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "reverse",
+        "rotate crop"
+      ],
+      "continuityTokens": [
+        "liquid luminous filaments",
+        "digital ocean",
+        "phasing circular echoes"
+      ],
+      "continuityGroupIds": ["world-global", "liquid-circuit"],
+      "previousShotId": "shot-010",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Must feel organic and musical without showing an instrument.",
+        "Avoid generic screensaver appearance."
+      ]
+    },
+    {
+      "shotId": "shot-012",
+      "chapterId": "liquid-circuit",
+      "order": 12,
+      "title": "Satellite Pulse Behind the Mind",
+      "narrativeIntent": "Introduce the satellite-pulse motif that can bridge the solo into the final chorus.",
+      "prompt": "A translucent side silhouette of the Quantum Siren floats in a dark celestial-water space. Behind and within the back of her head, one small amber satellite-like pulse travels along a delicate orbit, sending slow concentric waves through her hair and the surrounding water. The camera orbits in the opposite direction, creating hypnotic counter-motion.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, medical brain scan, literal satellite hardware, exposed skull, science diagram, readable UI",
+      "sourceSectionHints": [
+        "guitar solo",
+        "satellite pulse",
+        "transition"
+      ],
+      "energyRange": [
+        0.45,
+        0.78
+      ],
+      "seed": 18031012,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "reverse"
+      ],
+      "continuityTokens": [
+        "Quantum Siren profile",
+        "single amber pulse",
+        "cobalt water-space"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "liquid-circuit"],
+      "previousShotId": "shot-011",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Pulse is beautiful but painful, never threatening.",
+        "Keep profile consistent with prior shots."
+      ]
+    },
+    {
+      "shotId": "shot-013",
+      "chapterId": "transcendence",
+      "order": 13,
+      "title": "Siren Breaks Through the Machine",
+      "narrativeIntent": "Deliver the final chorus's operatic visual expansion.",
+      "prompt": "The Quantum Siren rises from the black digital ocean as enormous translucent sheets of water and glass unfold behind her like abstract wings, never literal feathers. Her charcoal fabric expands in slow motion; controlled violet and amber light breaks through the darkness. The camera cranes from a close low angle into a vast heroic wide shot while she remains emotionally vulnerable, not triumphant.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, angel wings, superhero costume, religious iconography, screaming mouth, concert performance",
+      "sourceSectionHints": [
+        "final chorus",
+        "operatic power",
+        "transcendence"
+      ],
+      "energyRange": [
+        0.72,
+        1.0
+      ],
+      "seed": 18031013,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "alternate-inpoint",
+        "slow zoom"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "abstract water-glass wings",
+        "violet and amber release"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-012",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Maximum scale while retaining sadness.",
+        "No literal angel imagery."
+      ]
+    },
+    {
+      "shotId": "shot-014",
+      "chapterId": "transcendence",
+      "order": 14,
+      "title": "The Equation Dissolves into Stars",
+      "narrativeIntent": "Resolve the distance geometry into a beautiful but unresolved cosmic release.",
+      "prompt": "The impossible translucent planes from the earlier distance chamber fold inward around the Quantum Siren, then dissolve into a field of slow silver particles that resemble distant stars. The warm faceless glow remains far away, but one narrow amber line briefly connects them before fading. A smooth 360-degree orbit reveals the bone-white house fragments suspended around the scene.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable equations, romantic reunion, explosive destruction, space battle, planet Earth",
+      "sourceSectionHints": [
+        "final chorus",
+        "distance returns",
+        "maximum release"
+      ],
+      "energyRange": [
+        0.75,
+        1.0
+      ],
+      "seed": 18031014,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "reverse",
+        "alternate crop"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "distance planes",
+        "bone-house fragments",
+        "distant amber glow"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "distance-architecture", "transcendence-failure"],
+      "previousShotId": "shot-013",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Echo earlier motifs clearly.",
+        "Connection line must remain temporary and delicate."
+      ]
+    },
+    {
+      "shotId": "shot-015",
+      "chapterId": "system-failure",
+      "order": 15,
+      "title": "World Dissolves into Reverb",
+      "narrativeIntent": "Let the arrangement and world fall away together in the outro.",
+      "prompt": "The digital ocean, bone fragments and translucent geometry gradually lose structure and dissolve upward into soft mist and long trails of static. The Quantum Siren stands alone on a narrow reflective surface as the environment disappears around her. The camera slowly retreats, exposure gently falls, and only a faint violet outline remains.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, explosion, apocalypse, debris impact, horror void creature, sudden blackout",
+      "sourceSectionHints": [
+        "outro",
+        "system failure",
+        "dissolve"
+      ],
+      "energyRange": [
+        0.05,
+        0.4
+      ],
+      "seed": 18031015,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "reverse for transition",
+        "long fade"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "dissolving digital ocean",
+        "faint violet outline"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-014",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Dissolution should be graceful and gradual.",
+        "Preserve a clean silhouette until late in the clip."
+      ]
+    },
+    {
+      "shotId": "shot-016",
+      "chapterId": "system-failure",
+      "order": 16,
+      "title": "The Pixelated Brink",
+      "narrativeIntent": "End with the revelation that the glitch belongs to the protagonist herself.",
+      "prompt": "Close rear three-quarter view of the Quantum Siren standing at the edge of a black reflective plane that ends in infinite darkness. Fine square fragments begin at her fingertips and travel slowly inward through her body, revealing that the signal failure originates within her. Just before she disappears, she turns her head slightly toward camera; one human eye remains clear as the final violet fragment fades.",
+      "negativePrompt": "camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, body horror, dismemberment, death scene, dramatic scream, direct lip sync, complete face melting",
+      "sourceSectionHints": [
+        "outro",
+        "final whisper",
+        "the glitch is me"
+      ],
+      "energyRange": [
+        0.0,
+        0.25
+      ],
+      "seed": 18031016,
+      "required": true,
+      "reuseModes": [
+        "forward",
+        "freeze final clear eye",
+        "fade to black"
+      ],
+      "continuityTokens": [
+        "Quantum Siren",
+        "black reflective brink",
+        "fine violet pixel fragments"
+      ],
+      "continuityGroupIds": ["world-global", "quantum-siren-identity", "transcendence-failure"],
+      "previousShotId": "shot-015",
+      "continuationMode": "prompt-anchors",
+      "reviewNotes": [
+        "Transformation remains poetic, not graphic.",
+        "Final eye should be stable enough for a held ending frame."
+      ]
+    }
+  ]
+}

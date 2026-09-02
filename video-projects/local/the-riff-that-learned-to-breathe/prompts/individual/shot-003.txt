@@ -1,0 +1,29 @@
+The Riff That Learned to Breathe
+shot-003 — Rain Room
+Provisional timing: 17.000–26.000 s
+Seed: 24081003
+
+NARRATIVE INTENT
+Introduce the second collaborator and the quieter world where the remix will form.
+
+KEYFRAME PROMPT
+The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos stands in a small blue rain-lit studio as the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged arrives through an open circular window. A tape deck, compact keyboard shapes without labels, a ceramic cup, and hanging acoustic fabric sit in soft shadow. Rain beads on the glass; the amber scarf and the bird's heart create the only warm accents. original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text
+
+WAN2.2 I2V MOTION PROMPT
+Begin outside the rain-covered window and glide through it behind the arriving bird. The Listener turns, raises both hands, and gently receives the bird while rain curtains sway and the amber heart reflects in their eyes. Use a calm continuous move, finishing in a medium close view of bird and hands.
+
+NEGATIVE PROMPT
+visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts
+
+CONTINUITY TOKENS
+listener-identity, origami-bird-core, rain-room
+
+TRANSITION IN
+circular-window match cut
+
+TRANSITION OUT
+a lightning reflection creates a restrained one-frame white bridge into the old pulse
+
+ACCEPTANCE NOTES
+- Clearly adult fictional character.
+- Hands must remain anatomically stable while catching the bird.

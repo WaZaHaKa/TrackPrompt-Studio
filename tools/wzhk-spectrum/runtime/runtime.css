@@ -1,0 +1,224 @@
+:root {
+  color: #f5f7fa;
+  background: #070a12;
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Fail closed before configuration arrives, including startup/error states. */
+body:not([data-runtime-mode="preview"]) .runtime-status,
+body:not([data-runtime-mode="preview"]) .lab,
+body:not([data-runtime-mode="preview"]) .fatal-error {
+  display: none !important;
+}
+
+html,
+body,
+#runtime {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: #070a12;
+}
+
+#runtime {
+  isolation: isolate;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+#geometry-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #070a12;
+}
+
+#identity-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  /* Blend the untouched logo's black matte against the actual geometry
+     backdrop. A 2D blend against this canvas's transparency cannot do this. */
+  mix-blend-mode: screen;
+}
+
+.runtime-status {
+  position: absolute;
+  right: 28px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border: 1px solid rgb(120 216 255 / 18%);
+  border-radius: 999px;
+  color: rgb(245 247 250 / 72%);
+  background: rgb(7 10 18 / 72%);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.runtime-status.is-settled {
+  opacity: 0;
+}
+
+.runtime-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #78d8ff;
+  box-shadow: 0 0 12px rgb(120 216 255 / 80%);
+}
+
+.lab {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: min(440px, calc(100vw - 48px));
+  padding: 20px;
+  border: 1px solid rgb(120 216 255 / 22%);
+  border-radius: 18px;
+  background: rgb(7 10 18 / 90%);
+  box-shadow: 0 20px 80px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(18px);
+}
+
+.lab__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.lab__header h1 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.lab__eyebrow {
+  color: #78d8ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lab button,
+.lab select {
+  border: 1px solid rgb(157 124 255 / 32%);
+  border-radius: 10px;
+  color: #f5f7fa;
+  background: #111827;
+}
+
+.lab button {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.lab button:hover,
+.lab button:focus-visible,
+.lab select:focus-visible,
+.lab input:focus-visible {
+  border-color: #78d8ff;
+  outline: 2px solid rgb(120 216 255 / 26%);
+  outline-offset: 2px;
+}
+
+.lab__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.lab label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: rgb(245 247 250 / 74%);
+  font-size: 12px;
+}
+
+.lab select {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.lab__range {
+  grid-column: 1 / -1;
+}
+
+.lab__range span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.lab input[type="range"] {
+  width: 100%;
+  accent-color: #78d8ff;
+}
+
+.lab__note {
+  margin: 16px 0 0;
+  color: rgb(245 247 250 / 52%);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.fatal-error {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: grid;
+  gap: 8px;
+  width: min(520px, calc(100vw - 64px));
+  padding: 22px 24px;
+  border: 1px solid rgb(255 112 112 / 42%);
+  border-radius: 16px;
+  color: #f5f7fa;
+  background: rgb(24 10 18 / 94%);
+  box-shadow: 0 24px 100px rgb(0 0 0 / 55%);
+  transform: translate(-50%, -50%);
+}
+
+.fatal-error span {
+  color: rgb(245 247 250 / 72%);
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .lab__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lab__range {
+    grid-column: auto;
+  }
+}

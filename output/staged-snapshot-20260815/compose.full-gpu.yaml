@@ -1,0 +1,55 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.full-gpu
+    gpus: all
+    environment:
+      ENABLE_DEMUCS: "true"
+      DEMUCS_MODEL_NAME: "${DEMUCS_MODEL_NAME:-htdemucs}"
+      DEMUCS_DEVICE: "${DEMUCS_DEVICE:-cuda}"
+      ENABLE_GENRE_TAGGER: "${ENABLE_GENRE_TAGGER:-true}"
+      GENRE_MODEL_ID: "${GENRE_MODEL_ID:-laion/clap-htsat-unfused}"
+      GENRE_MODEL_REVISION: "${GENRE_MODEL_REVISION:-8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a}"
+      GENRE_DEVICE: "${GENRE_DEVICE:-cuda}"
+      ENABLE_LYRICS_ADAPTER: "${ENABLE_LYRICS_ADAPTER:-true}"
+      LYRICS_MODEL_NAME: "${LYRICS_MODEL_NAME:-Systran/faster-whisper-small}"
+      LYRICS_MODEL_REVISION: "${LYRICS_MODEL_REVISION:-536b0662742c02347bc0e980a01041f333bce120}"
+      LYRICS_DEVICE: "${LYRICS_DEVICE:-cuda}"
+      LYRICS_COMPUTE_TYPE: "${LYRICS_COMPUTE_TYPE:-float16}"
+      LYRICS_CPU_FALLBACK: "${LYRICS_CPU_FALLBACK:-false}"
+      ENABLE_LOCAL_PROMPT_WRITER: "${ENABLE_LOCAL_PROMPT_WRITER:-true}"
+      LOCAL_LLM_MODEL: "${LOCAL_LLM_MODEL:-qwen2.5:7b-instruct-q4_K_M}"
+      LOCAL_LLM_MODEL_DIGEST: "${LOCAL_LLM_MODEL_DIGEST:-845dbda0ea48}"
+      LOCAL_LLM_ENDPOINT: "http://prompt-writer:11434"
+      LOCAL_LLM_TIMEOUT_SECONDS: "${LOCAL_LLM_TIMEOUT_SECONDS:-90}"
+      LOCAL_LLM_KEEP_LOADED: "${LOCAL_LLM_KEEP_LOADED:-false}"
+      PROMPT_WRITER_DEVICE: "${PROMPT_WRITER_DEVICE:-cuda}"
+      GPU_TASK_WORKERS: "${GPU_TASK_WORKERS:-1}"
+    depends_on:
+      prompt-writer:
+        condition: service_healthy
+
+  prompt-writer:
+    image: ollama/ollama:0.32.0@sha256:57f573b47f1f71ebb445789f279fe3e596a8beab182f7cf486db9205bad87c5a
+    gpus: all
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11434"
+      OLLAMA_KEEP_ALIVE: "0"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_NO_CLOUD: "1"
+    volumes:
+      - trackprompt-ollama:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    init: true
+
+volumes:
+  trackprompt-ollama:

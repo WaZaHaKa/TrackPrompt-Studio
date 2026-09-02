@@ -24,7 +24,11 @@ export function EncodeScreen({
   capabilityAvailable: boolean
   activeEncode: EncodeJob | null
   busyJobId: string | null
-  onStartEncode: (jobId: string, includeAudio: boolean) => void
+  onStartEncode: (
+    jobId: string,
+    includeAudio: boolean,
+    outputKinds: Array<'delivery' | 'master'>,
+  ) => void
   onOpenOutput: (path: string) => void
 }) {
   return (
@@ -99,8 +103,12 @@ export function EncodeScreen({
               <ProgressBar value={percent(candidate.frameCount, candidate.totalFrames)} label={`${candidate.displayName} frame completeness`} />
               <ol className="mc-encode-steps">
                 <li className={candidate.verified ? 'is-complete' : ''}><CheckCircle2 aria-hidden="true" /><span><strong>Verify frame sequence</strong><small>Complete identities and image integrity</small></span></li>
-                <li><Film aria-hidden="true" /><span><strong>Encode delivery MP4</strong><small>H.264 High, CRF 16, approved local audio</small></span></li>
-                <li><Film aria-hidden="true" /><span><strong>Encode ProRes master</strong><small>ProRes 422 HQ with lossless PCM audio</small></span></li>
+                {candidate.outputKinds.includes('delivery') ? (
+                  <li><Film aria-hidden="true" /><span><strong>Encode delivery MP4</strong><small>Use the exact reviewed delivery settings from this render profile</small></span></li>
+                ) : null}
+                {candidate.outputKinds.includes('master') ? (
+                  <li><Film aria-hidden="true" /><span><strong>Encode mezzanine master</strong><small>Use the exact reviewed master settings from this render profile</small></span></li>
+                ) : null}
                 <li><ShieldCheck aria-hidden="true" /><span><strong>Verify final outputs</strong><small>Duration, streams, frames, audio, and color contract</small></span></li>
               </ol>
               {candidate.audioMuxAvailable ? (
@@ -110,8 +118,17 @@ export function EncodeScreen({
                 </div>
               ) : null}
               <div className="mc-button-row">
-                <Button tone="primary" disabled={!capabilityAvailable || !candidate.verified} busy={busyJobId === candidate.jobId} onClick={() => onStartEncode(candidate.jobId, true)}>
-                  Encode delivery + master
+                <Button
+                  tone="primary"
+                  disabled={!capabilityAvailable || !candidate.verified || candidate.outputKinds.length === 0}
+                  busy={busyJobId === candidate.jobId}
+                  onClick={() => onStartEncode(candidate.jobId, true, candidate.outputKinds)}
+                >
+                  {candidate.outputKinds.length === 2
+                    ? 'Encode delivery + master'
+                    : candidate.outputKinds[0] === 'master'
+                      ? 'Encode master'
+                      : 'Encode delivery'}
                 </Button>
                 <Button tone="quiet" icon={<FolderOpen aria-hidden="true" />} onClick={() => onOpenOutput(candidate.outputPath)}>Open frames</Button>
               </div>

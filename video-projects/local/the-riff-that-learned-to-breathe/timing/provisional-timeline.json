@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "durationSeconds": 149.0,
+  "durationIsProvisional": true,
+  "actualDurationSource": "ffprobe of audio/track.*",
+  "scenes": [
+    {
+      "shotId": "shot-001",
+      "title": "The Iron Seed",
+      "startSeconds": 0,
+      "endSeconds": 8,
+      "durationSeconds": 8,
+      "startFraction": 0.0,
+      "endFraction": 0.05369128
+    },
+    {
+      "shotId": "shot-002",
+      "title": "Send",
+      "startSeconds": 8,
+      "endSeconds": 17,
+      "durationSeconds": 9,
+      "startFraction": 0.05369128,
+      "endFraction": 0.11409396
+    },
+    {
+      "shotId": "shot-003",
+      "title": "Rain Room",
+      "startSeconds": 17,
+      "endSeconds": 26,
+      "durationSeconds": 9,
+      "startFraction": 0.11409396,
+      "endFraction": 0.17449664
+    },
+    {
+      "shotId": "shot-004",
+      "title": "Old Pulse",
+      "startSeconds": 26,
+      "endSeconds": 35,
+      "durationSeconds": 9,
+      "startFraction": 0.17449664,
+      "endFraction": 0.23489933
+    },
+    {
+      "shotId": "shot-005",
+      "title": "Turn the Tempo",
+      "startSeconds": 35,
+      "endSeconds": 44,
+      "durationSeconds": 9,
+      "startFraction": 0.23489933,
+      "endFraction": 0.29530201
+    },
+    {
+      "shotId": "shot-006",
+      "title": "Armor to Paper",
+      "startSeconds": 44,
+      "endSeconds": 53,
+      "durationSeconds": 9,
+      "startFraction": 0.29530201,
+      "endFraction": 0.3557047
+    },
+    {
+      "shotId": "shot-007",
+      "title": "New Drums",
+      "startSeconds": 53,
+      "endSeconds": 62,
+      "durationSeconds": 9,
+      "startFraction": 0.3557047,
+      "endFraction": 0.41610738
+    },
+    {
+      "shotId": "shot-008",
+      "title": "The Solo Becomes a Comet",
+      "startSeconds": 62,
+      "endSeconds": 71,
+      "durationSeconds": 9,
+      "startFraction": 0.41610738,
+      "endFraction": 0.47651007
+    },
+    {
+      "shotId": "shot-009",
+      "title": "Parallel Rooms",
+      "startSeconds": 71,
+      "endSeconds": 80,
+      "durationSeconds": 9,
+      "startFraction": 0.47651007,
+      "endFraction": 0.53691275
+    },
+    {
+      "shotId": "shot-010",
+      "title": "The Fracture",
+      "startSeconds": 80,
+      "endSeconds": 89,
+      "durationSeconds": 9,
+      "startFraction": 0.53691275,
+      "endFraction": 0.59731544
+    },
+    {
+      "shotId": "shot-011",
+      "title": "Keep the Heart",
+      "startSeconds": 89,
+      "endSeconds": 98,
+      "durationSeconds": 9,
+      "startFraction": 0.59731544,
+      "endFraction": 0.65771812
+    },
+    {
+      "shotId": "shot-012",
+      "title": "Bridge of Measures",
+      "startSeconds": 98,
+      "endSeconds": 107,
+      "durationSeconds": 9,
+      "startFraction": 0.65771812,
+      "endFraction": 0.71812081
+    },
+    {
+      "shotId": "shot-013",
+      "title": "Co-Write the Sky",
+      "startSeconds": 107,
+      "endSeconds": 116,
+      "durationSeconds": 9,
+      "startFraction": 0.71812081,
+      "endFraction": 0.77852349
+    },
+    {
+      "shotId": "shot-014",
+      "title": "The City Learns the Groove",
+      "startSeconds": 116,
+      "endSeconds": 125,
+      "durationSeconds": 9,
+      "startFraction": 0.77852349,
+      "endFraction": 0.83892617
+    },
+    {
+      "shotId": "shot-015",
+      "title": "Return Signal",
+      "startSeconds": 125,
+      "endSeconds": 137,
+      "durationSeconds": 12,
+      "startFraction": 0.83892617,
+      "endFraction": 0.91946309
+    },
+    {
+      "shotId": "shot-016",
+      "title": "Between Two Rooms",
+      "startSeconds": 137,
+      "endSeconds": 149,
+      "durationSeconds": 12,
+      "startFraction": 0.91946309,
+      "endFraction": 1.0
+    }
+  ]
+}

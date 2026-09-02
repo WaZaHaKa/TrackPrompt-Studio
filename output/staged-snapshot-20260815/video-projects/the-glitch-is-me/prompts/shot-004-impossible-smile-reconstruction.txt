@@ -1,0 +1,14 @@
+SHOT shot-004 — Impossible Smile Reconstruction
+
+NARRATIVE INTENT
+Visualize an emotionally remembered person without creating a second identifiable character.
+
+SHOT PROMPT
+In a black void, a graceful curve resembling a remembered smile forms from thousands of tiny luminous points and soft numerical geometry, but never becomes a complete human face. The Quantum Siren reaches toward it from the edge of frame; the shape ripples away before contact. Slow macro-to-medium rack focus, shallow depth of field, melancholy restraint.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, readable numbers, complete second face, floating emoji, literal hologram interface
+
+REVIEW NOTES
+- The smile remains abstract and non-identifying.
+- Hand anatomy must be clean.

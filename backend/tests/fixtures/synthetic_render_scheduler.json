@@ -1,0 +1,32 @@
+{
+  "kind": "synthetic-render-scheduler",
+  "schemaVersion": "1.0.0",
+  "packageSha256": "24fd8b1ea8fbae2dd585edd7961c1dfd12579af443a9de4079c19ea29cedc3c6",
+  "matrixSha256": "d534b1f4200eb5ee68da7eb5ab76ae1ec81d7f8004e5ae9403e1e0341c33c15a",
+  "variants": [
+    {
+      "id": "gallery-wide",
+      "width": 1600,
+      "height": 900,
+      "frameStart": 1,
+      "frameEnd": 12,
+      "compositionSha256": "c25f0d0b3642be86cb6b2313f875f5ad1184b1e79a14251f539c41c0713c0412"
+    },
+    {
+      "id": "square-social",
+      "width": 1080,
+      "height": 1080,
+      "frameStart": 1,
+      "frameEnd": 12,
+      "compositionSha256": "77f797760c3cbbf9ad2b555fe7d3696657960266bac289287b856d39c33d2199"
+    },
+    {
+      "id": "portrait-poster",
+      "width": 900,
+      "height": 1600,
+      "frameStart": 1,
+      "frameEnd": 12,
+      "compositionSha256": "79df880ecee2a272308282199538e58f8619499dca17250cd0b38ea553a7fab0"
+    }
+  ]
+}

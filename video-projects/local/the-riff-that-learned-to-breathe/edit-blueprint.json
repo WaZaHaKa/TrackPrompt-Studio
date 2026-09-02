@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "delivery": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 24,
+    "aspectRatio": "16:9",
+    "durationPolicy": "exactly match original audio",
+    "videoCodecPrimary": "H.264 High Profile, yuv420p, CRF 16 or validated equivalent",
+    "audioPrimary": "original track muxed as AAC 320 kb/s; preserve a PCM or FLAC master separately",
+    "optionalIntermediate": "ProRes 422 LT or FFV1 when disk space permits"
+  },
+  "assemblyPrinciples": [
+    "Each of the 16 base scenes starts from one approved keyframe.",
+    "Use one 81-frame I2V clip per base scene, plus at most one alternate for the four hero scenes.",
+    "Fill longer scene durations with 2.5D keyframe parallax, restrained optical-flow slowdown, end-frame drift, and transition overlap.",
+    "Never loop a whole clip visibly and never hide instability with frantic editing.",
+    "Preserve screen direction and the amber-thread motif across scene boundaries.",
+    "The first 15 seconds contain immediate story action and no title card."
+  ],
+  "scenes": [
+    {
+      "shotId": "shot-001",
+      "provisionalStartSeconds": 0,
+      "provisionalEndSeconds": 8,
+      "targetDurationSeconds": 8,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.25,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-001",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-002",
+      "provisionalStartSeconds": 8,
+      "provisionalEndSeconds": 17,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-002",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-003",
+      "provisionalStartSeconds": 17,
+      "provisionalEndSeconds": 26,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-003",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-004",
+      "provisionalStartSeconds": 26,
+      "provisionalEndSeconds": 35,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-004",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-005",
+      "provisionalStartSeconds": 35,
+      "provisionalEndSeconds": 44,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-005",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-006",
+      "provisionalStartSeconds": 44,
+      "provisionalEndSeconds": 53,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-006",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-007",
+      "provisionalStartSeconds": 53,
+      "provisionalEndSeconds": 62,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-007",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-008",
+      "provisionalStartSeconds": 62,
+      "provisionalEndSeconds": 71,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-008",
+      "heroVariant": true
+    },
+    {
+      "shotId": "shot-009",
+      "provisionalStartSeconds": 71,
+      "provisionalEndSeconds": 80,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-009",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-010",
+      "provisionalStartSeconds": 80,
+      "provisionalEndSeconds": 89,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-010",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-011",
+      "provisionalStartSeconds": 89,
+      "provisionalEndSeconds": 98,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-011",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-012",
+      "provisionalStartSeconds": 98,
+      "provisionalEndSeconds": 107,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-012",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-013",
+      "provisionalStartSeconds": 107,
+      "provisionalEndSeconds": 116,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-013",
+      "heroVariant": false
+    },
+    {
+      "shotId": "shot-014",
+      "provisionalStartSeconds": 116,
+      "provisionalEndSeconds": 125,
+      "targetDurationSeconds": 9,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 1.5,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-014",
+      "heroVariant": true
+    },
+    {
+      "shotId": "shot-015",
+      "provisionalStartSeconds": 125,
+      "provisionalEndSeconds": 137,
+      "targetDurationSeconds": 12,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 2.0,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": "transition-015",
+      "heroVariant": true
+    },
+    {
+      "shotId": "shot-016",
+      "provisionalStartSeconds": 137,
+      "provisionalEndSeconds": 149,
+      "targetDurationSeconds": 12,
+      "baseGeneratedClipSeconds": 5.0625,
+      "startParallaxSeconds": 2.0,
+      "fillStrategy": "context-sensitive end-frame parallax/optical-flow slowdown/transition overlap",
+      "transitionOutId": null,
+      "heroVariant": true
+    }
+  ],
+  "exports": [
+    "outputs/final/youtube-1080p24.mp4",
+    "outputs/final/master-audio-preserved.mkv",
+    "outputs/edit/resolve.fcpxml",
+    "outputs/edit/resolve-fcp7.xml",
+    "outputs/edit/timeline.edl",
+    "outputs/edit/markers.csv",
+    "outputs/edit/edit-sheet.csv",
+    "outputs/review/contact-sheet.jpg",
+    "outputs/review/thumbnail-candidates/",
+    "outputs/manifests/final-render-manifest.json",
+    "outputs/manifests/qc-report.json"
+  ]
+}

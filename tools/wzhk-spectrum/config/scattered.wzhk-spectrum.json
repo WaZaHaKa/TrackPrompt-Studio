@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0.0",
+  "rendererId": "wzhk-spectrum",
+  "project": {
+    "slug": "dj-wazahaka-scattered",
+    "artist": "DJ WaZaHaKa",
+    "title": "Scattered"
+  },
+  "track": {
+    "bpm": 120,
+    "timeSignature": {
+      "numerator": 4,
+      "denominator": 4
+    },
+    "totalBars": 96,
+    "gridDurationSeconds": 192,
+    "audioAssetDirectory": ".trackprompt-data/wzhk-spectrum/assets/track",
+    "preferredMasterExtensions": [
+      ".wav",
+      ".flac",
+      ".aiff",
+      ".aif"
+    ]
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "startBarInclusive": 1,
+      "endBarExclusive": 33,
+      "startSeconds": 0,
+      "endSeconds": 64,
+      "visualCue": "restrained"
+    },
+    {
+      "id": "main",
+      "label": "Main",
+      "startBarInclusive": 33,
+      "endBarExclusive": 89,
+      "startSeconds": 64,
+      "endSeconds": 176,
+      "visualCue": "full-energy"
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "startBarInclusive": 89,
+      "endBarExclusive": 97,
+      "startSeconds": 176,
+      "endSeconds": 192,
+      "visualCue": "deconstruct"
+    }
+  ],
+  "branding": {
+    "brand": "DJ WaZaHaKa",
+    "logoAssetDirectory": ".trackprompt-data/wzhk-spectrum/assets/logo",
+    "removeMonstercatIdentityFromGeneratedWorkspace": true
+  },
+  "renderer": {
+    "platform": "windows",
+    "engine": "rainmeter-audio-spectrum",
+    "vendorSourceDirectory": "vendor/wzhk-spectrum-visualizer",
+    "workspaceRoot": ".trackprompt-data/wzhk-spectrum/jobs",
+    "capture": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60
+    },
+    "audioPolicy": {
+      "visualizeSystemOutput": true,
+      "replaceCapturedAudioWithOriginalMaster": true
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-scene-dependency-health-report",
+  "projectId": "trip-to-andromeda-v2",
+  "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+  "checks": [
+    {
+      "id": "blender-load",
+      "status": "pass",
+      "detail": "The exact scene loaded in Blender 5.2.0 LTS."
+    },
+    {
+      "id": "render-profile-validation",
+      "status": "pass",
+      "detail": "The canonical renderer accepted the exact scene/profile identity."
+    },
+    {
+      "id": "source-audio",
+      "status": "pass",
+      "detail": "The private PCM source matched its 76,608,080-byte SHA-256 binding."
+    },
+    {
+      "id": "source-cues",
+      "status": "pass",
+      "detail": "The private 1.1.0 cue sheet matched its 1,276,886-byte SHA-256 binding."
+    },
+    {
+      "id": "story-and-shot-contracts",
+      "status": "pass",
+      "detail": "Seven acts and 35 contiguous shots cover frames 1 through 13,029."
+    },
+    {
+      "id": "locked-render-settings",
+      "status": "pass",
+      "detail": "Temporal samples, volumetric samples, reprojection, and motion blur were applied and read back."
+    },
+    {
+      "id": "runtime-models",
+      "status": "not-required",
+      "detail": "The authored scene has no external model download or network dependency."
+    }
+  ],
+  "unresolvedDependencies": [],
+  "outboundNetworkRequired": false,
+  "technicalPass": true
+}

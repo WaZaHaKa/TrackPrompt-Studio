@@ -11,7 +11,8 @@ param(
     [ValidateRange(1, 32)][int]$FrameScanWorkers = 4,
     [string]$FfmpegExecutable = "",
     [string]$FfprobeExecutable = "",
-    [string]$PythonExecutable = ""
+    [string]$PythonExecutable = "",
+    [string]$ProgressPath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -179,6 +180,26 @@ $encodeArgumentsPayload = Invoke-JsonTool `
     ) `
     -Description "Encoding command construction"
 $encodeArguments = @($encodeArgumentsPayload.arguments | ForEach-Object { [string]$_ })
+if (-not [string]::IsNullOrWhiteSpace($ProgressPath)) {
+    if (-not [IO.Path]::IsPathRooted($ProgressPath)) {
+        throw "Progress path must be absolute."
+    }
+    $resolvedProgressPath = [IO.Path]::GetFullPath($ProgressPath)
+    $progressParent = [IO.Path]::GetDirectoryName($resolvedProgressPath)
+    if (-not (Test-Path -LiteralPath $progressParent -PathType Container)) {
+        New-Item -ItemType Directory -Path $progressParent -Force | Out-Null
+    }
+    if ($encodeArguments.Count -lt 2) {
+        throw "Encoding arguments did not include a destination."
+    }
+    $destinationArgument = $encodeArguments[-1]
+    $encodeArguments = @($encodeArguments[0..($encodeArguments.Count - 2)]) + @(
+        "-nostats",
+        "-stats_period", "1",
+        "-progress", $resolvedProgressPath,
+        $destinationArgument
+    )
+}
 
 if ($DryRun -or $Preflight) {
     $result = [ordered]@{

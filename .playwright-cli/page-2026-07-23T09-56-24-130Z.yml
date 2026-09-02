@@ -1,0 +1,58 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#mission-control-main"
+  - complementary "Mission Control navigation" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e10]:
+        - strong [ref=e11]: WZHK
+        - generic [ref=e12]: MEDIA · MISSION CONTROL
+      - button "Close navigation" [ref=e13] [cursor=pointer]
+    - navigation [ref=e17]:
+      - button "Home" [ref=e18] [cursor=pointer]
+      - button "Render" [ref=e23] [cursor=pointer]
+      - button "Profiles" [ref=e27] [cursor=pointer]
+      - button "Calibration" [ref=e30] [cursor=pointer]
+      - button "Jobs" [active] [ref=e34] [cursor=pointer]
+      - button "Director" [ref=e40] [cursor=pointer]
+      - button "Encode" [ref=e47] [cursor=pointer]
+      - button "Cloud" [ref=e51] [cursor=pointer]
+      - button "Settings" [ref=e55] [cursor=pointer]
+    - generic [ref=e60]:
+      - generic [ref=e69]:
+        - strong [ref=e70]: Connected
+        - generic [ref=e71]: Local service
+      - generic [ref=e77]:
+        - text: Local & private
+        - generic [ref=e78]: No telemetry
+  - generic [ref=e79]:
+    - banner [ref=e80]:
+      - generic [ref=e81]: Jobs
+      - generic [ref=e83]:
+        - generic "Show exact hashes, paths, and metrics" [ref=e84] [cursor=pointer]:
+          - generic [ref=e85]: Simple
+          - switch "Simple" [ref=e86]
+        - button "Use light theme" [ref=e119] [cursor=pointer]
+        - generic "Backend connected" [ref=e126]
+    - main [ref=e98]:
+      - generic [ref=e320]:
+        - generic [ref=e322]:
+          - generic [ref=e323]: Persistent local jobs
+          - heading "Jobs & history" [level=1] [ref=e324]
+          - paragraph [ref=e325]: Renders continue in the local service when this browser closes. Safely paused jobs retain their exact scene and profile identity.
+        - article [ref=e327]:
+          - generic [ref=e328]:
+            - generic [ref=e329]:
+              - generic [ref=e330]:
+                - generic [ref=e331]: Trip to Andromeda
+                - heading "Trip to Andromeda - 720p Hyper Optimized" [level=2] [ref=e332]
+              - generic [ref=e333]: Complete
+            - paragraph [ref=e334]: Trip to Andromeda · updated Jul 21, 2026, 9:38 PM
+            - generic [ref=e335]:
+              - progressbar "Trip to Andromeda safe progress" [ref=e336]
+              - strong [ref=e338]: 100%
+            - generic [ref=e339]:
+              - generic [ref=e340]: 13,029 safe / 13,029 total
+              - generic [ref=e344]: Final verify
+          - generic [ref=e348]:
+            - button "View details" [ref=e349] [cursor=pointer]
+            - button "Open output" [ref=e353] [cursor=pointer]

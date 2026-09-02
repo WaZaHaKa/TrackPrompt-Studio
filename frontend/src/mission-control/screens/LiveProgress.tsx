@@ -19,11 +19,20 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MISSION_CONTROL_API_BASE } from '../api'
-import { AdvancedDetails, Button, ErrorCard, Metric, Notice, ProgressBar, SectionHeading, StatusBadge } from '../components'
+import { AdvancedDetails, Button, ErrorCard, Metric, Modal, Notice, ProgressBar, SectionHeading, StatusBadge } from '../components'
 import { elapsedSince, formatBytes, formatClock, formatDateTime, formatDuration, percent, sentenceCase } from '../format'
 import type { ConnectionState, EtaEstimate, LogEntry, RenderJob, StageProgress } from '../types'
 
-const runningStates = new Set(['starting', 'running', 'stop_requested', 'finishing_current_chunk', 'encoding', 'verifying'])
+const runningStates = new Set([
+  'starting',
+  'running',
+  'stop_requested',
+  'retry_requested',
+  'cancel_requested',
+  'finishing_current_chunk',
+  'encoding',
+  'verifying',
+])
 
 function appendVersion(url: string, job: RenderJob, frame: number | null, variantId: string | null): string {
   const separator = url.includes('?') ? '&' : '?'
@@ -95,6 +104,20 @@ function formatTimeline(seconds: number | null): string {
     : `${String(minutes).padStart(2, '0')}:${secondsLabel}`
 }
 
+function chunkBoundsAvailable(job: RenderJob): boolean {
+  if (
+    job.chunkStart === null
+    || job.chunkEnd === null
+    || job.chunkEnd < job.chunkStart
+  ) {
+    return false
+  }
+  const latestSafeFrame = job.frameStart === null
+    ? null
+    : job.frameStart + job.publishedFrames - 1
+  return latestSafeFrame === null || job.chunkEnd > latestSafeFrame
+}
+
 export function LiveProgress({
   job,
   connection,
@@ -105,6 +128,9 @@ export function LiveProgress({
   onRefresh,
   onStopAfterChunk,
   onCancelStop,
+  onCancelRender,
+  onRetryCurrentChunk,
+  onRetryFailedRender,
   onResume,
   onOpenOutput,
   onEncode,
@@ -119,6 +145,9 @@ export function LiveProgress({
   onRefresh: () => void
   onStopAfterChunk: () => void
   onCancelStop: () => void
+  onCancelRender: () => void
+  onRetryCurrentChunk: () => void
+  onRetryFailedRender: () => void
   onResume: () => void
   onOpenOutput: () => void
   onEncode: () => void
@@ -128,6 +157,8 @@ export function LiveProgress({
   const [logsOpen, setLogsOpen] = useState(false)
   const [logQuery, setLogQuery] = useState('')
   const [previewFailed, setPreviewFailed] = useState(false)
+  const [confirmation, setConfirmation] = useState<'cancel' | 'retry-current' | 'retry-failed' | null>(null)
+  const [operationConfirmed, setOperationConfirmed] = useState(false)
   const enabledVariants = useMemo(
     () => (job.outputVariants ?? []).filter((variant) => variant.enabled),
     [job.outputVariants],
@@ -140,6 +171,26 @@ export function LiveProgress({
     ?? enabledVariants[0]
     ?? null
   const running = runningStates.has(job.state)
+  const exactIdentityAvailable = Boolean(job.sceneSha256 && job.profileSha256)
+  const canCancelRender = (
+    job.state === 'running'
+    || job.state === 'stop_requested'
+    || job.state === 'finishing_current_chunk'
+  ) && exactIdentityAvailable
+  const canRetryFailedRender = (
+    job.state === 'failed'
+    && job.error?.retryable !== false
+    && exactIdentityAvailable
+  )
+  const exactActiveChunkAvailable = (
+    chunkBoundsAvailable(job)
+    && job.rendererActive !== false
+    && job.watcherActive !== false
+  )
+  const canRetryCurrentChunk = exactIdentityAvailable && (
+    (job.state === 'running' && exactActiveChunkAvailable)
+    || (job.state === 'failed' && job.error?.retryable !== false)
+  )
 
   useEffect(() => {
     if (!running) return
@@ -220,7 +271,9 @@ export function LiveProgress({
   const hasPreview = previewFrame !== null && !previewFailed
   const currentFrameElapsed = elapsedSince(frameStartedAt, now)
   const lastOutputElapsed = elapsedSince(lastOutputAt, now)
-  const activeStatus = running && job.rendererActive !== false
+  const activeStatus = job.state === 'retry_requested'
+    ? 'Retry current chunk requested'
+    : running && job.rendererActive !== false
     ? exactCurrentFrame && currentFrame !== null
       ? `Rendering frame ${currentFrame.toLocaleString()}`
       : phase === 'render_frame' && chunksTotal > 0
@@ -286,6 +339,10 @@ export function LiveProgress({
         title={job.state === 'complete' ? 'Render complete' : activeStatus}
         description={job.state === 'complete'
           ? 'Every required frame has been validated and published safely.'
+          : job.state === 'cancel_requested'
+            ? 'Cancellation is pending. The active chunk is being validated and published before the renderer exits; saved output is preserved.'
+          : job.state === 'retry_requested'
+            ? 'Retry is pending. Only the isolated current-chunk attempt is stopping; validated prior chunks remain authoritative before the exact chunk is requeued.'
           : job.state === 'paused_safely' || job.state === 'resumable'
             ? 'The last chunk is safe. This exact scene and profile can resume when you are ready.'
             : 'The renderer runs in the local service and continues if this browser closes.'}
@@ -502,40 +559,260 @@ export function LiveProgress({
         {job.state === 'running' && job.safeStopStatus !== 'requested' && job.safeStopStatus !== 'finishing_chunk' ? (
           <Button icon={<PauseCircle aria-hidden="true" />} busy={busyAction === 'stop'} onClick={onStopAfterChunk}>Stop after current chunk</Button>
         ) : null}
-        {job.state === 'stop_requested' || job.state === 'finishing_current_chunk' || job.safeStopStatus === 'requested' || job.safeStopStatus === 'finishing_chunk' ? (
+        {job.state === 'stop_requested' && job.safeStopStatus === 'requested' ? (
           <Button icon={<Ban aria-hidden="true" />} busy={busyAction === 'cancel-stop'} onClick={onCancelStop}>Cancel stop request</Button>
         ) : null}
         {(job.state === 'paused_safely' || job.state === 'resumable') && job.canResume ? (
           <Button tone="primary" icon={<Play aria-hidden="true" />} busy={busyAction === 'resume'} onClick={onResume}>Resume exact render</Button>
         ) : null}
-        {job.state !== 'complete' && job.state !== 'cancelled' ? (
-          <>
-            <Button
-              tone="danger"
-              icon={<Ban aria-hidden="true" />}
-              disabled
-              aria-describedby="mc-cancel-render-unavailable"
-            >
-              Cancel render
-            </Button>
-            <Button
-              icon={<RotateCw aria-hidden="true" />}
-              disabled
-              aria-describedby="mc-retry-chunk-unavailable"
-            >
-              Retry failed chunk
-            </Button>
-            <div className="mc-live-control-limitations" role="note" aria-label="Unavailable render actions">
-              <p id="mc-cancel-render-unavailable"><strong>Cancel render is unavailable.</strong> The current backend exposes only a safe stop after the active chunk and cancellation of that stop request.</p>
-              <p id="mc-retry-chunk-unavailable"><strong>Targeted chunk retry is unavailable.</strong> The current backend exposes exact resume for a resumable job, but no failed-chunk retry endpoint.</p>
-            </div>
-          </>
+        {job.state === 'cancel_requested' ? (
+          <Button tone="danger" icon={<Ban aria-hidden="true" />} disabled>Cancellation requested</Button>
+        ) : job.state === 'retry_requested' ? null : job.state !== 'complete' && job.state !== 'cancelled' ? (
+          <Button
+            tone="danger"
+            icon={<Ban aria-hidden="true" />}
+            busy={busyAction === 'cancel-render'}
+            disabled={!canCancelRender}
+            aria-describedby={!canCancelRender ? 'mc-cancel-render-unavailable' : undefined}
+            onClick={() => {
+              setOperationConfirmed(false)
+              setConfirmation('cancel')
+            }}
+          >
+            Cancel render
+          </Button>
+        ) : null}
+        {job.state === 'retry_requested' ? (
+          <Button icon={<RotateCw aria-hidden="true" />} disabled>Retry current chunk requested</Button>
+        ) : job.state !== 'complete' && job.state !== 'cancelled' ? (
+          <Button
+            icon={<RotateCw aria-hidden="true" />}
+            busy={busyAction === 'retry-current-chunk'}
+            disabled={!canRetryCurrentChunk}
+            aria-describedby={!canRetryCurrentChunk ? 'mc-retry-current-chunk-unavailable' : undefined}
+            onClick={() => {
+              setOperationConfirmed(false)
+              setConfirmation('retry-current')
+            }}
+          >
+            Retry current chunk
+          </Button>
+        ) : null}
+        {job.state === 'failed' ? (
+          <Button
+            tone="quiet"
+            icon={<RotateCw aria-hidden="true" />}
+            busy={busyAction === 'retry-failed'}
+            disabled={!canRetryFailedRender}
+            aria-describedby={!canRetryFailedRender ? 'mc-retry-failed-chunk-unavailable' : undefined}
+            onClick={() => {
+              setOperationConfirmed(false)
+              setConfirmation('retry-failed')
+            }}
+          >
+            Retry failed chunk
+          </Button>
+        ) : null}
+        {(!canCancelRender || !canRetryCurrentChunk || (job.state === 'failed' && !canRetryFailedRender))
+          && job.state !== 'complete'
+          && job.state !== 'cancelled'
+          && job.state !== 'retry_requested' ? (
+          <div className="mc-live-control-limitations" role="note" aria-label="Render action availability">
+            {!canCancelRender && job.state !== 'cancel_requested' ? (
+              <p id="mc-cancel-render-unavailable">
+                <strong>Cancel render is unavailable in this state.</strong>{' '}
+                {exactIdentityAvailable
+                  ? 'It is available only while an active chunk can be stopped safely.'
+                  : 'The exact scene and profile identity is missing; refresh before confirming cancellation.'}
+              </p>
+            ) : null}
+            {!canRetryCurrentChunk ? (
+              <p id="mc-retry-current-chunk-unavailable">
+                <strong>Retry current chunk is unavailable.</strong>{' '}
+                {!exactIdentityAvailable
+                  ? 'The exact scene and profile identity is missing; refresh before retrying.'
+                  : job.state === 'failed' && job.error?.retryable === false
+                    ? 'The backend marked this failure as non-retryable.'
+                    : job.state === 'running'
+                      ? 'Wait until the watched renderer reports exact active chunk bounds.'
+                      : 'It is available for a watched active chunk or a retryable failed chunk.'}
+              </p>
+            ) : null}
+            {job.state === 'failed' && !canRetryFailedRender ? (
+              <p id="mc-retry-failed-chunk-unavailable">
+                <strong>Retry failed chunk is unavailable.</strong>{' '}
+                {job.error?.retryable === false
+                  ? 'The backend marked this failure as non-retryable.'
+                  : 'The exact scene and profile identity is missing; refresh before retrying.'}
+              </p>
+            ) : null}
+          </div>
         ) : null}
         {job.outputPath ? <Button tone="quiet" icon={<FolderOpen aria-hidden="true" />} onClick={onOpenOutput}>Open output folder</Button> : null}
         <Button tone="quiet" icon={<TerminalSquare aria-hidden="true" />} onClick={() => setLogsOpen((value) => !value)}>{logsOpen ? 'Hide logs' : 'Open logs'}</Button>
         <Button tone="quiet" icon={<RotateCw aria-hidden="true" />} busy={busyAction === 'refresh'} onClick={onRefresh}>Refresh</Button>
         {job.state === 'complete' && job.canEncode ? <Button tone="primary" icon={<CheckCircle2 aria-hidden="true" />} busy={busyAction === 'encode-candidates'} onClick={onEncode}>Encode video</Button> : null}
       </div>
+
+      <Modal
+        open={confirmation === 'cancel'}
+        title="Cancel this render at the safe chunk boundary?"
+        description="This is a terminal cancellation, not a resumable stop-after-chunk request."
+        onClose={() => {
+          setConfirmation(null)
+          setOperationConfirmed(false)
+        }}
+        footer={(
+          <>
+            <Button onClick={() => {
+              setConfirmation(null)
+              setOperationConfirmed(false)
+            }}>Keep rendering</Button>
+            <Button
+              tone="danger"
+              disabled={!operationConfirmed}
+              onClick={() => {
+                setConfirmation(null)
+                setOperationConfirmed(false)
+                onCancelRender()
+              }}
+            >
+              Confirm cancel
+            </Button>
+          </>
+        )}
+      >
+        <div className="mc-render-operation-confirmation">
+          <Notice tone="warning" title="The active chunk will finish safely">
+            <p>Mission Control will validate and publish the current chunk, then stop this job. Already validated output is preserved. This action does not delete output files or job history.</p>
+          </Notice>
+          <dl>
+            <div><dt>Job</dt><dd><code>{job.jobId}</code></dd></div>
+            <div><dt>Active chunk</dt><dd>{activeChunkId ?? (chunkStart !== null && chunkEnd !== null ? `Frames ${chunkStart}–${chunkEnd}` : 'Awaiting exact chunk bounds')}</dd></div>
+            <div><dt>Result</dt><dd>Cancelled after safe chunk publication</dd></div>
+            <div><dt>Output handling</dt><dd>Preserve validated and published frames</dd></div>
+          </dl>
+          <label className="mc-confirm-checkbox">
+            <input
+              type="checkbox"
+              checked={operationConfirmed}
+              onChange={(event) => setOperationConfirmed(event.target.checked)}
+            />
+            <span>
+              <strong>Cancel this exact render job after the active chunk is safe.</strong>
+              <small>This is distinct from “Stop after current chunk,” which leaves the job safely resumable.</small>
+            </span>
+          </label>
+        </div>
+      </Modal>
+
+      <Modal
+        open={confirmation === 'retry-current'}
+        title={job.state === 'failed' ? 'Retry the failed current chunk?' : 'Retry the active current chunk?'}
+        description="Retry is bound to this job’s exact saved scene, profile, and current chunk identity."
+        onClose={() => {
+          setConfirmation(null)
+          setOperationConfirmed(false)
+        }}
+        footer={(
+          <>
+            <Button onClick={() => {
+              setConfirmation(null)
+              setOperationConfirmed(false)
+            }}>Not now</Button>
+            <Button
+              tone="primary"
+              disabled={!operationConfirmed}
+              onClick={() => {
+                setConfirmation(null)
+                setOperationConfirmed(false)
+                onRetryCurrentChunk()
+              }}
+            >
+              Retry exact current chunk
+            </Button>
+          </>
+        )}
+      >
+        <div className="mc-render-operation-confirmation">
+          <Notice tone="warning" title={job.state === 'failed' ? 'The failed chunk will reuse its saved identity' : 'Only the isolated active attempt will stop'}>
+            <p>
+              {job.state === 'failed'
+                ? 'Mission Control will reuse the exact saved chunk identity and fill only its missing or invalid work.'
+                : 'Mission Control will stop the isolated in-flight attempt, preserve every validated prior chunk, and requeue these exact chunk bounds. It does not delete published output or job history.'}
+            </p>
+          </Notice>
+          <dl>
+            <div><dt>Job</dt><dd><code>{job.jobId}</code></dd></div>
+            <div><dt>Current chunk</dt><dd>{activeChunkId ?? (chunkStart !== null && chunkEnd !== null ? `Frames ${chunkStart}–${chunkEnd}` : 'Resolved from the saved failed identity')}</dd></div>
+            <div><dt>Previous retries</dt><dd>{retryCount.toLocaleString()}</dd></div>
+            <div><dt>Prior output</dt><dd>Validated and published chunks stay authoritative</dd></div>
+          </dl>
+          <label className="mc-confirm-checkbox">
+            <input
+              type="checkbox"
+              checked={operationConfirmed}
+              onChange={(event) => setOperationConfirmed(event.target.checked)}
+            />
+            <span>
+              <strong>Retry this exact current chunk without deleting validated prior work.</strong>
+              <small>The backend rejects this request if the saved identity, active watcher, or artifact safety checks no longer pass.</small>
+            </span>
+          </label>
+        </div>
+      </Modal>
+
+      <Modal
+        open={confirmation === 'retry-failed'}
+        title="Retry the failed render work?"
+        description="Retry is bound to this job’s exact saved scene and profile identity."
+        onClose={() => {
+          setConfirmation(null)
+          setOperationConfirmed(false)
+        }}
+        footer={(
+          <>
+            <Button onClick={() => {
+              setConfirmation(null)
+              setOperationConfirmed(false)
+            }}>Not now</Button>
+            <Button
+              tone="primary"
+              disabled={!operationConfirmed}
+              onClick={() => {
+                setConfirmation(null)
+                setOperationConfirmed(false)
+                onRetryFailedRender()
+              }}
+            >
+              Retry exact failed work
+            </Button>
+          </>
+        )}
+      >
+        <div className="mc-render-operation-confirmation">
+          <Notice tone="info" title="Validated work remains authoritative">
+            <p>The backend will inspect the saved artifacts and fill only deterministic missing or invalid work. It will not treat this as a new render identity or delete validated frames.</p>
+          </Notice>
+          <dl>
+            <div><dt>Job</dt><dd><code>{job.jobId}</code></dd></div>
+            <div><dt>Failed chunk</dt><dd>{activeChunkId ?? (chunkStart !== null && chunkEnd !== null ? `Frames ${chunkStart}–${chunkEnd}` : 'Resolved from the saved manifest')}</dd></div>
+            <div><dt>Previous retries</dt><dd>{retryCount.toLocaleString()}</dd></div>
+            <div><dt>Failure</dt><dd>{job.error?.summary ?? 'Retryable failure recorded by the backend'}</dd></div>
+          </dl>
+          <label className="mc-confirm-checkbox">
+            <input
+              type="checkbox"
+              checked={operationConfirmed}
+              onChange={(event) => setOperationConfirmed(event.target.checked)}
+            />
+            <span>
+              <strong>Retry the missing or invalid work for this exact job.</strong>
+              <small>The backend will reject the request if identity or artifact safety checks no longer pass.</small>
+            </span>
+          </label>
+        </div>
+      </Modal>
 
       {advanced ? (
         <section className="mc-card mc-advanced-metrics">

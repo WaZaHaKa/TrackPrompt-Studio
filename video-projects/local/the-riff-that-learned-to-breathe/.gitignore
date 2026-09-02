@@ -1,0 +1,7 @@
+audio/track.*
+outputs/
+models/
+cache/
+*.tmp
+*.partial
+*.part

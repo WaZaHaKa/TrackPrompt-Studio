@@ -1,5 +1,20 @@
 # Analysis methods and limitations
 
+## Long-form boundary detection versus musical sections
+
+Song-boundary detection is a dedicated catalogue pipeline and is not the
+ordinary within-track musical section segmenter. It combines energy dips,
+before/after spectral ratios and centroid/flatness, chroma distance, onset
+density, stereo width, and persistence. Candidate suppression and deterministic
+global selection use configurable soft track-length expectations. The scan is
+streaming and bounded; it does not construct a source-wide waveform or STFT.
+
+Candidate refinement assigns `silence_gap`, `hard_cut`, `fade`, `crossfade`,
+`gradual_transition`, or `uncertain`, plus transition regions and stable cores.
+Crossfade audio still contains both tracks. Child genre/key/timbre analysis uses
+the stable core where at least 20 seconds are available; otherwise the result
+warns that transition evidence may contaminate the bounded full segment.
+
 This document describes analysis version `0.5.0` and result schema `1.4.0`.
 Exports preserve both versions and the runtime analyzer-version map.
 

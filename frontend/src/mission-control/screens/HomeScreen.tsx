@@ -3,7 +3,7 @@ import { Button, EmptyState, Metric, Notice, ProgressBar, SectionHeading, Status
 import { formatDuration, formatGiB, percent, sentenceCase } from '../format'
 import type { DashboardSnapshot, MissionSection, RenderJob } from '../types'
 
-const activeStates = new Set(['starting', 'running', 'stop_requested', 'finishing_current_chunk', 'encoding', 'verifying'])
+const activeStates = new Set(['starting', 'running', 'stop_requested', 'retry_requested', 'finishing_current_chunk', 'encoding', 'verifying'])
 
 export function HomeScreen({
   data,

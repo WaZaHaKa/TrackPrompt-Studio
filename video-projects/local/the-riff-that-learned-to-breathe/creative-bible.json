@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "the-riff-that-learned-to-breathe",
+  "title": "The Riff That Learned to Breathe",
+  "logline": "A mechanical riff travels between two fictional adult creators, learns to breathe as downtempo music, and returns with a new body but the same heart.",
+  "visualIdentity": "An original hand-drawn anime world made of watercolor rain, gouache shadows, fine ink lines, paper fibers, brushed metal, and restrained 2.5D parallax. It feels intimate and authored rather than glossy or synthetic.",
+  "narrativeTheme": [
+    "transformation without erasure",
+    "collaboration without ownership",
+    "the main riff as a durable heart",
+    "the solo as an expressive amber ribbon",
+    "tempo change as learning to breathe"
+  ],
+  "characters": [
+    {
+      "id": "architect",
+      "description": "The Architect, one consistent fictional adult with wavy dark hair, warm brown eyes, a rust-colored work jacket over a charcoal shirt, practical dark trousers, calm precise hands, no jewelry, no logos",
+      "symbolicRole": "source composer and builder"
+    },
+    {
+      "id": "listener",
+      "description": "The Listener, one consistent fictional adult with short dark hair and one silver forelock, an indigo overshirt, a muted amber scarf, charcoal trousers, observant eyes, no jewelry, no logos",
+      "symbolicRole": "remixer, arranger, and attentive transformer"
+    }
+  ],
+  "heroProp": {
+    "id": "origami-bird",
+    "description": "the same palm-sized origami bird, initially made from brushed dark metal and guitar-string-like ribs, with a small warm amber mechanical heart visible through its chest; later its feathers become layered paper and fabric while the amber heart and exact silhouette remain unchanged"
+  },
+  "palette": [
+    "iron blue",
+    "deep indigo",
+    "charcoal",
+    "rain teal",
+    "warm amber thread",
+    "restrained rust",
+    "pale rose dawn"
+  ],
+  "cameraLanguage": [
+    "slow deliberate dolly, orbit, lateral glide, or crane",
+    "stable horizon and coherent screen direction",
+    "macro material detail alternating with wide negative space",
+    "subject motion may accelerate while camera remains readable",
+    "24 fps delivery with an animated-on-twos feeling where appropriate"
+  ],
+  "lightingLanguage": [
+    "soft rain-window light",
+    "warm practical workshop pools",
+    "amber heart and thread as motivated highlights",
+    "rich shadow detail",
+    "dawn release without blown highlights"
+  ],
+  "textureLanguage": [
+    "watercolor wash",
+    "gouache shadow shapes",
+    "fine ink contour",
+    "paper grain",
+    "brushed dark metal",
+    "stitched fabric",
+    "subtle analog film grain"
+  ],
+  "animationRules": [
+    "preserve silhouette and color anchors across all shots",
+    "avoid boiling line art and uncontrolled texture crawl",
+    "use 2.5D parallax and held poses to extend scenes gracefully",
+    "favor one continuous action per generated clip",
+    "transitions carry motifs from one scene into the next"
+  ],
+  "globalPromptPrefix": "original hand-drawn anime film frame, clearly adult fictional characters, 2D cel animation with watercolor and gouache backgrounds, fine expressive ink lines, restrained 2.5D parallax, subtle paper grain, cinematic composition, quiet emotional realism, iron-blue and indigo shadows with rare warm amber light, 16:9, no text",
+  "globalNegativePrompt": "visible text, letters, captions, subtitles, logos, watermarks, interface elements, named artist imitation, named studio imitation, celebrity likeness, real-person likeness, child, teenager, sexualized framing, nudity, gore, horror monster, photorealism, live action, 3D plastic render, glossy CGI, generic neon cyberpunk city, chibi comedy, exaggerated fan service, malformed anatomy, extra fingers, extra limbs, duplicated person, duplicated face, face morphing, wardrobe changes, inconsistent hair, inconsistent scarf, inconsistent bird design, flickering line art, boiling details, crawling textures, unstable background, abrupt internal cuts, rapid montage, random camera shake, fisheye distortion, muddy exposure, oversaturated colors, low resolution, compression artifacts",
+  "privacyRules": [
+    "Do not include raw audio, filenames, local paths, account identifiers, private messages, or credentials in model prompts.",
+    "Do not depict either real collaborator; the Architect and Listener are invented fictional adults.",
+    "Audio remains local and is muxed only after visual generation."
+  ]
+}

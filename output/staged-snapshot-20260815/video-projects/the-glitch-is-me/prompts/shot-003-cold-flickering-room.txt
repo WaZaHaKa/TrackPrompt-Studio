@@ -1,0 +1,14 @@
+SHOT shot-003 — Cold Flickering Room
+
+NARRATIVE INTENT
+Show physical isolation inside an unstable digital frame.
+
+SHOT PROMPT
+A sparse cold room made from wet concrete and smoked glass flickers between solid reality and a precise wireframe absence. The Quantum Siren sits alone at the far edge of a narrow bed, almost motionless, while the light above her fails in slow irregular pulses. The camera tracks laterally behind translucent foreground glass, producing deep parallax and emotional distance.
+
+SHOT-SPECIFIC EXCLUSIONS
+camera shake, chaotic motion, abrupt internal cut, obvious stock footage look, inconsistent protagonist, costume change, face replacement, excessive glitch covering the subject, cozy bedroom, furniture clutter, horror asylum, violent strobe
+
+REVIEW NOTES
+- Flicker must be slow enough for comfortable viewing.
+- Keep face readable when visible.

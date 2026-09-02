@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "trackprompt-deterministic-effects-and-disk-report",
+  "projectId": "trip-to-andromeda-v2",
+  "sceneSha256": "bbc9fc6849fc4ad23375e01d33d53990b6b316cc41c30867dbc0edaff3ee3280",
+  "renderProfileSha256": "dafe37dafb0cebb19af849c7c13032d94c8a0ffbe2a756b8453eaa94dfd06d7b",
+  "determinism": {
+    "seed": 84291,
+    "simulationSystems": [],
+    "bakesRequired": false,
+    "allRequiredBakesComplete": true,
+    "proceduralAnimationSource": "versioned deterministic keyframes",
+    "allFcurveInterpolation": "LINEAR",
+    "cueCurvesHashBound": true,
+    "deterministicEffectsVerified": true
+  },
+  "storage": {
+    "measuredAt": "2026-07-23T07:45:00Z",
+    "freeBytes": 379058008064,
+    "plannedFrameSequenceBytes": 50277960909,
+    "projectedMasterBytes": 107374183,
+    "projectedDeliveryBytes": 1610612736,
+    "supportReserveBytes": 4294967296,
+    "projectedPeakDiskBytes": 56290915124,
+    "safetyMultiplier": 1.25,
+    "requiredFreeBytes": 70363643905,
+    "headroomAfterRequiredBytes": 308694364159,
+    "headroomSatisfied": true
+  },
+  "throughput": {
+    "benchmarkBytes": 268435456,
+    "writeMiBPerSecond": 545.442,
+    "readMiBPerSecond": 802.131,
+    "temporaryArtifactRetained": false
+  },
+  "vram": {
+    "availableMiB": 12288,
+    "minimumRequiredMiB": 8192,
+    "maximumConcurrentWorkers": 1,
+    "stableDuringBoundedEvidence": true
+  },
+  "technicalPass": true
+}

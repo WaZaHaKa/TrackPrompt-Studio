@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -23,10 +24,14 @@ class LocalRequestBoundaryMiddleware:
         allowed_origins: tuple[str, ...],
         allowed_hosts: tuple[str, ...],
         max_api_request_bytes: int = 256 * 1024,
+        max_chunk_request_bytes: int = 32 * 1024 * 1024,
+        max_active_uploads: int = 3,
     ) -> None:
         self.app = app
         self.max_upload_request_bytes = max_upload_request_bytes
         self.max_api_request_bytes = max_api_request_bytes
+        self.max_chunk_request_bytes = max_chunk_request_bytes
+        self.upload_slots = asyncio.Semaphore(max_active_uploads)
         self.allowed_origins = {origin.rstrip("/").casefold() for origin in allowed_origins}
         origin_hosts = {
             host.casefold()
@@ -94,12 +99,13 @@ class LocalRequestBoundaryMiddleware:
                 return
 
         is_upload = method == "POST" and path == "/api/analyses"
-        is_capped_api_body = is_upload or (is_api and method in {"POST", "PATCH"})
+        is_resumable_chunk = method == "PATCH" and path.startswith("/api/upload-sessions/")
+        is_capped_api_body = is_upload or is_resumable_chunk or (is_api and method in {"POST", "PATCH", "PUT"})
         if not is_capped_api_body:
             await self.app(scope, receive, send)
             return
-        request_limit = (
-            self.max_upload_request_bytes if is_upload else self.max_api_request_bytes
+        request_limit = self.max_upload_request_bytes if is_upload else (
+            self.max_chunk_request_bytes if is_resumable_chunk else self.max_api_request_bytes
         )
         raw_length = headers.get("content-length")
         if raw_length is not None:
@@ -132,12 +138,18 @@ class LocalRequestBoundaryMiddleware:
                     raise RequestBodyTooLarge
             return message
 
+        if is_resumable_chunk:
+            await self.upload_slots.acquire()
         try:
-            await self.app(scope, limited_receive, send)
-        except RequestBodyTooLarge:
-            await self._error(
-                send,
-                413,
-                "request_body_too_large",
-                "The API request exceeds the configured local limit.",
-            )
+            try:
+                await self.app(scope, limited_receive, send)
+            except RequestBodyTooLarge:
+                await self._error(
+                    send,
+                    413,
+                    "request_body_too_large",
+                    "The API request exceeds the configured local limit.",
+                )
+        finally:
+            if is_resumable_chunk:
+                self.upload_slots.release()

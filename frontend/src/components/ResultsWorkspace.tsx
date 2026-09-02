@@ -38,7 +38,7 @@ import { GenrePanel } from './GenrePanel'
 import { LyricsPanel } from './LyricsPanel'
 import { WaveformTimeline } from './WaveformTimeline'
 import { Button, ConfidenceBadge, InlineNotice, Modal } from './ui'
-import { BlenderVisualizerPanel } from './BlenderVisualizerPanel'
+import { RendererSelector } from '../features/renderers/RendererSelector'
 
 type ResultsTab = 'overview' | 'timeline' | 'rhythm' | 'instruments' | 'genre' | 'lyrics' | 'production' | 'prompt'
 
@@ -263,7 +263,7 @@ export function ResultsWorkspace({
         </div>
       </header>
 
-      <BlenderVisualizerPanel jobId={jobId} />
+      <RendererSelector jobId={jobId} capabilities={capabilities} />
 
       <div className="results-tabs" role="tablist" aria-label="Analysis workspace" onKeyDown={onTabKeyDown}>
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -324,7 +324,7 @@ export function ResultsWorkspace({
 
       <footer className="privacy-footer">
         <LockKeyhole aria-hidden="true" />
-        <span><strong>Your local data expires automatically after {capabilities.limits.jobTtlMinutes} minutes.</strong><small>Delete now removes uploaded audio, temporary stems, derived files, metadata, and in-memory job state. No stem downloads are exposed.</small></span>
+        <span><strong>Your completed analysis is retained persistently.</strong><small>Only an explicit delete removes its private source and canonical artifacts. Temporary worker files and stems are still cleaned automatically.</small></span>
         <Download aria-hidden="true" />
       </footer>
 

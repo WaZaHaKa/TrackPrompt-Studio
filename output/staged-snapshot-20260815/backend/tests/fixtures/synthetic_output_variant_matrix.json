@@ -1,0 +1,70 @@
+{
+  "fixtureVersion": "1.0.0",
+  "kind": "synthetic-output-variant-matrix",
+  "tenantNamespace": "synthetic-lab",
+  "projectId": "procedural-orbit-demo",
+  "scenarios": [
+    {
+      "id": "wide-only-short-range",
+      "frameRange": {
+        "start": 17,
+        "end": 28
+      },
+      "outputVariants": [
+        {
+          "id": "wide-lowres",
+          "enabled": true,
+          "required": true,
+          "width": 640,
+          "height": 360,
+          "fps": 24,
+          "compositionMode": "authored",
+          "deliverableRole": "primary",
+          "artifactRoot": "synthetic/wide-only/wide-lowres"
+        },
+        {
+          "id": "tall-lowres",
+          "enabled": false,
+          "required": false,
+          "width": 360,
+          "height": 640,
+          "fps": 24,
+          "compositionMode": "authored",
+          "deliverableRole": "alternate",
+          "artifactRoot": "synthetic/wide-only/tall-lowres"
+        }
+      ]
+    },
+    {
+      "id": "dual-authored-short-range",
+      "frameRange": {
+        "start": 101,
+        "end": 112
+      },
+      "outputVariants": [
+        {
+          "id": "wide-lowres",
+          "enabled": true,
+          "required": true,
+          "width": 800,
+          "height": 450,
+          "fps": 25,
+          "compositionMode": "authored",
+          "deliverableRole": "primary",
+          "artifactRoot": "synthetic/dual/wide-lowres"
+        },
+        {
+          "id": "tall-lowres",
+          "enabled": true,
+          "required": false,
+          "width": 450,
+          "height": 800,
+          "fps": 25,
+          "compositionMode": "authored",
+          "deliverableRole": "alternate",
+          "artifactRoot": "synthetic/dual/tall-lowres"
+        }
+      ]
+    }
+  ]
+}

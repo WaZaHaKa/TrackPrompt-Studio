@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { MissionControlApp } from './MissionControlApp'
@@ -83,6 +83,7 @@ describe('MissionControlApp', () => {
         frameCount: completeJob.totalFrames,
         totalFrames: completeJob.totalFrames,
         verified: true,
+        outputKinds: ['delivery'],
         audioMuxAvailable: false,
       }])
     const client = makeClient({
@@ -99,6 +100,32 @@ describe('MissionControlApp', () => {
     expect(screen.getByText('13,029 / 13,029 frames')).toBeInTheDocument()
     expect(screen.queryByText('No complete frame sequence yet')).not.toBeInTheDocument()
     expect(listEncodeCandidates).toHaveBeenCalledTimes(2)
+  })
+
+  it('confirms and submits an identity-safe cancellation from the active render UI', async () => {
+    const user = userEvent.setup()
+    const runningJob = makeRenderJob()
+    const cancelRender = vi.fn().mockResolvedValue({
+      ...runningJob,
+      state: 'cancel_requested',
+      safeStopStatus: 'requested',
+      warning: 'Cancellation is pending at the current chunk boundary.',
+    })
+    const client = makeClient({
+      getSystemStatus: () => Promise.resolve({ ...testSystem, activeJobId: runningJob.jobId }),
+      listJobs: () => Promise.resolve([runningJob]),
+      cancelRender,
+    })
+    render(<MissionControlApp client={client} eventSubscriber={quietSubscriber} />)
+
+    expect(await screen.findByRole('heading', { name: /rendering frame 8,110/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel render' }))
+    const dialog = screen.getByRole('dialog', { name: /cancel this render at the safe chunk boundary/i })
+    await user.click(within(dialog).getByRole('checkbox', { name: /cancel this exact render job/i }))
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm cancel' }))
+
+    await waitFor(() => expect(cancelRender).toHaveBeenCalledWith(runningJob.jobId))
+    expect(await screen.findByRole('button', { name: 'Cancellation requested' })).toBeDisabled()
   })
 
   it('monitors idle backend health and recovers the connection indicator', async () => {

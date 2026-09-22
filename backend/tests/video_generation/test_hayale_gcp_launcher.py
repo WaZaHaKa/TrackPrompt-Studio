@@ -52,10 +52,13 @@ def test_batch_is_bounded_and_cloud_only() -> None:
     value = batch_spec('hayale-gcp16-' + '1' * 24, 'us-central1-docker.pkg.dev/p/r/w@sha256:' + 'a' * 64)
     task = value['taskGroups'][0]['taskSpec']
     assert task['maxRetryCount'] == 2
+    assert task['lifecyclePolicies'] == [{'action': 'FAIL_TASK', 'actionCondition': {'exitCodes': [1]}}]
     assert task['maxRunDuration'] == '43200s'
     assert value['taskGroups'][0]['taskCount'] == 1
     assert '--manifest' in task['runnables'][0]['container']['commands']
     assert value['allocationPolicy']['serviceAccount']['email'].startswith('trackprompt-hayale-worker@')
+    assert value['allocationPolicy']['location']['allowedLocations'] == [
+        'zones/us-central1-a', 'zones/us-central1-b', 'zones/us-central1-c']
 
 
 def test_launchers_require_pwsh_and_set_absolute_fresh_environment() -> None:

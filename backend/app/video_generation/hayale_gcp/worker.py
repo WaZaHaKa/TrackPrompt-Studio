@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import tarfile
@@ -25,6 +26,7 @@ from .cloud import (
     SubmissionUnknown,
     VertexClient,
 )
+from .media import MediaError
 from .state import ManifestStore, now
 
 DELIVERY_NAMES = ("Hayale-Flowers-Promo-1080p.mp4", "Hayale-Flowers-Promo-verification.json", "Hayale-Flowers-Promo-delivery-report.md")
@@ -36,6 +38,130 @@ _MOTION = {
     "vibe": "An elegant premium florist atmosphere shot. Restrained natural depth and parallax, believable floral detail, preserving the supplied environment and subjects without morphing.",
     "tour": "A gentle interior tour of the supplied real florist shop. Restrained forward or lateral camera movement, preserving the room layout, shelving and architecture; no invented crowds or signs.",
 }
+
+
+def _smoke_runtime_proof(project: str, account: str, verified: bool) -> dict[str, Any]:
+    if (verified is not True or platform.system() != "Linux"
+            or project != "nexus-core-481713"
+            or account != "trackprompt-hayale-worker@nexus-core-481713.iam.gserviceaccount.com"
+            or not os.environ.get("BATCH_JOB_UID") or os.environ.get("BATCH_TASK_INDEX") != "0"):
+        raise CloudError("verified_attached_smoke_runtime_required")
+    return {"provider": "gcp-batch", "projectId": project, "serviceAccount": account,
+            "jobUid": os.environ["BATCH_JOB_UID"], "taskIndex": "0", "identityVerified": True}
+
+
+def object_io_smoke(storage: GcsClient, prefix: str, work_root: Path, *, project: str,
+                    service_account: str, identity_verified: bool = False) -> dict[str, Any]:
+    """Exercise production GCS transport with two disposable, non-media objects."""
+    if not re.fullmatch(r"hayale-final/hayale-gcp16-[a-f0-9]{24}/smoke-object-io/[a-f0-9]{24}/", prefix):
+        raise CloudError("cloud_smoke_prefix_invalid")
+    runtime = _smoke_runtime_proof(project, service_account, identity_verified)
+    nonce = uuid4().hex
+    child = prefix + nonce + "/"
+    local = work_root / nonce
+    local.mkdir(parents=True, exist_ok=True)
+    categories: dict[str, dict[str, Any]] = {}
+    result: dict[str, Any] = {"schemaVersion": 1, "mode": "cloud-object-io-smoke", "ok": False,
+        "runtime": runtime, "smokePrefix": prefix, "probePrefix": child, "startedAt": now(),
+        "categories": categories, "generationSubmitted": False, "productionInputsUploaded": False,
+        "cleanup": {"status": "not-started", "retentionEnforced": False}}
+
+    def checked(category: str, passed: bool, **proof: Any) -> None:
+        categories[category] = {"ok": passed, **proof}
+        if not passed:
+            raise CloudError("object_io_smoke_" + category + "_failed")
+
+    def publish_receipt() -> None:
+        name = prefix + "result.json"
+        current = storage.metadata(name)
+        storage.put_json(name, result, if_generation_match=current["generation"] if current else 0)
+
+    try:
+        bucket = storage.bucket_metadata()
+        checked("bucket_metadata", bucket.get("name") == storage.bucket)
+        payload = b"TrackPrompt Hayale disposable object-I/O probe v1\n" + nonce.encode("ascii")
+        original = local / "payload.bin"
+        original.write_bytes(payload)
+        expected_sha = sha256_file(original)
+        payload_name, state_name = child + "payload.bin", child + "state.json"
+        uploaded = storage.upload_file(payload_name, original, if_generation_match=0,
+                                       content_type="application/octet-stream")
+        checked("object_create", uploaded.get("sha256") == expected_sha and uploaded.get("size") == len(payload),
+                generation=str(uploaded.get("generation")), objectIdentitySha256=sha256_json(payload_name))
+        generation = str(uploaded["generation"])
+        metadata = storage.metadata(payload_name)
+        checked("object_metadata", bool(metadata and str(metadata.get("generation")) == generation
+                and int(metadata.get("size", -1)) == len(payload)))
+        pinned = storage.metadata(payload_name, generation)
+        checked("generation_bound_read", bool(pinned and str(pinned.get("generation")) == generation),
+                generation=generation)
+        downloaded = local / "downloaded.bin"
+        download = storage.download(payload_name, downloaded, generation=generation, expected_sha256=expected_sha)
+        checked("object_download", downloaded.read_bytes() == payload and str(download.get("generation")) == generation)
+        checked("object_sha256", sha256_file(downloaded) == expected_sha, sha256=expected_sha)
+        listing = storage.list_objects(child)
+        checked("object_list", any(item.get("name") == payload_name and str(item.get("generation")) == generation
+                                    for item in listing) and all(item.get("name", "").startswith(child) for item in listing),
+                matchedObjects=len(listing))
+        state_v1 = {"schemaVersion": 1, "nonce": nonce, "revision": 1, "payloadSha256": expected_sha}
+        first = storage.put_json(state_name, state_v1, if_generation_match=0)
+        read_v1, pinned_v1 = storage.get_json(state_name, str(first["generation"]))
+        checked("json_create", read_v1 == state_v1 and str(pinned_v1["generation"]) == str(first["generation"]))
+        state_v2 = {**state_v1, "revision": 2}
+        second = storage.put_json(state_name, state_v2, if_generation_match=str(first["generation"]))
+        checked("json_cas_update", str(second["generation"]) != str(first["generation"]),
+                previousGeneration=str(first["generation"]), currentGeneration=str(second["generation"]))
+        read_v2, meta_v2 = storage.get_json(state_name)
+        checked("json_read_after_update", read_v2 == state_v2 and str(meta_v2["generation"]) == str(second["generation"]))
+        # A pinned old generation may legitimately be absent without versioning.
+        # Record the bucket's observed behavior instead of calling it an I/O fault.
+        try:
+            prior_state, prior_meta = storage.get_json(state_name, str(first["generation"]))
+            checked("prior_generation_behavior", prior_state == state_v1 and str(prior_meta["generation"]) == str(first["generation"]),
+                    behavior="retained-version-readable")
+        except CloudError as exc:
+            if exc.status != 404:
+                raise
+            checked("prior_generation_behavior", True, behavior="replaced-generation-unavailable", httpStatus=404)
+        updated = storage.update_metadata(payload_name, {"smokeProbe": "metadata-update"},
+                                           generation=generation, required_prefix=child)
+        checked("object_metadata_update", updated.get("metadata", {}).get("smokeProbe") == "metadata-update"
+                and updated.get("metadata", {}).get("sha256") == expected_sha
+                and str(updated.get("generation")) == generation,
+                metageneration=str(updated.get("metageneration")))
+        cleanup_targets = [(payload_name, generation), (state_name, str(second["generation"])),
+                           (state_name, str(first["generation"]))]
+        retained: list[dict[str, str]] = []
+        for object_name, object_generation in cleanup_targets:
+            if storage.metadata(object_name, object_generation) is None:
+                continue
+            try:
+                storage.delete_object(object_name, generation=object_generation, required_prefix=child)
+                if storage.metadata(object_name, object_generation) is not None:
+                    raise CloudError("object_io_smoke_cleanup_unconfirmed")
+            except CloudError as exc:
+                if exc.status != 403:
+                    raise
+                retained.append({"object": object_name, "generation": object_generation})
+        categories["object_delete"] = {"ok": not retained, "optional": True,
+                                       "status": "retained-permission-denied" if retained else "passed"}
+        result["cleanup"] = {"status": "retained-permission-denied" if retained else "deleted",
+            "retainedObjects": retained, "maximumDisposableObjectNames": 2,
+            "retentionEnforced": not retained, "receiptRetained": True,
+            "retentionNote": "Only this smoke's disposable objects are eligible for deletion. No bucket retention policy was changed."
+                if not retained else "Two bounded disposable object names remain as smoke evidence because deletion was denied; no automatic expiry is claimed."}
+        result.update(ok=True, completedAt=now(), metadataVerified=True)
+        publish_receipt()
+        return result
+    except Exception as exc:
+        error = exc.to_dict() if isinstance(exc, CloudError) else {"code": "object_io_smoke_failed"}
+        result.update(completedAt=now(), error=error)
+        try:
+            publish_receipt()
+        except Exception:
+            pass
+        print(json.dumps(result), flush=True)
+        raise
 
 
 def generation_request(manifest: dict[str, Any], scene: dict[str, Any], number: int) -> dict[str, Any]:
@@ -430,6 +556,7 @@ def main() -> int:
     parser.add_argument("--manifest")
     parser.add_argument("--runtime-service-account", required=True)
     parser.add_argument("--check-runtime", action="store_true")
+    parser.add_argument("--smoke-prefix")
     args = parser.parse_args()
     worker: CloudWorker | None = None
     try:
@@ -440,9 +567,11 @@ def main() -> int:
             if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
                 raise CloudError("cloud_media_tools_missing")
             Image.init()
-            storage.bucket_metadata()
-            print(json.dumps({"ok": True, "project": args.project, "metadataVerified": True,
-                              "ffmpegAvailable": True, "pillowAvailable": True, "generationSubmitted": False}))
+            if not args.smoke_prefix:
+                raise CloudError("cloud_smoke_prefix_required")
+            result = object_io_smoke(storage, args.smoke_prefix, Path("/tmp/hayale-object-io-smoke"),
+                project=args.project, service_account=args.runtime_service_account, identity_verified=True)
+            print(json.dumps({**result, "ffmpegAvailable": True, "pillowAvailable": True}))
             return 0
         if not args.manifest:
             raise CloudError("cloud_manifest_required")
@@ -458,14 +587,15 @@ def main() -> int:
             worker.run()
         return 0
     except Exception as exc:
-        code = exc.code if isinstance(exc, CloudError) else "cloud_worker_stage_failed"
+        code = exc.code if isinstance(exc, (CloudError, MediaError)) else "cloud_worker_stage_failed"
+        details = exc.to_dict() if isinstance(exc, (CloudError, MediaError)) else {"code": code, "retryable": False}
         if worker is not None and not isinstance(exc, StateConflict):
             try:
-                worker.manifest["lastError"] = {"code": code, "observedAt": now(), "retryable": bool(getattr(exc, "retryable", False))}
+                worker.manifest["lastError"] = {**details, "observedAt": now()}
                 worker._save("retrying" if bool(getattr(exc, "retryable", False)) else "blocked")
             except Exception:
                 pass
-        print(json.dumps({"ok": False, "error": code}), flush=True)
+        print(json.dumps({"ok": False, "error": code, "errorDetails": details}), flush=True)
         return 75 if isinstance(exc, CloudError) and exc.retryable else 1
 
 

@@ -54,6 +54,6 @@ WNP uses the existing enrolled node when available and projects content-free dur
 
 ## Maintainer checks
 
-The optional `-Check` switch hashes the bound originals and reads cloud setup state without uploading media or starting generation. `-SetupOnly` builds the cloud worker without uploading production inputs. `-Smoke` runs only the bounded metadata/tools/bucket check in Batch; it cannot invoke Veo. These are implementation diagnostics, not additional operator steps required by the normal command.
+The optional `-Check` switch hashes the bound originals and reads cloud setup state without uploading media or starting generation. `-SetupOnly` builds the cloud worker without uploading production inputs. `-Smoke` performs a bounded real object round trip in Batch: create, metadata/read/download/hash, prefix listing, pinned generation read, conditional JSON replacement, metadata update and disposable-object cleanup. It cannot invoke Veo. The normal command automatically requires this image-bound proof; no extra operator command is required. See `docs/hayale-gcp-object-io-repair.md` for the production observer race and its repair.
 
 Synthetic tests cover source roles, cloud execution guards, frame/sample timelines, operation recovery, unknown submission protection, retry bounds, transfer resumption, generation fencing, native PowerShell/CMD invocation, and historical delivery preservation. A synthetic encode is test evidence; real production completion requires the cloud receipts and downloaded-byte proof for this distinct run.

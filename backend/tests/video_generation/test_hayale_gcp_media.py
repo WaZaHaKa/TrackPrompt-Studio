@@ -160,6 +160,36 @@ def test_scene_verification_rejects_upscale_candidates_and_timeline_drift(tmp_pa
         media.verify_scene(tmp_path / 'unqualified-source.mp4')
 
 
+def test_final_audio_failure_records_exact_safe_statistics_without_relaxing_verification(tmp_path, synthetic, monkeypatch):
+    video = {'codec_type': 'video', 'codec_name': 'h264', 'width': 1920, 'height': 1080,
+        'avg_frame_rate': '24/1', 'r_frame_rate': '24/1', 'nb_read_frames': '1536',
+        'duration': '64.000000', 'start_time': '0.000000', 'sample_aspect_ratio': '1:1', 'time_base': '1/12288'}
+    audio = {'codec_type': 'audio', 'codec_name': 'aac', 'sample_rate': '48000', 'channels': 2,
+             'duration': '63.936000', 'start_time': '0.000000', 'tags': {'title': 'PRIVATE_TOKEN_AND_FILENAME'}}
+    monkeypatch.setattr(media, '_probe', lambda path: {'streams': [video, audio]})
+    with pytest.raises(media.MediaError) as error:
+        media._verify(tmp_path / 'PRIVATE_FILE.mp4', frames=1536, audio_required=True)
+    details = error.value.to_dict()
+    assert details['code'] == 'cloud_media_audio_contract_failed'
+    assert details['context']['audioDurationSeconds'] == '63.936000'
+    assert details['context']['expectedDurationSeconds'] == '64.0'
+    assert details['context']['videoFrames'] == '1536'
+    assert details['context']['audioStartSeconds'] == '0.000000'
+    assert 'PRIVATE' not in json.dumps(details)
+
+
+def test_timestamp_failure_reports_first_exact_mismatch_without_media_content():
+    timestamps = [index * 512 for index in range(96)]
+    timestamps[31] += 1
+    with pytest.raises(media.MediaError) as error:
+        media._validate_pts(timestamps, time_base='1/12288', frames=96)
+    details = error.value.to_dict()
+    assert details['code'] == 'cloud_media_cfr_timestamp_failed'
+    assert details['context']['firstMismatchFrame'] == '31'
+    assert details['context']['observedTicks'] == str(31 * 512 + 1)
+    assert details['context']['timeBase'] == '1/12288'
+
+
 def _provenance(clips):
     sources = ['a' * 64, *[f'{index:064x}' for index in range(1, 15)], 'a' * 64]
     return {'runId': 'synthetic-cloud-contract', 'planDigest': 'c' * 64, 'sceneRecords': [
@@ -226,6 +256,82 @@ def test_cloud_manifest_arrangement_uses_explicit_canonical_time_keys():
         media._arrangement_samples(canonical, source_seconds=60)
 
 
+@pytest.mark.parametrize('interrupt_mux', [False, True])
+def test_final_mux_cannot_repeat_the_observed_frame_limit_audio_truncation(tmp_path, synthetic, monkeypatch, interrupt_mux):
+    """Model the exact FFmpeg 5.1 failure retained in the real cloud diagnostic."""
+    clips = []
+    for index in range(16):
+        path = tmp_path / f'scene-{index:03}.mp4'
+        path.write_bytes(f'clip-{index}'.encode())
+        clips.append(path)
+    audio = tmp_path / 'source.wav'
+    audio.write_bytes(b'original synthetic source')
+    arrangement = {'sourceSha256': media.sha256_file(audio), 'segments': [
+        {'sourceIn': 0, 'duration': 43.24}, {'sourceIn': 38.76, 'duration': 4.48},
+        {'sourceIn': 43.24, 'duration': 16.28}], 'joinFadeSeconds': .005}
+    def arrange(source, target, edit):
+        target.write_bytes(b'exactly 3072000 arranged audio samples')
+        return {'sourceSha256': media.sha256_file(source), 'arrangedSha256': media.sha256_file(target),
+                'durationSeconds': 64, 'arrangement': edit, 'cloudExecution': synthetic}
+    monkeypatch.setattr(media, '_arrange_audio', arrange)
+    monkeypatch.setattr(media, 'verify_scene', lambda path: {'technicalVerified': True})
+    monkeypatch.setattr(media, 'executable', lambda name: name)
+    monkeypatch.setattr(media, '_probe', lambda path: json.loads(path.read_text()))
+    commands = []
+    failed_mux = False
+    def ffmpeg51(command, **kwargs):
+        nonlocal failed_mux
+        if command[0] == 'ffprobe':
+            return json.dumps({'frames': [{'best_effort_timestamp': index * 512} for index in range(1536)]}).encode()
+        if command[-1] == '-':
+            return b''  # The synthetic decoder fixture succeeds.
+        commands.append(command)
+        if interrupt_mux and '-c:a' in command and not failed_mux:
+            failed_mux = True
+            raise media.MediaError('synthetic interrupted mux')
+        video = {'codec_type': 'video', 'codec_name': 'h264', 'width': 1920, 'height': 1080,
+            'avg_frame_rate': '24/1', 'r_frame_rate': '24/1', 'nb_read_frames': '1536',
+            'duration': '64.000000', 'start_time': '0.000000', 'sample_aspect_ratio': '1:1', 'time_base': '1/12288'}
+        streams = [video]
+        if '-c:a' in command:
+            duration = '61.994000' if '-frames:v' in command else '64.000000'
+            streams.append({'codec_type': 'audio', 'codec_name': 'aac', 'sample_rate': '48000',
+                'channels': 2, 'duration': duration, 'start_time': '0.000000', 'time_base': '1/48000',
+                'duration_ts': '2975712' if duration == '61.994000' else '3072000'})
+        Path(command[-1]).write_text(json.dumps({'streams': streams}))
+        return b''
+    monkeypatch.setattr(media, '_run', ffmpeg51)
+    provenance = _provenance(clips)
+    old_identity = media._digest({'sources': media._sources(clips, provenance), 'arrangement': arrangement,
+                                 'runId': provenance['runId'], 'planDigest': provenance['planDigest']})
+    output = tmp_path / 'delivery/final.mp4'
+    old_work = output.parent / 'finishing' / old_identity
+    old_work.mkdir(parents=True)
+    old_candidate = old_work / 'old-short-audio.mp4'
+    old_candidate.write_bytes(b'preserved old short-audio candidate')
+    media._write_json(old_work / 'encoded-candidate.json', {'candidate': old_candidate.name,
+        'finishingRecipeSha256': old_identity, 'sha256': media.sha256_file(old_candidate)})
+    if interrupt_mux:
+        with pytest.raises(media.MediaError, match='synthetic interrupted mux'):
+            media.finish(clips, audio, output, arrangement, provenance)
+        cached = list((output.parent / 'finishing').glob('*/video-only.mp4'))
+        assert len(cached) == 1
+        cached_hash = media.sha256_file(cached[0])
+    result = media.finish(clips, audio, output, arrangement, provenance)
+    assert result['technicalVerified'] and result['audioStartOffsetSeconds'] == 0
+    assert result['mediaRecipeVersion'] == media.FINISHING_RECIPE_VERSION
+    assert result['finishingRecipeSha256'] != old_identity
+    assert old_candidate.read_bytes() == b'preserved old short-audio candidate'
+    assert len(commands) == (3 if interrupt_mux else 2)
+    assert '-frames:v' in commands[0] and '-an' in commands[0] and '-c:a' not in commands[0]
+    assert sum('-frames:v' in command for command in commands) == 1
+    for command in commands[1:]:
+        assert command[command.index('-c:v') + 1] == 'copy'
+        assert '-frames:v' not in command and '-shortest' not in command and '-t' not in command
+    if interrupt_mux:
+        assert media.sha256_file(cached[0]) == cached_hash
+
+
 @pytest.mark.parametrize('reuse_encode', [False, True])
 def test_finishing_stages_and_verified_encode_reuse(tmp_path, synthetic, monkeypatch, reuse_encode):
     clips = []
@@ -240,7 +346,8 @@ def test_finishing_stages_and_verified_encode_reuse(tmp_path, synthetic, monkeyp
         {'sourceIn': 43.24, 'duration': 16.28}], 'joinFadeSeconds': .005}
     provenance = _provenance(clips)
     sources = media._sources(clips, provenance)
-    identity = media._digest({'sources': sources, 'arrangement': arrangement,
+    identity = media._digest({'mediaRecipeVersion': media.FINISHING_RECIPE_VERSION,
+                             'sources': sources, 'arrangement': arrangement,
                              'runId': provenance['runId'], 'planDigest': provenance['planDigest']})
     output = tmp_path / 'delivery/final.mp4'
     work = output.parent / 'finishing' / identity
@@ -272,7 +379,7 @@ def test_finishing_stages_and_verified_encode_reuse(tmp_path, synthetic, monkeyp
     assert output.read_bytes() == b'completed synthetic encode candidate'
     assert stages == ['scene_verification', 'audio_preparation', 'finishing',
                       *([] if reuse_encode else ['mux']), 'final_verification']
-    assert len(commands) == (0 if reuse_encode else 1)
+    assert len(commands) == (0 if reuse_encode else 2)
 
 
 @pytest.mark.skipif(os.environ.get('HAYALE_GCP_RUN_MEDIA_INTEGRATION') != '1',

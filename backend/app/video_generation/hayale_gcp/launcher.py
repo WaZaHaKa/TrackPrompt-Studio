@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import os
@@ -16,7 +17,7 @@ from typing import Any
 from ..gcp_auth import GcpAuthError, access_token, load_binding, resolve_gcloud
 from ..jsonio import atomic_write_json
 from .cloud import CloudError, GcsClient, StateConflict
-from .config import ACCOUNT, BUCKET, NAMES, PROJECT, REGION, bound_path, build_plan, file_hash
+from .config import ACCOUNT, BUCKET, NAMES, PROJECT, REGION, WORKER_ACCOUNT, bound_path, build_plan, file_hash
 from .delivery import deliver
 from .infrastructure import (
     ApiError,
@@ -179,7 +180,7 @@ def ensure_image(api: GoogleApi, storage: GcsClient, repository: Path, root: Pat
         intent['attempts'][-1].update(status='accepted', buildId=build['id'])
         storage.put_json(intent_name, intent, if_generation_match=intent_meta['generation'] if intent_meta else 0)
     atomic_write_json(root / 'build.json', {'sourceDigest': digest, 'buildId': build['id'], 'updatedAt': now()})
-    print('Building the bounded cloud worker. No source media has been uploaded.', flush=True)
+    print('Building the bounded cloud worker from allowlisted code.', flush=True)
     for _ in range(180):
         build = api.request('GET', base + '/' + str(build['id'])) or {}
         if build.get('status') == 'SUCCESS':
@@ -187,12 +188,13 @@ def ensure_image(api: GoogleApi, storage: GcsClient, repository: Path, root: Pat
             if image:
                 return image
         elif build.get('status') in {'FAILURE', 'INTERNAL_ERROR', 'TIMEOUT', 'CANCELLED', 'EXPIRED'}:
-            raise CloudSetupError('The cloud worker image build failed. Its build identity is saved; no generation started.')
+            raise CloudSetupError('The cloud worker image build failed. Its build identity is saved.')
         time.sleep(10)
     raise CloudSetupError('Cloud Build remains pending; resume this command to reconnect.')
 
 
-def ensure_batch(api: GoogleApi, run_id: str, image: str, *, smoke: bool = False) -> dict[str, Any]:
+def ensure_batch(api: GoogleApi, run_id: str, image: str, *, smoke: bool = False,
+                 smoke_prefix: str | None = None) -> dict[str, Any]:
     parent = f'https://batch.googleapis.com/v1/projects/{PROJECT}/locations/{REGION}/jobs'
     for attempt in range(1, 4):
         job_id = (run_id + '-smoke') if smoke else (run_id + f'-worker-{attempt}')
@@ -205,7 +207,7 @@ def ensure_batch(api: GoogleApi, run_id: str, image: str, *, smoke: bool = False
                     raise CloudSetupError('Cloud runtime smoke failed; inspect its retained Batch diagnostics.')
                 continue
             return existing
-        spec = batch_spec(run_id, image, smoke=smoke)
+        spec = batch_spec(run_id, image, smoke=smoke, smoke_prefix=smoke_prefix)
         try:
             return api.request('POST', parent + '?jobId=' + job_id, spec) or {}
         except CloudSetupError as exc:
@@ -217,6 +219,43 @@ def ensure_batch(api: GoogleApi, run_id: str, image: str, *, smoke: bool = False
                 raise
             raise CloudSetupError('Batch submission acknowledgement is unresolved. Resume the same command; the deterministic job ID prevents duplicates.') from exc
     raise CloudSetupError('Three bounded cloud workers failed; completed scenes remain retained in GCS.')
+
+
+def batch_image(job: dict[str, Any]) -> str:
+    return str(job['taskGroups'][0]['taskSpec']['runnables'][0]['container']['imageUri'])
+
+
+def object_io_smoke(api: GoogleApi, storage: GcsClient, plan: dict[str, Any], image: str) -> dict[str, Any]:
+    """Only an actual successful Batch round trip qualifies this exact image/run."""
+    # Qualify both the immutable image and the repaired regional placement.
+    # Preserve older smoke jobs instead of altering/deleting their evidence.
+    image_id = hashlib.sha256((image + ':object-io-us-central1-abc-v2').encode()).hexdigest()[:24]
+    prefix = plan['gcsRoot'] + 'smoke-object-io/' + image_id + '/'
+    job = ensure_batch(api, 'hayale-smoke-' + image_id, image, smoke=True, smoke_prefix=prefix)
+    if batch_image(job) != image:
+        raise CloudSetupError('The smoke job image differs from the requested immutable worker.')
+    for _ in range(120):
+        current = api.request('GET', 'https://batch.googleapis.com/v1/' + job['name']) or {}
+        status = current.get('status', {}).get('state')
+        if status == 'SUCCEEDED':
+            proof, meta = storage.get_json(prefix + 'result.json')
+            runtime = proof.get('runtime', {})
+            required = ('bucket_metadata', 'object_create', 'object_metadata', 'object_download',
+                        'object_sha256', 'object_list', 'generation_bound_read', 'json_create',
+                        'json_cas_update', 'json_read_after_update', 'object_metadata_update')
+            if (proof.get('ok') is not True or proof.get('mode') != 'cloud-object-io-smoke'
+                    or proof.get('smokePrefix') != prefix or proof.get('generationSubmitted') is not False
+                    or runtime.get('identityVerified') is not True or runtime.get('projectId') != PROJECT
+                    or runtime.get('serviceAccount') != WORKER_ACCOUNT or runtime.get('jobUid') != job['uid']
+                    or any(proof.get('categories', {}).get(key, {}).get('ok') is not True for key in required)):
+                raise CloudSetupError('Batch smoke receipt does not prove the required object I/O for this runtime identity.')
+            return {'ok': True, 'mode': 'cloud-object-io-smoke', 'productionStarted': False,
+                    'image': image, 'job': job['name'], 'receipt': storage.receipt(meta),
+                    'categories': proof['categories'], 'cleanup': proof['cleanup']}
+        if status == 'FAILED':
+            raise CloudSetupError('Cloud object-I/O smoke failed; its retained receipt identifies the failing operation.')
+        time.sleep(10)
+    raise CloudSetupError('Cloud object-I/O smoke remains pending; the same command will reconnect.')
 
 
 def observe(repository: Path, manifest: dict[str, Any], generation: str) -> None:
@@ -280,17 +319,10 @@ def execute(repository: Path, *, check: bool = False, setup_only: bool = False,
         image = ensure_image(api, storage, repository, root)
         if setup_only and not smoke:
             return {'ok': True, 'mode': 'setup-only', 'image': image, **setup_result}
+        smoke_result = object_io_smoke(api, storage, plan, image)
+        atomic_write_json(root / 'object-io-smoke.json', smoke_result)
         if smoke:
-            smoke_id = 'hayale-smoke-' + image.rsplit(':', 1)[-1][:24]
-            smoke_job = ensure_batch(api, smoke_id, image, smoke=True)
-            for _ in range(120):
-                status = (api.request('GET', 'https://batch.googleapis.com/v1/' + smoke_job['name']) or {}).get('status', {}).get('state')
-                if status == 'SUCCEEDED':
-                    return {'ok': True, 'mode': 'cloud-runtime-smoke', 'productionStarted': False, 'image': image, 'job': smoke_job['name']}
-                if status == 'FAILED':
-                    raise CloudSetupError('Cloud runtime smoke failed; no production inputs were uploaded.')
-                time.sleep(10)
-            raise CloudSetupError('Cloud runtime smoke remains pending; resume -Smoke to reconnect.')
+            return smoke_result
         print(f"{plan['cost']['model']} | {REGION} | native 1080p | 16 x 4s = 64 generated seconds", flush=True)
         print('Generation estimate: USD 6.40 at USD 0.10/second (rate checked 2026-09-22); additional cloud processing is metered. Cost is telemetry, not an admission cap.', flush=True)
         manifest = bind_run(storage, plan, mapping, sources)
@@ -298,7 +330,8 @@ def execute(repository: Path, *, check: bool = False, setup_only: bool = False,
         job: dict[str, Any] | None = None
         if manifest.get('status') != 'cloud_verified':
             job = ensure_batch(api, plan['runId'], image)
-            atomic_write_json(root / 'cloud-job.json', {'name': job['name'], 'image': image, 'runId': plan['runId']})
+            atomic_write_json(root / 'cloud-job.json', {'name': job['name'], 'image': batch_image(job),
+                                                       'availableRecoveryImage': image, 'runId': plan['runId']})
             print('Cloud production is running independently. Keep this window for automatic download/open, or rerun this command later to reconnect.', flush=True)
         previous = ''
         while True:
@@ -323,6 +356,11 @@ def execute(repository: Path, *, check: bool = False, setup_only: bool = False,
                 storage.put_json(receipt_name, result, if_generation_match=previous_receipt['generation'] if previous_receipt else 0)
                 return {'ok': True, **result}
             if manifest.get('status') == 'blocked':
+                if job and manifest.get('worker', {}).get('jobUid') != job.get('uid'):
+                    recovery = api.request('GET', 'https://batch.googleapis.com/v1/' + job['name']) or {}
+                    if recovery.get('status', {}).get('state') in {'QUEUED', 'SCHEDULED', 'RUNNING'}:
+                        time.sleep(15)
+                        continue  # A fresh recovery worker has not yet replaced the old blocked snapshot.
                 error = manifest.get('lastError', manifest.get('error', {}))
                 code = error.get('code', 'cloud_workflow_blocked') if isinstance(error, dict) else str(error)
                 raise CloudSetupError('Cloud workflow stopped: ' + code + '. All accepted operations and completed scenes are preserved.')
@@ -371,10 +409,12 @@ def main(argv: list[str] | None = None) -> int:
         message = str(exc) if isinstance(exc, (CloudSetupError, ValueError, GcpAuthError)) else code or 'Required local file or runtime is unavailable.'
         root = args.repository / '.trackprompt-data/hayale-gcp-final'
         try:
-            atomic_write_json(root / 'last-error.json', {'error': message, 'code': code, 'at': now()})
+            details = exc.to_dict() if isinstance(exc, CloudError) else {}
+            atomic_write_json(root / 'last-error.json', {'error': message, 'code': code, 'at': now(), **details})
         except OSError:
             pass
-        print('Hayale stopped: ' + message, flush=True)
+        context = exc.context if isinstance(exc, CloudError) else {}
+        print('Hayale stopped: ' + message + (' ' + json.dumps(context) if context else ''), flush=True)
         return 2
 
 

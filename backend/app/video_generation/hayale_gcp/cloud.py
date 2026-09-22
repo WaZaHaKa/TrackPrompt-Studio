@@ -20,10 +20,49 @@ from ..jsonio import canonical_json_bytes, sha256_file
 
 class CloudError(RuntimeError):
     def __init__(self, code: str, *, retryable: bool = False, status: int | None = None,
-                 evidence: dict[str, Any] | None = None) -> None:
+                 evidence: dict[str, Any] | None = None, context: dict[str, str] | None = None) -> None:
         super().__init__(code)
         self.code, self.retryable, self.status = code, retryable, status
         self.evidence = evidence
+        self.context = context or {}
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"code": self.code, "retryable": self.retryable, "httpStatus": self.status,
+                "context": self.context}
+
+
+def storage_context(method: str, url: str, object_name: str | None = None) -> dict[str, str]:
+    """Fixed categories and hashed identity only; never retain credentials or session URLs."""
+    parsed = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qs(parsed.query)
+    if parsed.hostname != "storage.googleapis.com":
+        return {"operation": "provider_poll", "method": method}
+    name = object_name
+    if "/o/" in parsed.path:
+        name = urllib.parse.unquote(parsed.path.split("/o/", 1)[1])
+    if "upload_id" in query:
+        category = "resumable_session_put"
+    elif query.get("uploadType") == ["resumable"]:
+        category = "resumable_upload_initiation"
+    elif query.get("uploadType") == ["multipart"]:
+        category = "multipart_json_insert"
+    elif method == "PATCH":
+        category = "object_metadata_patch"
+    elif method == "DELETE":
+        category = "object_delete"
+    elif query.get("alt") == ["media"]:
+        category = "object_media_get"
+    elif "prefix" in query:
+        category, name = "object_list", query["prefix"][0]
+    else:
+        category = "object_metadata_get" if name is not None else "bucket_metadata_get"
+    result = {"operation": category, "method": method}
+    if name is not None:
+        result["objectHash"] = hashlib.sha256(name.encode()).hexdigest()
+    generation = query.get("generation", query.get("ifGenerationMatch", []))
+    if generation:
+        result["generation"] = generation[0] if re.fullmatch(r"[0-9]{1,30}", generation[0]) else "invalid"
+    return result
 
 
 class StateConflict(CloudError):
@@ -139,24 +178,33 @@ class GcsClient:
         return f"https://storage.googleapis.com/storage/v1/b/{urllib.parse.quote(self.bucket, safe='')}/o/{urllib.parse.quote(self._name(name), safe='')}"
 
     def _json(self, method: str, url: str, data: bytes | None = None,
-              headers: dict[str, str] | None = None) -> dict[str, Any]:
+              headers: dict[str, str] | None = None, *, object_name: str | None = None) -> dict[str, Any]:
+        context = storage_context(method, url, object_name)
         for number in range(5):
             try:
                 request = urllib.request.Request(url, data=data, method=method,
                     headers={"Authorization": f"Bearer {self.token_provider()}", "Content-Type": "application/json", **(headers or {})})
                 with _open(request, timeout=120) as response:
+                    if getattr(response, "status", None) == 204:
+                        return {}
                     return _read_json_response(response)
             except urllib.error.HTTPError as exc:
                 if exc.code == 412:
-                    raise StateConflict() from exc
+                    conflict = StateConflict()
+                    conflict.context = context
+                    raise conflict from exc
                 if exc.code == 401 and number < 4:
                     _refresh_attached_token(self.token_provider)
                     continue
                 if exc.code not in {408, 429, 500, 502, 503, 504} or number == 4:
-                    raise CloudError(f"storage_http_{exc.code}", retryable=exc.code in {408, 429, 500, 502, 503, 504}, status=exc.code) from exc
+                    raise CloudError(f"storage_http_{exc.code}", retryable=exc.code in {408, 429, 500, 502, 503, 504}, status=exc.code, context=context) from exc
+            except CloudError as exc:
+                if not exc.context:
+                    exc.context = context
+                raise
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
                 if number == 4:
-                    raise CloudError("storage_transport_unavailable", retryable=True) from exc
+                    raise CloudError("storage_transport_unavailable", retryable=True, context=context) from exc
             time.sleep(min(16, 2 ** number))
         raise CloudError("storage_transport_unavailable", retryable=True)
 
@@ -172,11 +220,24 @@ class GcsClient:
             raise
 
     def get_json(self, name: str, generation: str | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
-        meta = self.metadata(name, generation)
-        if meta is None:
-            raise CloudError("storage_object_missing", status=404)
-        value = self._json("GET", self._url(name) + "?alt=media&generation=" + str(meta["generation"]))
-        return value, meta
+        # Replacing a live object in a non-versioned bucket can remove the
+        # generation between metadata GET and media GET. Only latest reads
+        # follow a proven replacement; explicit immutable generations stay strict.
+        for _ in range(5):
+            meta = self.metadata(name, generation)
+            if meta is None:
+                raise CloudError("storage_object_missing", status=404,
+                                 context=storage_context("GET", self._url(name)))
+            url = self._url(name) + "?alt=media&generation=" + str(meta["generation"])
+            try:
+                return self._json("GET", url), meta
+            except CloudError as exc:
+                if exc.status != 404 or generation is not None:
+                    raise
+                current = self.metadata(name)
+                if current is None or str(current["generation"]) == str(meta["generation"]):
+                    raise
+        raise CloudError("storage_snapshot_changed", retryable=True, context=storage_context("GET", url))
 
     @staticmethod
     def receipt(meta: dict[str, Any], sha256: str | None = None) -> dict[str, Any]:
@@ -194,7 +255,7 @@ class GcsClient:
                 + data + f"\r\n--{boundary}--\r\n".encode())
         url = f"https://storage.googleapis.com/upload/storage/v1/b/{urllib.parse.quote(self.bucket, safe='')}/o?uploadType=multipart&ifGenerationMatch={if_generation_match}"
         try:
-            return self._json("POST", url, body, {"Content-Type": f"multipart/related; boundary={boundary}"})
+            return self._json("POST", url, body, {"Content-Type": f"multipart/related; boundary={boundary}"}, object_name=self._name(name))
         except StateConflict:
             current = self.metadata(name)
             if current and current.get("metadata", {}).get("sha256") == digest:
@@ -220,6 +281,7 @@ class GcsClient:
         metadata = {"name": self._name(name), "contentType": content_type,
                     "metadata": {"sha256": digest}, "md5Hash": encoded_md5}
         for number in range(5):
+            context = storage_context("POST", url, self._name(name))
             try:
                 request = urllib.request.Request(url, method="POST", data=canonical_json_bytes(metadata), headers={
                     "Authorization": f"Bearer {self.token_provider()}", "Content-Type": "application/json",
@@ -230,6 +292,8 @@ class GcsClient:
                 if parsed.scheme != "https" or parsed.hostname not in {"storage.googleapis.com", "www.googleapis.com"}:
                     raise CloudError("storage_upload_session_invalid")
                 with source.open("rb") as stream:
+                    context = {"operation": "resumable_session_put", "method": "PUT",
+                               "objectHash": hashlib.sha256(self._name(name).encode()).hexdigest()}
                     request = urllib.request.Request(session, method="PUT", data=stream, headers={
                         "Authorization": f"Bearer {self.token_provider()}", "Content-Type": content_type,
                         "Content-Length": str(size)})
@@ -245,9 +309,9 @@ class GcsClient:
                 if isinstance(exc, urllib.error.HTTPError) and exc.code == 401:
                     _refresh_attached_token(self.token_provider)
                 if isinstance(exc, urllib.error.HTTPError) and exc.code not in {401, 408, 429, 500, 502, 503, 504}:
-                    raise CloudError(f"storage_http_{exc.code}", status=exc.code) from exc
+                    raise CloudError(f"storage_http_{exc.code}", status=exc.code, context=context) from exc
                 if number == 4:
-                    raise CloudError("storage_transfer_failed", retryable=True) from exc
+                    raise CloudError("storage_transfer_failed", retryable=True, context=context) from exc
                 time.sleep(min(16, 2 ** number))
         raise CloudError("storage_transfer_failed", retryable=True)
 
@@ -279,14 +343,44 @@ class GcsClient:
                 return self.receipt(meta, actual)
             except (urllib.error.URLError, TimeoutError, OSError, CloudError) as exc:
                 temporary.unlink(missing_ok=True)
+                context = storage_context("GET", self._url(name) + "?alt=media&generation=" + str(generation))
                 if isinstance(exc, urllib.error.HTTPError) and exc.code == 401:
                     _refresh_attached_token(self.token_provider)
+                if isinstance(exc, urllib.error.HTTPError) and exc.code not in {401, 408, 429, 500, 502, 503, 504}:
+                    raise CloudError(f"storage_http_{exc.code}", status=exc.code, context=context) from exc
                 if isinstance(exc, CloudError) and not exc.retryable:
                     raise
                 if number == 4:
-                    raise CloudError("storage_transfer_failed", retryable=True) from exc
+                    raise CloudError("storage_transfer_failed", retryable=True, context=context) from exc
                 time.sleep(min(16, 2 ** number))
         raise CloudError("storage_transfer_failed", retryable=True)
+
+    def _disposable_object(self, name: str, required_prefix: str) -> str:
+        prefix = self._name(required_prefix)
+        if (not re.fullmatch(r"hayale-final/[a-z0-9-]+/smoke-object-io/[a-z0-9-]+/[a-f0-9]{32}/", prefix)
+                or not self._name(name).startswith(prefix) or self._name(name) == prefix):
+            raise CloudError("disposable_smoke_prefix_required")
+        return self._name(name)
+
+    def update_metadata(self, name: str, metadata: dict[str, str], *, generation: str,
+                        required_prefix: str) -> dict[str, Any]:
+        name = self._disposable_object(name, required_prefix)
+        current = self.metadata(name, generation)
+        if current is None:
+            raise CloudError("storage_generation_missing")
+        query = urllib.parse.urlencode({"generation": generation, "ifGenerationMatch": generation,
+                                        "ifMetagenerationMatch": current["metageneration"]})
+        return self._json("PATCH", self._url(name) + "?" + query,
+                          canonical_json_bytes({"metadata": {**current.get("metadata", {}), **metadata}}))
+
+    def delete_object(self, name: str, *, generation: str, required_prefix: str) -> None:
+        name = self._disposable_object(name, required_prefix)
+        query = urllib.parse.urlencode({"generation": generation, "ifGenerationMatch": generation})
+        try:
+            self._json("DELETE", self._url(name) + "?" + query)
+        except CloudError as exc:
+            if exc.status != 404:
+                raise
 
     def list_objects(self, prefix: str) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []

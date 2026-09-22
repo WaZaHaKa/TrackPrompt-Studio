@@ -30,6 +30,7 @@ from PIL import Image, ImageFilter, ImageOps
 
 WIDTH, HEIGHT, FPS, SCENE_FRAMES, TOTAL_FRAMES = 1920, 1080, 24, 96, 1536
 SAMPLE_RATE = 48000
+FINISHING_RECIPE_VERSION = 'hayale-gcp-finish/2-video-first-full-audio'
 _SHA256 = re.compile(r'^[a-f0-9]{64}$')
 _CLOUD: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar('hayale_cloud_media', default=None)
 _EXPECTED_SEGMENTS = ((0.0, 43.24), (38.76, 4.48), (43.24, 16.28))
@@ -37,6 +38,44 @@ _EXPECTED_SEGMENTS = ((0.0, 43.24), (38.76, 4.48), (43.24, 16.28))
 
 class MediaError(ValueError):
     """A safe, actionable media-contract failure; no source is modified."""
+
+    def __init__(self, message: str, *, code: str = 'cloud_media_contract_failed',
+                 context: dict[str, str] | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.context = dict(context or {})
+        self.retryable = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {'code': self.code, 'message': str(self), 'retryable': False, 'context': self.context}
+
+
+def _stat(value: Any, *, codec: bool = False) -> str:
+    """Only bounded numerical probe statistics or known codec names leave media."""
+    if value is None:
+        return 'missing'
+    text = str(value)
+    if codec:
+        return text if text in {'h264', 'hevc', 'vp8', 'vp9', 'av1', 'aac', 'mp3', 'pcm_s16le', 'pcm_s24le'} else 'other'
+    return text if len(text) <= 40 and re.fullmatch(r'-?\d+(?:\.\d+|[/:]\d+)?', text) else 'invalid'
+
+
+def _probe_statistics(video: dict[str, Any], audio: dict[str, Any] | None, frames: int) -> dict[str, str]:
+    context = {'expectedWidth': str(WIDTH), 'expectedHeight': str(HEIGHT), 'expectedFps': str(FPS),
+        'expectedFrames': str(frames), 'expectedDurationSeconds': str(frames / FPS),
+        'videoCodec': _stat(video.get('codec_name'), codec=True)}
+    for name, key in {'videoWidth': 'width', 'videoHeight': 'height', 'videoFrames': 'nb_read_frames',
+        'videoAvgFrameRate': 'avg_frame_rate', 'videoRFrameRate': 'r_frame_rate',
+        'videoDurationSeconds': 'duration', 'videoStartSeconds': 'start_time',
+        'videoTimeBase': 'time_base', 'videoSampleAspectRatio': 'sample_aspect_ratio'}.items():
+        context[name] = _stat(video.get(key))
+    if audio is not None:
+        context['audioCodec'] = _stat(audio.get('codec_name'), codec=True)
+        for name, key in {'audioDurationSeconds': 'duration', 'audioStartSeconds': 'start_time',
+                          'audioSampleRate': 'sample_rate', 'audioChannels': 'channels',
+                          'audioTimeBase': 'time_base', 'audioDurationTicks': 'duration_ts'}.items():
+            context[name] = _stat(audio.get(key))
+    return context
 
 
 @contextmanager
@@ -152,12 +191,16 @@ def _run(command: list[str], *, timeout: int = 900, stdout_limit: int = 4_000_00
         except subprocess.TimeoutExpired as exc:
             stop()
             process.wait(timeout=10)
-            raise MediaError('cloud media command exceeded its deadline; original sources are retained') from exc
+            raise MediaError('cloud media command exceeded its deadline; original sources are retained',
+                code='cloud_media_process_timeout', context={'tool': 'ffprobe' if 'ffprobe' in Path(command[0]).name else 'ffmpeg',
+                                                            'timeoutSeconds': str(timeout)}) from exc
         finally:
             for thread in readers:
                 thread.join(timeout=10)
         if exceeded.is_set() or process.returncode:
-            raise MediaError('cloud media command failed or exceeded its output bound; original sources are retained')
+            raise MediaError('cloud media command failed or exceeded its output bound; original sources are retained',
+                code='cloud_media_process_failed', context={'tool': 'ffprobe' if 'ffprobe' in Path(command[0]).name else 'ffmpeg',
+                    'exitCode': _stat(process.returncode), 'outputBoundExceeded': str(exceeded.is_set()).lower()})
     return bytes(buffers[0])
 
 
@@ -258,10 +301,15 @@ def _probe(path: Path) -> dict[str, Any]:
 
 def _validate_pts(timestamps: list[int], *, time_base: str, frames: int) -> None:
     if len(timestamps) != frames:
-        raise MediaError('decoded frame count differs from the frame timeline')
+        raise MediaError('decoded frame count differs from the frame timeline', code='cloud_media_frame_count_failed',
+                         context={'expectedFrames': str(frames), 'observedFrames': str(len(timestamps))})
     base = Fraction(time_base)
-    if any(Fraction(timestamp) * base != Fraction(index, FPS) for index, timestamp in enumerate(timestamps)):
-        raise MediaError('presentation timestamps violate the exact zero-origin CFR timeline')
+    for index, timestamp in enumerate(timestamps):
+        if Fraction(timestamp) * base != Fraction(index, FPS):
+            raise MediaError('presentation timestamps violate the exact zero-origin CFR timeline',
+                code='cloud_media_cfr_timestamp_failed', context={'firstMismatchFrame': str(index),
+                    'observedTicks': _stat(timestamp), 'timeBase': _stat(time_base),
+                    'expectedSeconds': str(Fraction(index, FPS)), 'expectedFrames': str(frames)})
 
 
 def _verify(path: Path, *, frames: int, audio_required: bool) -> dict[str, Any]:
@@ -270,15 +318,19 @@ def _verify(path: Path, *, frames: int, audio_required: bool) -> dict[str, Any]:
     video = [stream for stream in probe['streams'] if stream.get('codec_type') == 'video']
     audio = [stream for stream in probe['streams'] if stream.get('codec_type') == 'audio']
     if len(video) != 1 or len(audio) != int(audio_required):
-        raise MediaError('media must contain exactly the intended video and audio streams')
+        raise MediaError('media must contain exactly the intended video and audio streams',
+            code='cloud_media_stream_layout_failed', context={'videoCount': str(len(video)), 'audioCount': str(len(audio)),
+                                                             'expectedAudioCount': str(int(audio_required))})
     stream = video[0]
+    statistics = _probe_statistics(stream, audio[0] if audio else None, frames)
     if (int(stream['width']) != WIDTH or int(stream['height']) != HEIGHT
         or Fraction(stream['avg_frame_rate']) != FPS or Fraction(stream['r_frame_rate']) != FPS
         or int(stream.get('nb_read_frames', -1)) != frames
         or Fraction(stream.get('sample_aspect_ratio', '1:1').replace(':', '/')) != 1
         or Fraction(stream.get('start_time', '0')) != 0
         or abs(float(stream['duration']) - frames / FPS) > 0.000001):
-        raise MediaError('native 1080p dimensions, exact frames, duration or 24 fps contract failed')
+        raise MediaError('native 1080p dimensions, exact frames, duration or 24 fps contract failed',
+                         code='cloud_media_video_contract_failed', context=statistics)
     audio_offset: float | None = None
     if audio_required:
         sound = audio[0]
@@ -286,7 +338,8 @@ def _verify(path: Path, *, frames: int, audio_required: bool) -> dict[str, Any]:
         if (stream.get('codec_name') != 'h264' or sound.get('codec_name') != 'aac'
             or audio_offset != 0 or int(sound['sample_rate']) != SAMPLE_RATE or int(sound['channels']) != 2
             or abs(float(sound['duration']) - frames / FPS) > 1 / SAMPLE_RATE):
-            raise MediaError('final H.264/AAC audio codec, exact zero offset or audio duration contract failed')
+            raise MediaError('final H.264/AAC audio codec, exact zero offset or audio duration contract failed',
+                             code='cloud_media_audio_contract_failed', context=statistics)
     frame_data = json.loads(_run([executable('ffprobe'), '-v', 'error', '-select_streams', 'v:0',
         '-show_entries', 'frame=best_effort_timestamp', '-of', 'json', str(path)]))
     _validate_pts([int(frame['best_effort_timestamp']) for frame in frame_data['frames']],
@@ -414,7 +467,8 @@ def finish(clips: list[Path], audio: Path, output: Path, arrangement: dict[str, 
     sources = _sources(clips, provenance)
     if sha256_file(audio) != arrangement.get('sourceSha256'):
         raise MediaError('original soundtrack bytes differ from the approved source hash')
-    identity = _digest({'sources': sources, 'arrangement': arrangement, 'runId': provenance['runId'],
+    identity = _digest({'mediaRecipeVersion': FINISHING_RECIPE_VERSION,
+                        'sources': sources, 'arrangement': arrangement, 'runId': provenance['runId'],
                         'planDigest': provenance['planDigest']})
     verification = output.parent / 'Hayale-Flowers-Promo-verification.json'
     report = output.parent / 'Hayale-Flowers-Promo-delivery-report.md'
@@ -466,12 +520,34 @@ def finish(clips: list[Path], audio: Path, output: Path, arrangement: dict[str, 
             or retained.get('sha256') != sha256_file(candidate)):
             raise MediaError('retained encoded candidate differs from the cloud finishing recipe')
     else:
+        # FFmpeg 5.1 can stop audio early when a simultaneous video encode reaches
+        # -frames:v. Finish and verify the exact video first; the separate mux
+        # consumes the entire arranged soundtrack without any frame/time cutoff.
+        video_only = work / 'video-only.mp4'
+        video_receipt_path = work / 'video-only.verification.json'
+        if video_only.exists():
+            video_receipt = _read_json(video_receipt_path)
+            _require_retained_execution(video_receipt, execution)
+            if (video_receipt.get('finishingRecipeSha256') != identity
+                or video_receipt.get('sha256') != sha256_file(video_only)
+                or video_receipt.get('technicalVerified') is not True):
+                raise MediaError('retained video-only master differs from its verified finishing recipe')
+        else:
+            video_candidate = work / f'video-only-{uuid4().hex}.partial.mp4'
+            _run([executable('ffmpeg'), '-nostdin', '-v', 'error', '-n', '-f', 'concat', '-safe', '0',
+                  '-i', str(concat), '-map', '0:v:0', '-an', '-vf', 'setpts=N/(24*TB),setsar=1',
+                  '-frames:v', '1536', '-r', '24', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'medium',
+                  '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '2', '-video_track_timescale', '12288',
+                  '-map_metadata', '-1', '-movflags', '+faststart', str(video_candidate)])
+            video_receipt = _verify(video_candidate, frames=TOTAL_FRAMES, audio_required=False)
+            video_receipt.update(path=str(video_only), finishingRecipeSha256=identity,
+                                 mediaRecipeVersion=FINISHING_RECIPE_VERSION)
+            _write_json(video_receipt_path, video_receipt)
+            os.replace(video_candidate, video_only)
         candidate = work / f'delivery-{uuid4().hex}.partial.mp4'
         stage('mux')
-        _run([executable('ffmpeg'), '-nostdin', '-v', 'error', '-n', '-f', 'concat', '-safe', '0', '-i', str(concat),
-              '-i', str(arranged), '-map', '0:v:0', '-map', '1:a:0', '-vf', 'setpts=N/(24*TB),setsar=1',
-              '-frames:v', '1536', '-r', '24', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'medium',
-              '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '2', '-video_track_timescale', '12288',
+        _run([executable('ffmpeg'), '-nostdin', '-v', 'error', '-n', '-i', str(video_only),
+              '-i', str(arranged), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-video_track_timescale', '12288',
               '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', '-map_metadata', '-1',
               '-movflags', '+faststart', str(candidate)])
         _write_json(encoded_receipt, {'candidate': candidate.name, 'sha256': sha256_file(candidate),
@@ -481,7 +557,8 @@ def finish(clips: list[Path], audio: Path, output: Path, arrangement: dict[str, 
     if [sha256_file(path) for path in clips] != [source['clipSha256'] for source in sources] or sha256_file(audio) != arrangement['sourceSha256']:
         raise MediaError('approved source bytes changed during cloud finishing')
     result.update(schemaVersion='hayale-gcp-verification/1', runId=provenance['runId'],
-        planDigest=provenance['planDigest'], finishingRecipeSha256=identity, sources=sources,
+        planDigest=provenance['planDigest'], finishingRecipeSha256=identity,
+        mediaRecipeVersion=FINISHING_RECIPE_VERSION, sources=sources,
         sceneCount=16, arrangement=music, cloudExecution=execution, path=str(output),
         deliveryPath=str(output), verificationPath=str(verification), reportPath=str(report))
     _write_json(verification, result)

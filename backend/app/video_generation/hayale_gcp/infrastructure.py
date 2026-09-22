@@ -240,15 +240,22 @@ def build_spec(source: dict[str, Any], digest: str) -> dict[str, Any]:
             'options': {'logging': 'CLOUD_LOGGING_ONLY'}}
 
 
-def batch_spec(run_id: str, image: str, *, smoke: bool = False) -> dict[str, Any]:
+def batch_spec(run_id: str, image: str, *, smoke: bool = False, smoke_prefix: str | None = None) -> dict[str, Any]:
     commands = ['-m', 'app.video_generation.hayale_gcp.worker', '--bucket', BUCKET,
                 '--runtime-service-account', WORKER_ACCOUNT]
-    commands += ['--check-runtime', '--project', PROJECT] if smoke else ['--manifest', f'hayale-final/{run_id}/state/run-manifest.json']
+    if smoke:
+        if smoke_prefix is None:
+            raise CloudSetupError('The object-I/O smoke requires its explicit canonical smoke prefix.')
+        commands += ['--check-runtime', '--project', PROJECT, '--smoke-prefix', smoke_prefix]
+    else:
+        commands += ['--manifest', f'hayale-final/{run_id}/state/run-manifest.json']
     return {'taskGroups': [{'taskCount': 1, 'parallelism': 1, 'taskSpec': {
         'runnables': [{'container': {'imageUri': image, 'entrypoint': 'python', 'commands': commands}}],
         'computeResource': {'cpuMilli': 4000, 'memoryMib': 8192},
-        'maxRunDuration': '600s' if smoke else '43200s', 'maxRetryCount': 0 if smoke else 2}}],
-        'allocationPolicy': {'instances': [{'policy': {'machineType': 'e2-standard-4',
+        'maxRunDuration': '600s' if smoke else '43200s', 'maxRetryCount': 0 if smoke else 2,
+        **({} if smoke else {'lifecyclePolicies': [{'action': 'FAIL_TASK', 'actionCondition': {'exitCodes': [1]}}]})}}],
+        'allocationPolicy': {'location': {'allowedLocations': ['zones/us-central1-a', 'zones/us-central1-b', 'zones/us-central1-c']},
+                             'instances': [{'policy': {'machineType': 'e2-standard-4',
                                                         'bootDisk': {'sizeGb': 50, 'type': 'pd-balanced'},
                                                         'provisioningModel': 'STANDARD'}}],
                              'serviceAccount': {'email': WORKER_ACCOUNT,

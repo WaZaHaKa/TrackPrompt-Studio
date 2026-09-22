@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "projectId": "hayale-flowers-promo",
+  "sourceMapVersion": "v4-gcp-only-20260922",
+  "sourceRootParameter": "SourceRoot",
+  "selectionMethod": "Visual content review of the actual Hayale originals through private discovery previews, checked against earlier Hayale source evidence. No filename-order, size, random or modulo selection.",
+  "permissionBasis": "User approved these fifteen original Hayale image roles and the original soundtrack for the defined GCP-only promotional workflow.",
+  "sources": {
+    "logo": {
+      "relativePath": "logo/hayale-logo.png",
+      "sha256": "5110b6e81003ecae991bcf18121e9d5fb44c1e2015512bee5f53084acb883c71",
+      "mimeType": "image/png",
+      "seedRecipe": {
+        "strategy": "preserve-subject",
+        "subjectSafe": true,
+        "fit": "contain",
+        "backgroundExtension": "logo-edge-color",
+        "preserveExactArtwork": true,
+        "targetWidth": 1920,
+        "targetHeight": 1080
+      },
+      "selectionEvidence": "Original cream square logo with burgundy floral monogram, exact Hebrew lettering, English HAYALE FLOWERS line and circular border. Same original is reused for opening and closing; no recreated lettering."
+    },
+    "customer-01": {
+      "relativePath": "stills/WhatsApp Image 2026-09-03 at 18.17.06.jpeg",
+      "sha256": "356c9931f58b9402c90e4533c95c402579c15a3b449a70ed7271147b1081c557",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {
+        "strategy": "preserve-subject",
+        "subjectSafe": true,
+        "fit": "contain",
+        "backgroundExtension": "source-derived",
+        "preservePerson": true,
+        "preserveFaceGeometry": true,
+        "targetWidth": 1920,
+        "targetHeight": 1080
+      },
+      "selectionEvidence": "Actual adult customer wearing sunglasses and a light outfit, holding a large round red-rose bouquet with gold ribbon at the shop entrance. Preserve face, complete bouquet, clothing and original context."
+    },
+    "customer-02": {
+      "relativePath": "stills/WhatsApp Image 2026-09-11 at 16.47.57.jpeg",
+      "sha256": "02a8db5d4174ddec09512f82a0a1324ecfe5d9c173440bde414e13108d3568fa",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {
+        "strategy": "preserve-subject",
+        "subjectSafe": true,
+        "fit": "contain",
+        "backgroundExtension": "source-derived",
+        "preservePerson": true,
+        "preserveFaceGeometry": true,
+        "targetWidth": 1920,
+        "targetHeight": 1080
+      },
+      "selectionEvidence": "Actual adult customer in a blue outfit and sunglasses, holding two distinct mixed bouquets inside the shop. Preserve his face, both bouquets and clothing. Existing mirror reflections belong to the source; no invented additional people."
+    },
+    "customer-03": {
+      "relativePath": "stills/WhatsApp Image 2026-09-11 at 17.02.58.jpeg",
+      "sha256": "67fc424244ed192e3e448614a9d625b8fa5801fc2d7ec097613f5dac34c629ab",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {
+        "strategy": "preserve-subject",
+        "subjectSafe": true,
+        "fit": "contain",
+        "backgroundExtension": "source-derived",
+        "preservePerson": true,
+        "preserveFaceGeometry": true,
+        "targetWidth": 1920,
+        "targetHeight": 1080
+      },
+      "selectionEvidence": "Actual adult customer with short blond hair in a striped top, holding purple-and-white flowers and a tall wrapped plant with red ribbon inside the shop. Preserve her recognizable face, both gifts and the original framing."
+    },
+    "exterior-01": {
+      "relativePath": "stills/_DSC0045.JPG",
+      "sha256": "fe379906c675a352a520af9b193a47abbfaa3d23b39dd1aefed4d6823207e7b4",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Wide street-side facade: black awning, actual entrance, pavement and plant racks on both sides. Establishes the real shop architecture; preserve existing poles, reflections and signage instead of inventing replacements."
+    },
+    "exterior-02": {
+      "relativePath": "stills/_DSC0046.JPG",
+      "sha256": "fd3d2ea8abea2af2d28b82a1e722d6013a12b77471ee8f6aa274eb61f19104ae",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Distinct oblique pavement-side view along the glazed storefront, illuminated flower sign, real window plants and entrance-side passage. Provides a closer exterior approach rather than duplicating the wide facade image."
+    },
+    "product-01": {
+      "relativePath": "stills/_DSC0140.JPG",
+      "sha256": "5c0076693922e4925c3a556b2d70f18b9d02305b8737b62938b8b33f3b951de1",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Tight hero view of an actual pink-and-purple gerbera and pale mixed-flower bouquet in pink wrapping. Preserve the existing arrangement and visible petal geometry; do not crop further into the bouquet."
+    },
+    "product-02": {
+      "relativePath": "stills/_DSC0144.JPG",
+      "sha256": "816875d815f18ca51f40702f28c30fec18b17fe2b1915f92004a182a3fdda81c",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Actual orange-gerbera and cream-flower arrangement in purple patterned wrapping. Distinct product and color composition from product-01; recognizable flower positions and wrapper remain the visual anchor."
+    },
+    "product-03": {
+      "relativePath": "stills/_DSC0149.JPG",
+      "sha256": "16ecfcd90339da025c5b24facdde41b648ff8ce51905dc93a4c777ff4798c54d",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Actual yellow sunflower bouquet with dark centers, green filler and printed-paper wrapping. Distinct third product, with a warm closing product palette; existing printed wrapper must not become new promotional text."
+    },
+    "vibe-01": {
+      "relativePath": "stills/_DSC0101.JPG",
+      "sha256": "07ae758e227abc8b1f9cf734e3423b2140cbd0461f245a316af06a4fefd79a24",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Deep purple lisianthus flowers and buds with layered stems and soft background focus. Selected for floral atmosphere, color and restrained depth rather than as a packaged product hero."
+    },
+    "vibe-02": {
+      "relativePath": "stills/_DSC0156.JPG",
+      "sha256": "da9eed7514b113b7a21167dca0786e89136fac78e60c1ec05efd3907afea39db",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Pale yellow and blush orchid blossoms against a softly defocused shop background. Reuses the original orchid-detail subject established in the earlier Hayale creative brief, preserving delicate petal structure."
+    },
+    "vibe-03": {
+      "relativePath": "stills/_DSC0137.JPG",
+      "sha256": "db46116f4271476d76fcaf0966f7c97390b508cf6e66af32efe9e285ffd839c2",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Actual layered green leaves and stems in soft side light. Provides a quiet natural-texture atmosphere between the last product hero and interior tour, without adding another bouquet or invented scenery."
+    },
+    "tour-01": {
+      "relativePath": "stills/_DSC0051.JPG",
+      "sha256": "4e991cb44c416a3b6d8aa77160dff99c8d3954a2e2978108d3e8e1d8364f6cb3",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Wide actual interior with hanging greenery and orchids in the foreground, floral buckets below and wall-mounted glass shelves. Establishes the compact shop layout; preserve shelf heights and architecture."
+    },
+    "tour-02": {
+      "relativePath": "stills/_DSC0062.JPG",
+      "sha256": "80ba760b9f5e0fb52db5f30f130a6744b7b85bf1166276c03a038f854cdb2e76",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {"strategy": "preserve-subject", "subjectSafe": true, "fit": "contain", "backgroundExtension": "source-derived", "targetWidth": 1920, "targetHeight": 1080},
+      "selectionEvidence": "Different, lower frontal interior view across the real multi-level bouquet display, floor buckets, left plant stand and rear orchid shelf. Gives a spatial view of the merchandising arrangement rather than another isolated product close-up."
+    },
+    "tour-03": {
+      "relativePath": "stills/_DSC0060.JPG",
+      "sha256": "8df1bf26c336cff84a4226cfac128157e7f42ac8547c3651f5c34458bd51b22f",
+      "mimeType": "image/jpeg",
+      "seedRecipe": {
+        "strategy": "preserve-subject",
+        "subjectSafe": true,
+        "fit": "cover",
+        "cropNormalized": [0, 0, 1, 0.84375],
+        "backgroundExtension": "none",
+        "targetWidth": 1920,
+        "targetHeight": 1080
+      },
+      "selectionEvidence": "Distinct upward oblique view of the shop's actual glass display shelves, colored planters, decorative vases and orchids. Cloud-only top 6000x3375 composition crop from the 6000x4000 original keeps the principal shelves and excludes the lower-right CCTV-screen edge. Rejected the separate CCTV-dominated DSC0057 candidate."
+    }
+  },
+  "sceneOrder": [
+    "logo", "exterior-01", "exterior-02", "customer-01",
+    "product-01", "vibe-01", "tour-01", "customer-02",
+    "product-02", "vibe-02", "tour-02", "customer-03",
+    "product-03", "vibe-03", "tour-03", "logo"
+  ],
+  "soundtrack": {
+    "relativePath": "audio/hayale-remaster-17-09-2026.wav",
+    "sha256": "c09fe068f3b813316e725a54d46f9246004299907a4e2e024c783d028a6b56eb",
+    "mimeType": "audio/wav",
+    "provenance": "Original approved Hayale soundtrack bound in preserved run 344ab3d2444c and the later 64-second edit. The original byte hash was rechecked during this source selection.",
+    "arrangement": {
+      "execution": "gcp",
+      "durationSeconds": 64,
+      "segments": [
+        {"sourceIn": 0, "duration": 43.24},
+        {"sourceIn": 38.76, "duration": 4.48},
+        {"sourceIn": 43.24, "duration": 16.28}
+      ],
+      "fadeInSeconds": 0,
+      "fadeOutSeconds": 0,
+      "joinFadeSeconds": 0.005,
+      "basis": "Reuse the explicit documented interior eight-beat motif arrangement: retain the original intro and natural ending; repeat the matched interior phrase rather than blindly appending the opening. Five-millisecond in-place join ramps; no overlap, silence padding or time stretch. Render anew in GCP from the original soundtrack.",
+      "auditoryAcceptance": "not-asserted"
+    }
+  }
+}

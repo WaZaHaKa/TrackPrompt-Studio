@@ -70,6 +70,8 @@ class VideoError(VideoMissionModel):
     provider_status: str | None = Field(default=None, max_length=160)
     provider_error_code: str | None = Field(default=None, max_length=160)
     diagnostic_id: str | None = Field(default=None, max_length=160)
+    remedy: str | None = Field(default=None, max_length=1_000)
+    retry_classification: str | None = Field(default=None, max_length=100)
 
 
 class VideoShotAttempt(VideoMissionModel):
@@ -78,8 +80,16 @@ class VideoShotAttempt(VideoMissionModel):
     idempotency_key: str = Field(min_length=64, max_length=64)
     state: VideoShotState
     reserved_cost_usd: float = Field(ge=0)
+    storage_uri: str | None = Field(default=None, max_length=4_000)
+    request_digest: str | None = Field(default=None, min_length=64, max_length=64)
+    authorization_digest: str | None = Field(default=None, min_length=64, max_length=64)
+    submission_intent_at: datetime | None = None
+    last_provider_observation_at: datetime | None = None
+    next_retry_at: datetime | None = None
+    safe_read_failures: int = Field(default=0, ge=0)
     operation_name: str | None = Field(default=None, max_length=2_000)
     output_uri: str | None = Field(default=None, max_length=4_000)
+    output_object_identity: dict[str, Any] | None = None
     local_clip_path: str | None = None
     clip_sha256: str | None = Field(default=None, min_length=64, max_length=64)
     probe_evidence: dict[str, Any] | None = None
@@ -152,6 +162,7 @@ class VideoJobRecord(VideoMissionModel):
     local_edit_digest: str | None = Field(default=None, min_length=64, max_length=64)
     authorization: dict[str, Any] | None = None
     reference_assets: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    pre_submit_resume_attempt_ids: tuple[str, ...] = ()
     shots: tuple[VideoShotRecord, ...]
     reserved_cost_usd: float = Field(default=0, ge=0)
     timeline_path: str | None = None
@@ -162,6 +173,10 @@ class VideoJobRecord(VideoMissionModel):
     updated_at: datetime
     started_at: datetime | None = None
     completed_at: datetime | None = None
+    credential_binding_digest: str | None = Field(default=None, min_length=64, max_length=64)
+    worker_started_at: datetime | None = None
+    worker_heartbeat_at: datetime | None = None
+    provider_cancellation_confirmed: bool = False
 
     def shot(self, shot_id: str) -> VideoShotRecord | None:
         return next((item for item in self.shots if item.shot_id == shot_id), None)

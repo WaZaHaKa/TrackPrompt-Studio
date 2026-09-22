@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import time
-import uuid
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -195,68 +194,10 @@ def _validate_authorized_request(plan: dict[str, Any], root: Path, shot: Compile
 
 
 def command_submit_batch(arguments: argparse.Namespace) -> None:
-    plan = _load_object(Path(arguments.plan))
-    project_id = str(plan["projectId"])
-    root = _runtime_root(arguments, project_id)
-    existing = list_operations(root)
-    complete_or_active = {
-        record.shot_id
-        for record in existing
-        if record.plan_digest == plan["planDigest"]
-        and record.status in {"submitted", "running", "succeeded", "downloaded", "verified"}
-    }
-    client = VeoRestClient(
-        project_id=arguments.project_id,
-        region=arguments.region,
-        diagnostics_root=Path(arguments.runtime_root) / "provider-errors",
-    )
-    submitted = []
-    skipped = []
-    selected_shot_ids = set(arguments.only_shot or [])
-    known_shot_ids = {shot.shot_id for shot in _plan_shots(plan)}
-    unknown = sorted(selected_shot_ids - known_shot_ids)
-    if unknown:
-        raise ContractError(f"unknown --only-shot IDs: {', '.join(unknown)}")
-    for shot in _plan_shots(plan):
-        if selected_shot_ids and shot.shot_id not in selected_shot_ids:
-            skipped.append(shot.shot_id)
-            continue
-        if shot.shot_id in complete_or_active and not arguments.force_retry:
-            skipped.append(shot.shot_id)
-            continue
-        _validate_authorized_request(plan, root, shot)
-        response = client.submit(
-            shot,
-            context=ProviderRequestContext(
-                phase="cli-submit",
-                shot_id=shot.shot_id,
-            ),
-        )
-        operation_name = str(response["name"])
-        operation_id = str(uuid.uuid4())
-        raw_path = root / "provider-responses" / f"{operation_id}-submit.json"
-        atomic_write_json(raw_path, response)
-        record = OperationRecord.new(
-            operation_id=operation_id,
-            project_id=project_id,
-            plan_digest=str(plan["planDigest"]),
-            shot_id=shot.shot_id,
-            model_id=shot.model_id,
-            reserved_cost_usd=shot.estimated_cost_usd,
-            operation_name=operation_name,
-            storage_uri=shot.storage_uri,
-        ).updated(status="submitted", raw_response_path=str(raw_path))
-        save_operation(root, record)
-        submitted.append(
-            {"shotId": shot.shot_id, "operationId": operation_id, "operationName": operation_name}
-        )
-    _emit(
-        {
-            "status": "submitted",
-            "submitted": submitted,
-            "skipped": skipped,
-            "reservedUsd": reserved_cost(root, plan_digest=str(plan["planDigest"])),
-        }
+    raise ContractError(
+        "New paid work must use Mission Control's plan-bound authorize/start path. "
+        "Use tools/hayale-16x4.py or run-hayale-16x4.ps1 for the Hayale 16x4 workflow. "
+        "Legacy poll/download/verify/export commands remain available for retained operations."
     )
 
 

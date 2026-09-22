@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+import os
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +12,38 @@ from .contracts import ContractError
 from .jsonio import atomic_write_json, read_json
 
 OPERATION_SCHEMA_VERSION = "1.0.0"
+
+
+@contextmanager
+def admission_lock(root: Path) -> Iterator[None]:
+    """Serialize the short SQLite admission read/write, never a provider wait.
+
+    Kernel ownership survives stale timestamps and releases on process exit.
+    Durable outstanding/uncertain reservations still block new admissions.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / "paid-admission.lock").open("a+b") as stream:
+        if stream.tell() == 0:
+            stream.write(b"0")
+            stream.flush()
+        stream.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)  # type: ignore[attr-defined]
+        except OSError as exc:
+            raise ContractError("Another controller is admitting paid work; resume after it finishes") from exc
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
 
 
 @dataclass(frozen=True)

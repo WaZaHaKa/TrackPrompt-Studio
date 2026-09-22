@@ -1,0 +1,75 @@
+test_apply_idempotent_and_keeps_existing_repo_files (test_install.InstallerTests.test_apply_idempotent_and_keeps_existing_repo_files) ... FAIL
+test_conflict_stops_before_any_copy (test_install.InstallerTests.test_conflict_stops_before_any_copy) ... FAIL
+test_dry_run_writes_nothing (test_install.InstallerTests.test_dry_run_writes_nothing) ... FAIL
+test_existing_symlink_rejected (test_install.InstallerTests.test_existing_symlink_rejected) ... FAIL
+test_non_repository_refused (test_install.InstallerTests.test_non_repository_refused) ... FAIL
+test_tamper_rejected (test_install.InstallerTests.test_tamper_rejected) ... FAIL
+test_unsafe_manifest_path_rejected (test_install.InstallerTests.test_unsafe_manifest_path_rejected) ... FAIL
+
+======================================================================
+FAIL: test_apply_idempotent_and_keeps_existing_repo_files (test_install.InstallerTests.test_apply_idempotent_and_keeps_existing_repo_files)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_conflict_stops_before_any_copy (test_install.InstallerTests.test_conflict_stops_before_any_copy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_dry_run_writes_nothing (test_install.InstallerTests.test_dry_run_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_existing_symlink_rejected (test_install.InstallerTests.test_existing_symlink_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_non_repository_refused (test_install.InstallerTests.test_non_repository_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_tamper_rejected (test_install.InstallerTests.test_tamper_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+======================================================================
+FAIL: test_unsafe_manifest_path_rejected (test_install.InstallerTests.test_unsafe_manifest_path_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/packaging_tests/test_install.py", line 5, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('bundle_tools'),'Installer implementation required')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Installer implementation required
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.002s
+
+FAILED (failures=7)

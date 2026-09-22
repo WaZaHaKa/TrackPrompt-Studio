@@ -101,27 +101,28 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
         )
 
     audio_id = "r-audio"
-    audio_path = str(timeline["audioPath"])
-    audio_asset = ET.SubElement(
-        resources,
-        "asset",
-        {
-            "id": audio_id,
-            "name": Path(audio_path).name,
-            "start": "0s",
-            "duration": _frames(duration_frames, fps),
-            "hasVideo": "0",
-            "hasAudio": "1",
-            "audioSources": "1",
-            "audioChannels": "2",
-            "audioRate": "48k",
-        },
-    )
-    ET.SubElement(
-        audio_asset,
-        "media-rep",
-        {"kind": "original-media", "src": _file_uri(audio_path)},
-    )
+    audio_path = timeline.get("audioPath")
+    if audio_path:
+        audio_asset = ET.SubElement(
+            resources,
+            "asset",
+            {
+                "id": audio_id,
+                "name": Path(audio_path).name,
+                "start": "0s",
+                "duration": _frames(duration_frames, fps),
+                "hasVideo": "0",
+                "hasAudio": "1",
+                "audioSources": "1",
+                "audioChannels": "2",
+                "audioRate": "48k",
+            },
+        )
+        ET.SubElement(
+            audio_asset,
+            "media-rep",
+            {"kind": "original-media", "src": _file_uri(audio_path)},
+        )
 
     library = ET.SubElement(root, "library")
     event = ET.SubElement(library, "event", {"name": "TrackPrompt Fast Lane"})
@@ -149,19 +150,20 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
             "duration": _frames(duration_frames, fps),
         },
     )
-    ET.SubElement(
-        gap,
-        "asset-clip",
-        {
-            "name": Path(audio_path).name,
-            "ref": audio_id,
-            "lane": "-1",
-            "offset": "0s",
-            "start": "0s",
-            "duration": _frames(duration_frames, fps),
-            "audioRole": "music",
-        },
-    )
+    if audio_path:
+        ET.SubElement(
+            gap,
+            "asset-clip",
+            {
+                "name": Path(audio_path).name,
+                "ref": audio_id,
+                "lane": "-1",
+                "offset": "0s",
+                "start": "0s",
+                "duration": _frames(duration_frames, fps),
+                "audioRole": "music",
+            },
+        )
 
     for item in segments:
         clip = ET.SubElement(
@@ -187,7 +189,7 @@ def export_fcpxml(value: dict[str, Any], output_path: Path) -> None:
             "marker",
             {
                 "start": _frames(int(marker["startFrames"]), fps),
-                "duration": "1/24s",
+                "duration": _frames(1, fps),
                 "value": str(marker["title"]),
                 "note": str(marker["chapterId"]),
             },
@@ -272,29 +274,30 @@ def export_fcp7_xml(value: dict[str, Any], output_path: Path) -> None:
         ET.SubElement(labels, "label2").text = str(item["chapterId"])
         ET.SubElement(clipitem, "comments").text = str(item.get("editorialNote", ""))
 
-    audio = ET.SubElement(media, "audio")
-    audio_track = ET.SubElement(audio, "track")
-    audio_clip = ET.SubElement(audio_track, "clipitem", {"id": "audio-master-1"})
-    audio_path = str(timeline["audioPath"])
-    ET.SubElement(audio_clip, "name").text = Path(audio_path).name
-    ET.SubElement(audio_clip, "duration").text = str(duration_frames)
-    audio_rate = ET.SubElement(audio_clip, "rate")
-    ET.SubElement(audio_rate, "timebase").text = str(fps)
-    ET.SubElement(audio_rate, "ntsc").text = "FALSE"
-    ET.SubElement(audio_clip, "start").text = "0"
-    ET.SubElement(audio_clip, "end").text = str(duration_frames)
-    ET.SubElement(audio_clip, "in").text = "0"
-    ET.SubElement(audio_clip, "out").text = str(duration_frames)
-    audio_file = ET.SubElement(audio_clip, "file", {"id": "file-audio-master"})
-    ET.SubElement(audio_file, "name").text = Path(audio_path).name
-    ET.SubElement(audio_file, "pathurl").text = _file_uri(audio_path)
-    ET.SubElement(audio_file, "duration").text = str(duration_frames)
-    audio_file_media = ET.SubElement(audio_file, "media")
-    audio_media = ET.SubElement(audio_file_media, "audio")
-    sample_characteristics = ET.SubElement(audio_media, "samplecharacteristics")
-    ET.SubElement(sample_characteristics, "depth").text = "16"
-    ET.SubElement(sample_characteristics, "samplerate").text = "48000"
-    ET.SubElement(audio_media, "channelcount").text = "2"
+    audio_path = timeline.get("audioPath")
+    if audio_path:
+        audio = ET.SubElement(media, "audio")
+        audio_track = ET.SubElement(audio, "track")
+        audio_clip = ET.SubElement(audio_track, "clipitem", {"id": "audio-master-1"})
+        ET.SubElement(audio_clip, "name").text = Path(audio_path).name
+        ET.SubElement(audio_clip, "duration").text = str(duration_frames)
+        audio_rate = ET.SubElement(audio_clip, "rate")
+        ET.SubElement(audio_rate, "timebase").text = str(fps)
+        ET.SubElement(audio_rate, "ntsc").text = "FALSE"
+        ET.SubElement(audio_clip, "start").text = "0"
+        ET.SubElement(audio_clip, "end").text = str(duration_frames)
+        ET.SubElement(audio_clip, "in").text = "0"
+        ET.SubElement(audio_clip, "out").text = str(duration_frames)
+        audio_file = ET.SubElement(audio_clip, "file", {"id": "file-audio-master"})
+        ET.SubElement(audio_file, "name").text = Path(audio_path).name
+        ET.SubElement(audio_file, "pathurl").text = _file_uri(audio_path)
+        ET.SubElement(audio_file, "duration").text = str(duration_frames)
+        audio_file_media = ET.SubElement(audio_file, "media")
+        audio_media = ET.SubElement(audio_file_media, "audio")
+        sample_characteristics = ET.SubElement(audio_media, "samplecharacteristics")
+        ET.SubElement(sample_characteristics, "depth").text = "16"
+        ET.SubElement(sample_characteristics, "samplerate").text = "48000"
+        ET.SubElement(audio_media, "channelcount").text = "2"
 
     for marker in markers:
         marker_element = ET.SubElement(sequence, "marker")

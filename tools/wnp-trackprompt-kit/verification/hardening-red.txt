@@ -1,0 +1,18 @@
+test_complete_gap_plus_torn_tail_preserves_all_bytes (test_hardening.HardeningTests.test_complete_gap_plus_torn_tail_preserves_all_bytes) ... FAIL
+test_crash_after_durable_event_before_snapshot_is_recoverable (test_hardening.HardeningTests.test_crash_after_durable_event_before_snapshot_is_recoverable) ... ok
+test_live_lock_cannot_be_stolen_by_second_owner (test_hardening.HardeningTests.test_live_lock_cannot_be_stolen_by_second_owner) ... ok
+test_parallel_writers_get_contiguous_sequences (test_hardening.HardeningTests.test_parallel_writers_get_contiguous_sequences) ... ok
+
+======================================================================
+FAIL: test_complete_gap_plus_torn_tail_preserves_all_bytes (test_hardening.HardeningTests.test_complete_gap_plus_torn_tail_preserves_all_bytes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_hardening.py", line 17, in test_complete_gap_plus_torn_tail_preserves_all_bytes
+    self.assertEqual(p.read_bytes(),before)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'{"s[126 chars]snapshot": {"health": "unknown", "state": "idle"}}\n' != b'{"s[126 chars]snapshot": {"health": "unknown", "state": "idle"}}\n{"partial"'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.178s
+
+FAILED (failures=1)

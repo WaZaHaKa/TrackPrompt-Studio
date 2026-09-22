@@ -1,0 +1,158 @@
+FFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_accept_after_reconnect_preserves_prompt (test_recovery.LedgerTests.test_accept_after_reconnect_preserves_prompt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 47, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('attempt_ledger'),'Attempt ledger must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Attempt ledger must be implemented
+
+======================================================================
+FAIL: test_changed_workflow_cannot_reuse_attempt (test_recovery.LedgerTests.test_changed_workflow_cannot_reuse_attempt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 47, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('attempt_ledger'),'Attempt ledger must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Attempt ledger must be implemented
+
+======================================================================
+FAIL: test_second_process_owner_refused_despite_stale_time (test_recovery.LedgerTests.test_second_process_owner_refused_despite_stale_time)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 47, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('attempt_ledger'),'Attempt ledger must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Attempt ledger must be implemented
+
+======================================================================
+FAIL: test_send_started_is_durable_before_external_call (test_recovery.LedgerTests.test_send_started_is_durable_before_external_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 47, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('attempt_ledger'),'Attempt ledger must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Attempt ledger must be implemented
+
+======================================================================
+FAIL: test_129_frames_are_not_a_60_second_final (test_recovery.RecoveryTests.test_129_frames_are_not_a_60_second_final)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_absent_history_after_submit_is_not_permission_to_resubmit (test_recovery.RecoveryTests.test_absent_history_after_submit_is_not_permission_to_resubmit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_conflicting_artifact_identity_stops (test_recovery.RecoveryTests.test_conflicting_artifact_identity_stops)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_duplicate_provider_matches_stop (test_recovery.RecoveryTests.test_duplicate_provider_matches_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_next_shot_history_outputs_recovered (test_recovery.RecoveryTests.test_next_shot_history_outputs_recovered)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_next_shot_queued_is_adopted (test_recovery.RecoveryTests.test_next_shot_queued_is_adopted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_no_owner_no_submission (test_recovery.RecoveryTests.test_no_owner_no_submission)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_only_provably_never_sent_can_submit_once (test_recovery.RecoveryTests.test_only_provably_never_sent_can_submit_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_partial_or_corrupt_frames_not_overwritten (test_recovery.RecoveryTests.test_partial_or_corrupt_frames_not_overwritten)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_provider_failure_recorded_not_timeout_workaround (test_recovery.RecoveryTests.test_provider_failure_recorded_not_timeout_workaround)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_raw_complete_before_marker_only_verifies (test_recovery.RecoveryTests.test_raw_complete_before_marker_only_verifies)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_unreachable_provider_does_not_mean_absent (test_recovery.RecoveryTests.test_unreachable_provider_does_not_mean_absent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+======================================================================
+FAIL: test_verified_raw_never_regenerated (test_recovery.RecoveryTests.test_verified_raw_never_regenerated)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_recovery.py", line 7, in setUp
+    def setUp(self):self.assertIsNotNone(importlib.util.find_spec('recovery_policy'),'Recovery policy must be implemented')
+                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Recovery policy must be implemented
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.003s
+
+FAILED (failures=17)

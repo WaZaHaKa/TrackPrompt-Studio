@@ -52,3 +52,28 @@ The operator can move cuts, replace derived events from the immutable originals 
 - Follow the package handoff notes. For `Static Into Signal`, protect graphite/cold-blue separation, keep warning red rare, and introduce muted amber only near the ending.
 - Add title, artist, and credits in Resolve rather than generated footage.
 - Export the final Rec.709 master and delivery copy.
+
+## Original recorded-media projects
+
+The existing resolved-timeline exporter also supports a silent recorded-media
+edit with `timeline.audioPath: null`. No audio resource or mux is emitted in that
+mode. Marker durations use the selected timeline FPS. An event with
+`inputKind: "still"` loops its image at that FPS with a finite input duration,
+including when buffering effects such as reverse are selected.
+
+`sourceFraming: "center"` is an opt-in event crop around the actual scaled image
+center; existing crop behavior remains the default. For a verified SDR input
+package, `timeline.normalizeSdr: true` converts the derived YUV matrix/range to
+BT.709 limited range and sets matching output tags. This keeps JPEG and video
+event encodings consistent before stream-copy assembly. It does not implement
+HDR tone mapping, ICC/gamut interpretation, or a creative grade; resolve unknown
+source color profiles during operator review.
+
+The Hayale project uses this path. Its root `run-hayale-promo-v1.ps1` defaults to
+plan-only; `-Render` or `RUN-HAYALE-PROMO-V1.cmd` starts an operator-owned local run.
+
+For fixed-duration edits, `timeline.frameExact: true` applies a final CFR pass,
+trims every event by frame count and supplies explicit concat durations. Hayale V2
+uses this option to retain exactly 1,440 frames at 24 FPS despite onset-snapped
+fractional-second boundaries and modest retimes. Existing timelines retain their
+default behavior unless they opt in.

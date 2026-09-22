@@ -7,10 +7,11 @@ import re
 import shutil
 import subprocess
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol, cast
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from ..analysis_archive import AnalysisArchiveRepository
 from ..privacy import secure_private_directory, secure_private_file
@@ -18,7 +19,7 @@ from .assembly import execute_assembly
 from .audio import AudioBindingError, StagedAudio, probe_audio, stage_audio_master
 from .authorization import BatchAuthorization, authorization_phrase
 from .continuity import derive_shot_seed, load_continuity_profile
-from .contracts import CompiledReferenceImage, CompiledShot, ContractError, load_project_config
+from .contracts import CompiledPlan, CompiledReferenceImage, CompiledShot, ContractError, load_project_config
 from .costs import PRICE_SNAPSHOT_DATE, estimate
 from .exporter import export_davinci_package
 from .gcp_veo import (
@@ -29,6 +30,7 @@ from .gcp_veo import (
     copy_gcs_uri,
     doctor,
     response_output_uris,
+    safe_read_delay,
     save_operation_failure_diagnostic,
     upload_reference_image,
 )
@@ -66,6 +68,7 @@ from .mission_models import (
     VideoShotView,
     utc_now,
 )
+from .operations import admission_lock
 from .planning import compile_project_plan
 from .timeline import editorial_export_files, load_edit_blueprint, resolve_timeline
 
@@ -117,6 +120,7 @@ def _probe_stream_layout(path: Path, *, ffprobe: str) -> dict[str, Any]:
 
 class VideoMissionStore(Protocol):
     def put_video_job(self, job: VideoJobRecord) -> None: ...
+    def insert_video_job_if_absent(self, job: VideoJobRecord) -> bool: ...
     def get_video_job(self, job_id: str) -> VideoJobRecord | None: ...
     def list_video_jobs(self, *, limit: int = 100) -> list[VideoJobRecord]: ...
     def append_video_event(self, event: VideoGenerationEvent) -> VideoGenerationEvent: ...
@@ -153,7 +157,7 @@ class _VeoProvider:
         )
 
     async def download(self, uri: str, destination: Path) -> None:
-        await asyncio.to_thread(copy_gcs_uri, uri, destination)
+        await asyncio.to_thread(copy_gcs_uri, uri, destination, project_id=self.client.project_id)
 
     async def upload_reference(self, source: Path, destination_uri: str, expected_sha256: str) -> None:
         await asyncio.to_thread(
@@ -161,6 +165,7 @@ class _VeoProvider:
             source,
             destination_uri,
             expected_sha256=expected_sha256,
+            project_id=self.client.project_id,
         )
 
 
@@ -199,11 +204,13 @@ class VideoGenerationController:
                 self.runtime_root / "provider-errors",
             )
         )
+        self._uses_bound_credentials = provider_factory is None
         self.ffmpeg_path = ffmpeg_path or (lambda: None)
         self.ffprobe_path = ffprobe_path or (lambda: None)
         self.poll_interval_seconds = max(0.01, poll_interval_seconds)
         self._lock = asyncio.Lock()
         self._tasks: dict[str, asyncio.Task[None]] = {}
+        self._prepared_leases: dict[str, tuple[Path, str]] = {}
         self._closed = False
 
     @property
@@ -355,9 +362,9 @@ class VideoGenerationController:
                     VideoProfileSummary(
                         id=profile_id,
                         display_name={
-                            "fast-1080p": "Veo 3.1 Fast · 1080p",
-                            "quality-1080p": "Veo 3.1 Quality · 1080p",
-                            "quality-4k": "Veo 3.1 Quality · 4K (optional)",
+                            "fast-1080p": "Veo 3.1 Fast Â· 1080p",
+                            "quality-1080p": "Veo 3.1 Quality Â· 1080p",
+                            "quality-4k": "Veo 3.1 Quality Â· 4K (optional)",
                         }[profile_id],
                         model_id=profile.model_id,
                         resolution=profile.resolution,
@@ -635,8 +642,151 @@ class VideoGenerationController:
                 raise self._error(422, selection.error.code, selection.error.message)
         return self.get(record.id)
 
+    async def create_prepared_plan(
+        self,
+        plan: CompiledPlan,
+        *,
+        gcp_project_id: str,
+        gcs_bucket: str,
+        reference_paths: dict[str, Path],
+    ) -> VideoJobView:
+        """Register an offline-authored plan in the canonical lifecycle.
+
+        This local entrypoint needs no analysis job, does not bind audio, and
+        neither creates a provider nor authorizes/submits any generation.
+        """
+        if plan.plan_digest != sha256_json(plan.unsigned_dict()):
+            raise ContractError("prepared plan digest is stale")
+        plan.profile.validate()
+        self._project_root(plan.project_id)
+        if not re.fullmatch(r"[a-z][a-z0-9-]{4,61}[a-z0-9]", gcp_project_id):
+            raise ContractError("invalid GCP project ID")
+        bucket = self._bucket(gcs_bucket)
+        prefix = f"gs://{bucket}/"
+        if not plan.shots or len({shot.shot_id for shot in plan.shots}) != len(plan.shots):
+            raise ContractError("prepared plan shots must be present and unique")
+        private_references: dict[str, dict[str, Any]] = {}
+        for shot in plan.shots:
+            if not re.fullmatch(r"shot-[0-9]{3}", shot.shot_id):
+                raise ContractError("invalid prepared shot ID")
+            if shot.continuation_mode == "local-composition":
+                if shot.estimated_cost_usd != 0 or shot.first_frame_reference is not None:
+                    raise ContractError("local composition must have zero generation cost and no cloud reference")
+                continue
+            if not shot.storage_uri or not shot.storage_uri.startswith(prefix):
+                raise ContractError("prepared shot output does not match the selected bucket")
+            build_request_payload(shot)
+            reference = shot.first_frame_reference
+            if reference is None:
+                continue
+            if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,119}", reference.asset_id):
+                raise ContractError("invalid prepared reference ID")
+            if not reference.gcs_uri.startswith(prefix):
+                raise ContractError("prepared reference does not match the selected bucket")
+            path = reference_paths.get(reference.asset_id)
+            if path is None or not path.is_file() or sha256_file(path) != reference.sha256:
+                raise ContractError("prepared reference is missing or changed")
+            mapping = {**reference.to_dict(), "localPath": str(path.resolve())}
+            if reference.asset_id in private_references and private_references[reference.asset_id] != mapping:
+                raise ContractError("prepared reference ID has conflicting bindings")
+            private_references[reference.asset_id] = mapping
+        job_id = str(uuid5(NAMESPACE_URL, f"trackprompt:{gcp_project_id}:{bucket}:{plan.plan_digest}"))
+        async with self._lock:
+            existing = self.store.get_video_job(job_id)
+            if existing is not None:
+                if existing.plan != plan.to_dict() or existing.gcp_project_id != gcp_project_id:
+                    raise ContractError("prepared job identity conflict")
+                return self._view(existing)
+            now = utc_now()
+            record = VideoJobRecord(
+                id=job_id, analysis_job_id="", project_id=plan.project_id, title=plan.title,
+                state=VideoJobState.PLANNED, plan_digest=plan.plan_digest, plan=plan.to_dict(),
+                gcp_project_id=gcp_project_id, gcs_bucket=bucket, reference_assets=private_references,
+                analysis_dependency_state=VideoAnalysisDependencyState.SNAPSHOTTED,
+                shots=tuple(VideoShotRecord(
+                    shot_id=shot.shot_id, chapter_id=shot.chapter_id, order=shot.order, title=shot.title,
+                    prompt=shot.prompt, negative_prompt=shot.negative_prompt, seed=shot.seed,
+                    required=shot.required, estimated_cost_usd=shot.estimated_cost_usd,
+                ) for shot in plan.shots), created_at=now, updated_at=now,
+            )
+            root = self._job_root(record)
+            if not root.is_relative_to(self.repository_root):
+                raise ContractError("prepared job storage must stay inside the repository")
+            for candidate in (self.runtime_root / record.project_id, self.runtime_root / record.project_id / record.id):
+                if candidate.is_symlink() or candidate.is_junction():
+                    raise ContractError("redirected prepared job storage refused")
+            atomic_write_json(root / "plan.json", record.plan)
+            for shot in plan.shots:
+                if shot.continuation_mode != "local-composition":
+                    atomic_write_json(root / "request-preview" / f"{shot.shot_id}.json", build_request_payload(shot))
+            manifest = root / "prepared-dependencies.json"
+            atomic_write_json(manifest, {
+                "schemaVersion": "1.0.0", "source": "offline-prepared-video-plan",
+                "analysisRequired": False, "audioBound": False,
+                "sourceArtifacts": plan.source_artifacts, "references": private_references,
+            })
+            record = record.model_copy(update={"dependency_manifest_path": str(manifest)})
+            inserted = self.store.insert_video_job_if_absent(record)
+            current = self._record(record.id)
+            if inserted:
+                event = self.store.append_video_event(self._event(current))
+                await self.notify_event(event.sequence)
+            return self._view(current)
+
     def get(self, job_id: str) -> VideoJobView:
         return self._view(self._record(job_id))
+
+    async def register_local_clip(
+        self, job_id: str, shot_id: str, path: Path, *, expected_sha256: str
+    ) -> VideoJobView:
+        """Import a selected local composition into the same verification ledger."""
+        async with self._lock:
+            job = self._record(job_id)
+            prepared = self._is_foreground_prepared(job)
+            acquired = prepared and job.id not in self._prepared_leases
+            if acquired:
+                self._claim_prepared_lease(job)
+            try:
+                compiled = self._compiled(job, shot_id)
+                if compiled.continuation_mode != "local-composition" or compiled.estimated_cost_usd != 0:
+                    raise ContractError("local import requires a plan-bound local-composition shot")
+                if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or sha256_file(path) != expected_sha256:
+                    raise ContractError("selected local composition hash changed")
+                shot = self._shot(job, shot_id)
+                prior = shot.latest_attempt
+                if prior is not None:
+                    if prior.state is VideoShotState.VERIFIED and prior.clip_sha256 == expected_sha256:
+                        if prior.local_clip_path and sha256_file(Path(prior.local_clip_path)) == expected_sha256:
+                            return self._view(job)
+                    raise ContractError("local shot already has conflicting retained evidence")
+                key = sha256_json({"planDigest": job.plan_digest, "shotId": shot_id, "sha256": expected_sha256})
+                destination = self._job_root(job) / "clips" / shot_id / f"local-{key[:16]}" / "provider.mp4"
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                partial = destination.with_name(f"{uuid4().hex}.partial.mp4")
+                await asyncio.to_thread(shutil.copyfile, path, partial)
+                if sha256_file(partial) != expected_sha256:
+                    raise ContractError("local composition changed during import")
+                evidence = await asyncio.to_thread(
+                    verify_generated_clip, partial, resolution=compiled.resolution,
+                    aspect_ratio=compiled.aspect_ratio, expected_duration_seconds=compiled.duration_seconds,
+                    ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
+                )
+                if destination.exists() and sha256_file(destination) != expected_sha256:
+                    raise ContractError("local composition destination has conflicting evidence")
+                os.replace(partial, destination)
+                now = utc_now()
+                attempt = VideoShotAttempt(
+                    id=f"local-{key[:16]}", attempt=1, idempotency_key=key,
+                    state=VideoShotState.VERIFIED, reserved_cost_usd=0,
+                    local_clip_path=str(destination), clip_sha256=expected_sha256,
+                    probe_evidence=replace(evidence, path=str(destination)).to_dict(),
+                    created_at=now, updated_at=now,
+                )
+                job = self._replace_shot(job, shot.model_copy(update={"attempts": (attempt,)}))
+                return self._view(await self._save(job))
+            finally:
+                if acquired:
+                    self._release_prepared_lease(job_id)
 
     def jobs(self) -> list[VideoJobView]:
         return [self._view(self._record(item.id)) for item in self.store.list_video_jobs(limit=100)]
@@ -796,6 +946,7 @@ class VideoGenerationController:
     ) -> VideoAudioSelection:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             if job.state is VideoJobState.ASSEMBLING:
                 return VideoAudioSelection(
                     selected=False,
@@ -923,6 +1074,7 @@ class VideoGenerationController:
 
     async def bind_retained_audio(self, job_id: str) -> VideoAudioSelection:
         job = self._record(job_id)
+        self._require_prepared_owner(job)
         source, _ = self._analysis_source(job.analysis_job_id)
         if source is None:
             return VideoAudioSelection(
@@ -943,6 +1095,7 @@ class VideoGenerationController:
     async def clear_audio(self, job_id: str) -> VideoAudioSelection:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             if job.state is VideoJobState.ASSEMBLING:
                 return VideoAudioSelection(
                     selected=False,
@@ -974,68 +1127,186 @@ class VideoGenerationController:
         requests = tuple(
             cast(dict[str, Any], read_json(self._job_root(job) / "request-preview" / f"{shot.shot_id}.json"))
             for shot in job.shots
+            if self._compiled(job, shot.shot_id).continuation_mode != "local-composition"
         )
         return VideoRequestPreview(job_id=job.id, plan_digest=job.plan_digest, requests=requests)
 
     async def authorize(self, job_id: str, request: VideoAuthorizationRequest) -> VideoJobView:
         async with self._lock:
-            job = self._record(job_id)
-            self._require_current_request_contract(job)
-            if job.state not in {VideoJobState.PLANNED, VideoJobState.AUTHORIZED}:
-                raise self._error(
-                    409, "video_plan_not_authorizable", "Only an unchanged planned batch can be authorized"
-                )
-            maximum = float(cast(dict[str, Any], job.plan["cost"])["maxSpendUsd"])
+            acquired = job_id not in self._prepared_leases
+            if acquired:
+                self._claim_prepared_lease(self._record(job_id))
             try:
-                authorization = BatchAuthorization.create(
-                    project_id=job.project_id,
-                    plan_digest=job.plan_digest,
-                    max_spend_usd=maximum,
-                    confirmation=request.confirmation,
-                    valid_hours=24,
-                )
-            except ContractError as exc:
-                raise self._error(422, "video_authorization_invalid", str(exc)) from exc
-            updated = job.model_copy(
-                update={
-                    "authorization": authorization.to_dict(),
-                    "state": VideoJobState.AUTHORIZED,
-                    "error": None,
-                    "updated_at": utc_now(),
-                }
-            )
-            self._archive_authorization_receipt(updated)
-            atomic_write_json(self._job_root(updated) / "authorization.json", authorization.to_dict())
-            return self._view(await self._save(updated))
-
-    async def start(self, job_id: str) -> VideoJobView:
-        async with self._lock:
-            job = self._record(job_id)
-            self._authorization(job, next_cost=0)
-            if (
-                job.state
-                not in {
-                    VideoJobState.AUTHORIZED,
-                    VideoJobState.PARTIAL,
-                    VideoJobState.BLOCKED_PROVIDER_ACCESS,
-                    VideoJobState.BLOCKED_PROVIDER_QUOTA,
-                    VideoJobState.FAILED,
-                }
-                and job.state not in _ACTIVE_STATES
-            ):
-                raise self._error(409, "video_job_not_startable", "The video batch is not ready to start")
-            if job.state not in _ACTIVE_STATES:
-                job = job.model_copy(
+                job = self._record(job_id)
+                self._require_current_request_contract(job)
+                if job.state not in {VideoJobState.PLANNED, VideoJobState.AUTHORIZED}:
+                    raise self._error(
+                        409, "video_plan_not_authorizable", "Only an unchanged planned batch can be authorized"
+                    )
+                maximum = float(cast(dict[str, Any], job.plan["cost"])["maxSpendUsd"])
+                try:
+                    authorization = BatchAuthorization.create(
+                        project_id=job.project_id,
+                        plan_digest=job.plan_digest,
+                        max_spend_usd=maximum,
+                        confirmation=request.confirmation,
+                        valid_hours=24,
+                    )
+                except ContractError as exc:
+                    raise self._error(422, "video_authorization_invalid", str(exc)) from exc
+                updated = job.model_copy(
                     update={
-                        "state": VideoJobState.SMOKE_SUBMITTED,
-                        "started_at": job.started_at or utc_now(),
+                        "authorization": authorization.to_dict(),
+                        "state": VideoJobState.AUTHORIZED,
                         "error": None,
                         "updated_at": utc_now(),
                     }
                 )
-                job = await self._save(job)
-            self._schedule(job.id)
-            return self._view(job)
+                self._archive_authorization_receipt(updated)
+                atomic_write_json(self._job_root(updated) / "authorization.json", authorization.to_dict())
+                return self._view(await self._save(updated))
+            finally:
+                if acquired:
+                    self._release_prepared_lease(job_id)
+
+    @staticmethod
+    def is_recoverable_pre_submit_failure(attempt: VideoShotAttempt | None) -> bool:
+        return bool(
+            attempt is not None
+            and attempt.state is VideoShotState.FAILED
+            and attempt.error is not None
+            and attempt.error.code in {
+                "provider_reference_upload_failed", "provider_reference_reauthentication_required",
+                "provider_pre_submission_authentication_required",
+            }
+            and all(value is None for value in (attempt.operation_name, attempt.output_uri, attempt.local_clip_path,
+                                               attempt.clip_sha256, attempt.probe_evidence))
+        )
+
+    async def authorize_pre_submit_recovery(
+        self, job_id: str, request: VideoAuthorizationRequest | None = None,
+    ) -> VideoJobView:
+        """Explicitly resume a proven reference-upload failure, never an unknown POST.
+
+        Archive the failed attempt before mutation and reuse its original cost
+        reservation. The single-use permission is consumed before any network work.
+        """
+        async with self._lock:
+            initial = self._record(job_id)
+            if not self._is_foreground_prepared(initial):
+                raise ContractError("pre-submission recovery requires a prepared foreground job")
+            self._claim_prepared_lease(initial)
+            try:
+                job = self._record(job_id)
+                self._require_current_request_contract(job)
+                failed: list[VideoShotAttempt] = []
+                for shot in job.shots:
+                    attempt = shot.latest_attempt
+                    if attempt is None or attempt.state is VideoShotState.VERIFIED:
+                        continue
+                    if (not self.is_recoverable_pre_submit_failure(attempt)
+                        or len(shot.attempts) != 1 or shot.retry_requested
+                        or (self._job_root(job) / "operations" / f"{attempt.id}.json").exists()):
+                        raise ContractError("pre-submission recovery refused: saved evidence is submitted, uncertain or otherwise ineligible")
+                    compiled = self._compiled(job, shot.shot_id)
+                    reference = compiled.first_frame_reference
+                    private = job.reference_assets.get(reference.asset_id) if reference else None
+                    local_path = private.get("localPath") if isinstance(private, dict) else None
+                    if reference is None and attempt.error is not None and attempt.error.code == "provider_pre_submission_authentication_required":
+                        pass
+                    elif reference is None or not isinstance(local_path, str) or sha256_file(Path(local_path)) != reference.sha256:
+                        raise ContractError("pre-submission recovery reference is missing or changed")
+                    failed.append(attempt)
+                if not failed:
+                    raise ContractError("no eligible pre-submission failure to recover")
+                maximum = float(job.plan["cost"]["maxSpendUsd"])
+                authorization = (
+                    BatchAuthorization.create(
+                        project_id=job.project_id, plan_digest=job.plan_digest, max_spend_usd=maximum,
+                        confirmation=request.confirmation, valid_hours=24,
+                    ) if request is not None else self._authorization(job, next_cost=0)
+                )
+                authorization.validate_for(project_id=job.project_id, plan_digest=job.plan_digest,
+                                           current_reserved_usd=job.reserved_cost_usd, next_request_usd=0)
+                receipt = self._job_root(job) / "pre-submit-recovery" / f"{uuid4().hex}.json"
+                atomic_write_json(receipt, {
+                    "schemaVersion": "1.0.0", "jobId": job.id, "planDigest": job.plan_digest,
+                    "authorizedAt": authorization.authorized_at,
+                    "failedAttempts": [attempt.model_dump(mode="json", by_alias=True) for attempt in failed],
+                    "previousJobError": job.error.model_dump(mode="json") if job.error else None,
+                    "previousAuthorization": job.authorization,
+                    "reservedCostUsdBefore": job.reserved_cost_usd,
+                    "reservedCostUsdAfter": job.reserved_cost_usd,
+                    "authorization": authorization.to_dict(),
+                    "authorizationSource": "renewed-explicit-phrase" if request is not None else "existing-valid-authorization",
+                    "basis": "recorded reference upload failure before provider.submit; no operation/output evidence",
+                })
+                if request is not None:
+                    self._archive_authorization_receipt(job)
+                    atomic_write_json(self._job_root(job) / "authorization.json", authorization.to_dict())
+                updated = job.model_copy(update={
+                    "authorization": authorization.to_dict(), "state": VideoJobState.AUTHORIZED,
+                    "error": None, "pre_submit_resume_attempt_ids": tuple(a.id for a in failed),
+                })
+                return self._view(await self._save(updated))
+            finally:
+                self._release_prepared_lease(job_id)
+
+    async def start(self, job_id: str) -> VideoJobView:
+        async with self._lock:
+            existing_task = self._tasks.get(job_id)
+            if existing_task is not None and not existing_task.done():
+                return self._view(self._record(job_id))
+            acquired = job_id not in self._prepared_leases
+            if acquired:
+                # Admission precedes every state write, including ordinary jobs.
+                # A second controller must not mutate a run it cannot own.
+                self._claim_prepared_lease(self._record(job_id))
+            try:
+                job = self._record(job_id)
+                # Accepted operations may be polled/transferred after spending
+                # authority expires. Every NEW reservation still revalidates it.
+                if not any(shot.attempts for shot in job.shots):
+                    self._authorization(job, next_cost=0)
+                if job.plan.get("continuity", {}).get("hayaleEdit"):
+                    for local_shot in job.shots:
+                        if self._compiled(job, local_shot.shot_id).continuation_mode != "local-composition":
+                            continue
+                        local_attempt = local_shot.latest_attempt
+                        if (local_attempt is None or local_attempt.state is not VideoShotState.VERIFIED
+                            or not local_attempt.local_clip_path or not local_attempt.probe_evidence
+                            or not Path(local_attempt.local_clip_path).is_file()
+                            or sha256_file(Path(local_attempt.local_clip_path)) != local_attempt.clip_sha256):
+                            raise ContractError("required local composition is incomplete; repeat Prepare for the same profile before Start")
+                if (
+                    job.state
+                    not in {
+                        VideoJobState.AUTHORIZED,
+                        VideoJobState.PARTIAL,
+                        VideoJobState.BLOCKED_PROVIDER_ACCESS,
+                        VideoJobState.BLOCKED_PROVIDER_QUOTA,
+                        VideoJobState.FAILED,
+                        VideoJobState.CANCELLED,
+                    }
+                    and job.state not in _ACTIVE_STATES
+                ):
+                    raise self._error(409, "video_job_not_startable", "The video batch is not ready to start")
+                if job.state not in _ACTIVE_STATES:
+                    job = job.model_copy(
+                        update={
+                            "state": VideoJobState.SMOKE_SUBMITTED,
+                            "started_at": job.started_at or utc_now(),
+                            "error": None,
+                            "updated_at": utc_now(),
+                        }
+                    )
+                    job = await self._save(job)
+                self._schedule(job.id)
+                return self._view(job)
+            except BaseException:
+                if acquired:
+                    self._release_prepared_lease(job_id)
+                raise
 
     async def resume(self, job_id: str) -> VideoJobView:
         return await self.start(job_id)
@@ -1043,6 +1314,7 @@ class VideoGenerationController:
     async def cancel(self, job_id: str) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             task = self._tasks.get(job_id)
             if task is not None and not task.done():
                 task.cancel()
@@ -1063,8 +1335,11 @@ class VideoGenerationController:
     ) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             shot = self._shot(job, shot_id)
             latest = shot.latest_attempt
+            if self._is_uncertain_submission(latest):
+                raise self._error(409, "provider_submission_outcome_unknown", "Reconcile the uncertain submission before authorizing another attempt")
             if latest is None or latest.state not in {
                 VideoShotState.FAILED,
                 VideoShotState.FILTERED,
@@ -1093,6 +1368,7 @@ class VideoGenerationController:
         job: VideoJobRecord,
         shot: VideoShotRecord,
     ) -> VideoJobRecord:
+        self._require_prepared_owner(job)
         self._require_current_request_contract(job)
         plan = cast(dict[str, Any], json.loads(json.dumps(job.plan)))
         plan_shots = cast(list[dict[str, Any]], plan["shots"])
@@ -1162,6 +1438,7 @@ class VideoGenerationController:
     async def review(self, job_id: str, shot_id: str, request: VideoReviewRequest) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             shot = self._shot(job, shot_id)
             latest = shot.latest_attempt
             if latest is None or latest.state is not VideoShotState.VERIFIED:
@@ -1210,6 +1487,7 @@ class VideoGenerationController:
     async def repair_legacy_dependency(self, job_id: str) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             plan_digest = job.plan_digest
             authorization = json.dumps(job.authorization, sort_keys=True)
             reserved = job.reserved_cost_usd
@@ -1335,6 +1613,7 @@ class VideoGenerationController:
     ) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
             self._require_current_request_contract(job)
             target = self._shot(job, shot_id)
             source = self._shot(job, request.source_shot_id)
@@ -1463,16 +1742,19 @@ class VideoGenerationController:
     async def resolve(self, job_id: str) -> VideoJobView:
         async with self._lock:
             job = self._record(job_id)
+            self._require_prepared_owner(job)
         return self._view(await self._resolve(job))
 
     async def export(self, job_id: str) -> VideoJobView:
         job = self._record(job_id)
+        self._require_prepared_owner(job)
         if not job.timeline_path:
             job = await self._resolve(job)
         return self._view(await self._export(job))
 
     async def assemble(self, job_id: str) -> VideoJobView:
         job = self._record(job_id)
+        self._require_prepared_owner(job)
         if not job.export_root:
             job = await self._export(await self._resolve(job))
         return self._view(await self._assemble(job))
@@ -1576,12 +1858,79 @@ class VideoGenerationController:
             ) from exc
         return target
 
+    @staticmethod
+    def _is_foreground_prepared(job: VideoJobRecord) -> bool:
+        continuity = job.plan.get("continuity")
+        return isinstance(continuity, dict) and bool(continuity.get("executionPolicy") == "foreground-prepared-single-owner")
+
+    def _require_prepared_owner(self, job: VideoJobRecord) -> None:
+        retained_owner = (self._job_root(job) / "foreground-worker-lease.json").exists()
+        if (self._is_foreground_prepared(job) or retained_owner) and job.id not in self._prepared_leases:
+            raise self._error(409, "prepared_foreground_owner_required", "This job can only be changed by its worker or foreground owner. Recover its exact stopped-worker lease before resuming; cross-process cancellation or review is not applied.")
+
+    def _claim_prepared_lease(self, job: VideoJobRecord) -> None:
+        from app.mission_control.processes import process_started_at
+        path = self._job_root(job) / "foreground-worker-lease.json"
+        token = uuid4().hex
+        process_start = process_started_at(os.getpid())
+        try:
+            with path.open("x", encoding="utf-8") as handle:
+                json.dump({"pid": os.getpid(), "token": token, "planDigest": job.plan_digest,
+                           "jobId": job.id, "acceptedAt": utc_now().isoformat(),
+                           "processStartedAt": process_start.isoformat() if process_start else None}, handle)
+                handle.flush()
+                os.fsync(handle.fileno())
+        except FileExistsError as exc:
+            raise self._error(409, "prepared_worker_already_owned", "This prepared job has an existing worker lease. No duplicate generation or state update was started. Confirm its process has stopped before recovering that exact lease.") from exc
+        self._prepared_leases[job.id] = (path, token)
+
+    def recover_stopped_worker(self, job_id: str, *, expected_token: str) -> None:
+        """Explicitly reconcile a dead exact owner; timestamps never confer ownership."""
+        from app.mission_control.processes import process_is_alive, process_started_at
+        job = self._record(job_id)
+        path = self._job_root(job) / "foreground-worker-lease.json"
+        value = read_json(path)
+        if not isinstance(value, dict) or value.get("token") != expected_token or value.get("planDigest") != job.plan_digest:
+            raise ContractError("worker lease identity changed; inspect its exact receipt")
+        pid = value.get("pid")
+        if not isinstance(pid, int) or pid <= 0:
+            raise ContractError("worker process identity is unknown")
+        if process_is_alive(pid):
+            observed = process_started_at(pid)
+            recorded = value.get("processStartedAt")
+            if observed is None or not isinstance(recorded, str) or observed == datetime.fromisoformat(recorded):
+                raise ContractError("recorded worker is alive or its identity is uncertain; recovery refused")
+        with admission_lock(self.runtime_root):
+            if read_json(path) != value:
+                raise ContractError("worker lease changed during reconciliation")
+            atomic_write_json(self._job_root(job) / "worker-history" / f"{uuid4().hex}.json", value)
+            path.unlink()
+
+    def _release_prepared_lease(self, job_id: str) -> None:
+        lease = self._prepared_leases.pop(job_id, None)
+        if lease is not None:
+            path, token = lease
+            if path.is_file():
+                value = read_json(path)
+                if isinstance(value, dict) and value.get("token") == token:
+                    path.unlink()
+
     def start_background_tasks(self) -> None:
+        from app.mission_control.errors import MissionControlError
+
         if self._closed:
             return
         for job in self.store.list_video_jobs(limit=1_000):
-            if job.state in _ACTIVE_STATES:
-                self._schedule(job.id)
+            if job.state in _ACTIVE_STATES and not self._is_foreground_prepared(job):
+                try:
+                    self._schedule(job.id)
+                except MissionControlError as exc:
+                    if exc.error.code != "prepared_worker_already_owned":
+                        raise
+                    # Keep the native job and lease intact. Another live or
+                    # unknown worker must not break startup or lose ownership;
+                    # a stopped owner can be explicitly reconciled by token.
+                    continue
 
     def close(self) -> None:
         self._closed = True
@@ -1593,13 +1942,31 @@ class VideoGenerationController:
         task = self._tasks.get(job_id)
         if task is not None and not task.done():
             return
+        job = self._record(job_id)
+        if job_id not in self._prepared_leases:
+            self._claim_prepared_lease(job)
         self._tasks[job_id] = asyncio.create_task(self._run(job_id), name=f"video-generation-{job_id}")
 
     async def _run(self, job_id: str) -> None:
         try:
             job = self._record(job_id)
+            job = await self._save(job.model_copy(update={
+                "worker_started_at": utc_now(), "worker_heartbeat_at": utc_now(),
+            }))
+            if self._uses_bound_credentials:
+                from .gcp_auth import load_binding
+                binding = load_binding(project_id=job.gcp_project_id)
+                if job.credential_binding_digest and job.credential_binding_digest != binding.identity_digest:
+                    raise self._error(409, "auth_identity_mismatch", "The recorded worker identity changed; reconcile this exact run before resuming")
+                job = await self._save(job.model_copy(update={"credential_binding_digest": binding.identity_digest}))
             provider = self.provider_factory(job.gcp_project_id, job.region)
             ordered = sorted(job.shots, key=lambda item: item.order)
+            # Retained accepted work must be recovered even if an earlier slot
+            # needs NEW spending and its authorization has since expired.
+            for recovery_shot in ordered:
+                if self._has_recoverable_output(recovery_shot.latest_attempt):
+                    if not await self._process_shot(job_id, recovery_shot.shot_id, provider):
+                        return
             smoke = ordered[0]
             if not await self._process_shot(job_id, smoke.shot_id, provider):
                 return
@@ -1607,7 +1974,8 @@ class VideoGenerationController:
             if job.state is not VideoJobState.GENERATING:
                 await self._save(job.model_copy(update={"state": VideoJobState.GENERATING, "error": None}))
             for shot in ordered[1:]:
-                await self._process_shot(job_id, shot.shot_id, provider)
+                if not await self._process_shot(job_id, shot.shot_id, provider):
+                    return
             job = self._record(job_id)
             failed = [
                 shot
@@ -1623,6 +1991,18 @@ class VideoGenerationController:
             # Technical verification and creative acceptance are distinct.
             # Local finishing begins only through an explicit operator action.
         except asyncio.CancelledError:
+            # Cancelling asyncio cannot revoke a POST already running in the
+            # transport thread. Preserve its reservation and explicit uncertainty.
+            current = self.store.get_video_job(job_id)
+            if current is not None:
+                for shot in current.shots:
+                    attempt = shot.latest_attempt
+                    if attempt is not None and attempt.state is VideoShotState.RESERVED and attempt.submission_intent_at:
+                        await self._fail_attempt(job_id, shot.shot_id, attempt.id, VideoError(
+                            code="provider_submission_outcome_unknown",
+                            summary="Local scheduling stopped while submission was in flight; provider cancellation is not confirmed.",
+                            remedy="Reconcile the retained attempt and cloud output prefix before new spending.",
+                        ))
             return
         except Exception as exc:
             failed_job = self.store.get_video_job(job_id)
@@ -1639,15 +2019,70 @@ class VideoGenerationController:
                 )
         finally:
             self._tasks.pop(job_id, None)
+            self._release_prepared_lease(job_id)
 
     async def _process_shot(self, job_id: str, shot_id: str, provider: AsyncVideoProvider) -> bool:
         job = self._record(job_id)
         shot = self._shot(job, shot_id)
         attempt = shot.latest_attempt
         created_now = False
+        if self._compiled(job, shot_id).continuation_mode == "local-composition":
+            return attempt is not None and attempt.state is VideoShotState.VERIFIED
+        if attempt is not None and attempt.operation_name is None:
+            receipt_path = self._job_root(job) / "operations" / f"{attempt.id}.json"
+            if receipt_path.is_file():
+                receipt = read_json(receipt_path)
+                if not isinstance(receipt, dict) or any((
+                    receipt.get("operationId") != attempt.id,
+                    receipt.get("planDigest") != job.plan_digest,
+                    receipt.get("shotId") != shot_id,
+                    receipt.get("attempt") != attempt.attempt,
+                    receipt.get("reservedCostUsd") != attempt.reserved_cost_usd,
+                    not isinstance(receipt.get("operationName"), str),
+                    not receipt.get("operationName"),
+                )):
+                    raise ContractError("private operation receipt conflicts with this exact attempt")
+                attempt = attempt.model_copy(update={"state": VideoShotState.SUBMITTED,
+                    "operation_name": receipt["operationName"], "error": None})
+                job = await self._update_attempt(job_id, shot_id, attempt)
+                shot = self._shot(job, shot_id)
+        if (attempt is not None and attempt.state is VideoShotState.FAILED
+            and attempt.request_digest and attempt.submission_intent_at is None
+            and attempt.error is not None and attempt.error.code == "provider_pre_submission_authentication_required"):
+            self._authorization(job, next_cost=0)
+            attempt = attempt.model_copy(update={"state": VideoShotState.RESERVED, "error": None})
+            job = await self._update_attempt(job_id, shot_id, attempt)
+            shot = self._shot(job, shot_id)
+            created_now = True
+        if attempt is not None and attempt.state in {VideoShotState.FAILED, VideoShotState.FILTERED}:
+            # Recover historical post-generation failures from their evidence.
+            if self._has_recoverable_output(attempt) and not shot.retry_requested:
+                recovered_state = (VideoShotState.DOWNLOADED if attempt.local_clip_path
+                                   else VideoShotState.SUCCEEDED if attempt.output_uri
+                                   else VideoShotState.SUBMITTED)
+                attempt = attempt.model_copy(update={"state": recovered_state, "error": None})
+                job = await self._update_attempt(job_id, shot_id, attempt)
+                shot = self._shot(job, shot_id)
+            elif not shot.retry_requested and attempt.id not in job.pre_submit_resume_attempt_ids:
+                return False
+        if not created_now and self._is_foreground_prepared(job) and attempt is not None and (
+            attempt.state in {VideoShotState.RESERVED, VideoShotState.FAILED, VideoShotState.FILTERED}
+            or shot.retry_requested
+        ):
+            if (attempt.id not in job.pre_submit_resume_attempt_ids
+                or not self.is_recoverable_pre_submit_failure(attempt) or shot.retry_requested):
+                return False
+            self._authorization(job, next_cost=0)
+            # Persist consumption before upload/submit; a crash cannot replay it.
+            job = await self._save(job.model_copy(update={
+                "pre_submit_resume_attempt_ids": tuple(value for value in job.pre_submit_resume_attempt_ids if value != attempt.id),
+            }))
+            attempt = attempt.model_copy(update={"state": VideoShotState.RESERVED, "error": None, "updated_at": utc_now()})
+            job = await self._update_attempt(job_id, shot_id, attempt)
+            shot = self._shot(job, shot_id)
+            created_now = True
         if (
             attempt is None
-            or attempt.state in {VideoShotState.FAILED, VideoShotState.FILTERED}
             or shot.retry_requested
         ):
             job, shot, attempt = await self._reserve(job_id, shot_id)
@@ -1667,9 +2102,16 @@ class VideoGenerationController:
                     ),
                 )
                 return False
-            compiled = self._compiled(job, shot_id)
+            compiled = self._compiled_attempt(job, shot_id, attempt)
             try:
+                if attempt.request_digest and sha256_json(build_request_payload(compiled)) != attempt.request_digest:
+                    raise ContractError("reserved provider request no longer matches its immutable request digest")
                 await self._prepare_reference(job, compiled, provider)
+                self._authorization(self._record(job_id), next_cost=0)
+                # Write-ahead marker: failure/crash beyond here may have incurred
+                # spend. A seed/request digest is not a provider idempotency key.
+                attempt = attempt.model_copy(update={"submission_intent_at": utc_now()})
+                await self._update_attempt(job_id, shot_id, attempt)
                 response = await provider.submit(
                     compiled,
                     context=ProviderRequestContext(
@@ -1691,7 +2133,6 @@ class VideoGenerationController:
                         "updated_at": utc_now(),
                     }
                 )
-                await self._update_attempt(job_id, shot_id, attempt)
                 atomic_write_json(
                     self._job_root(self._record(job_id)) / "operations" / f"{attempt.id}.json",
                     {
@@ -1704,8 +2145,28 @@ class VideoGenerationController:
                         "reservedCostUsd": attempt.reserved_cost_usd,
                     },
                 )
+                await self._update_attempt(job_id, shot_id, attempt)
             except Exception as exc:
-                await self._fail_attempt(job_id, shot_id, attempt.id, self._safe_error(exc))
+                durable = self._shot(self._record(job_id), shot_id).latest_attempt
+                if attempt.operation_name or (durable is not None and durable.operation_name):
+                    # Receipt/projection failure cannot erase an accepted operation.
+                    await self._stage_failure(job_id, shot_id, attempt if attempt.operation_name else cast(VideoShotAttempt, durable), self._safe_error(exc))
+                else:
+                    safe = self._safe_error(exc)
+                    if isinstance(exc, ProviderError) and exc.request_not_sent:
+                        attempt = attempt.model_copy(update={"submission_intent_at": None})
+                        await self._update_attempt(job_id, shot_id, attempt)
+                        safe = VideoError(code="provider_pre_submission_authentication_required",
+                                          summary="Token acquisition failed before any generation POST was sent.",
+                                          remedy=exc.remedy, retry_classification="safe-pre-submit")
+                    elif attempt.submission_intent_at is not None:
+                        safe = VideoError(
+                            code="provider_submission_outcome_unknown",
+                            summary="Submission may have been accepted. Its reservation is retained; no generation replay is permitted.",
+                            remedy="Reconcile this attempt's private operation receipt and bound storage prefix before any new spending.",
+                            retry_classification="reconcile",
+                        )
+                    await self._fail_attempt(job_id, shot_id, attempt.id, safe)
                 return False
 
         attempt = self._shot(self._record(job_id), shot_id).latest_attempt
@@ -1735,14 +2196,25 @@ class VideoGenerationController:
                     ),
                 )
                 transient_failures = 0
+                attempt = attempt.model_copy(update={
+                    "last_provider_observation_at": utc_now(), "next_retry_at": None,
+                    "safe_read_failures": 0, "error": None,
+                })
+                await self._update_attempt(job_id, shot_id, attempt)
             except ProviderError as exc:
                 transient_failures += 1
                 if exc.retryable and transient_failures <= 5:
-                    await asyncio.sleep(
-                        min(30.0, self.poll_interval_seconds * (2 ** (transient_failures - 1)))
-                    )
+                    delay = safe_read_delay(transient_failures, base_seconds=self.poll_interval_seconds,
+                                            retry_after=exc.retry_after_seconds)
+                    attempt = attempt.model_copy(update={
+                        "safe_read_failures": transient_failures,
+                        "next_retry_at": utc_now() + timedelta(seconds=delay),
+                        "error": self._safe_error(exc),
+                    })
+                    await self._update_attempt(job_id, shot_id, attempt)
+                    await asyncio.sleep(delay)
                     continue
-                await self._fail_attempt(job_id, shot_id, attempt.id, self._safe_error(exc))
+                await self._stage_failure(job_id, shot_id, attempt, self._safe_error(exc))
                 return False
             if not response.get("done"):
                 attempt = attempt.model_copy(
@@ -1812,7 +2284,7 @@ class VideoGenerationController:
                     ),
                 )
                 return False
-            compiled = self._compiled(self._record(job_id), shot_id)
+            compiled = self._compiled_attempt(self._record(job_id), shot_id, attempt)
             try:
                 uris = response_output_uris(response, required_prefix=compiled.storage_uri)
             except ProviderError as exc:
@@ -1840,17 +2312,33 @@ class VideoGenerationController:
             if not attempt.output_uri:
                 return False
             destination = (
-                self._job_root(self._record(job_id)) / "clips" / shot_id / attempt.id / "provider.mp4"
+                self._job_root(self._record(job_id)) / "clips" / shot_id / attempt.id / f"provider-{uuid4().hex}.partial.mp4"
             )
-            try:
-                await provider.download(attempt.output_uri, destination)
-            except Exception as exc:
-                await self._fail_attempt(job_id, shot_id, attempt.id, self._safe_error(exc))
-                return False
+            for transfer_number in range(1, 4):
+                try:
+                    await provider.download(attempt.output_uri, destination)
+                    break
+                except Exception as exc:
+                    if isinstance(exc, ProviderError) and exc.retryable and transfer_number < 3:
+                        delay = safe_read_delay(transfer_number, base_seconds=self.poll_interval_seconds,
+                                                retry_after=exc.retry_after_seconds)
+                        attempt = attempt.model_copy(update={"next_retry_at": utc_now() + timedelta(seconds=delay),
+                                                            "safe_read_failures": transfer_number, "error": self._safe_error(exc)})
+                        await self._update_attempt(job_id, shot_id, attempt)
+                        await asyncio.sleep(delay)
+                        destination = destination.with_name(f"provider-{uuid4().hex}.partial.mp4")
+                        continue
+                    await self._stage_failure(job_id, shot_id, attempt, self._safe_error(exc))
+                    return False
             attempt = attempt.model_copy(
                 update={
                     "state": VideoShotState.DOWNLOADED,
                     "local_clip_path": str(destination),
+                    "output_object_identity": (read_json(destination.with_name(destination.name + ".gcs-object.json"))
+                        if destination.with_name(destination.name + ".gcs-object.json").is_file() else None),
+                    "error": None,
+                    "next_retry_at": None,
+                    "safe_read_failures": 0,
                     "updated_at": utc_now(),
                 }
             )
@@ -1860,23 +2348,51 @@ class VideoGenerationController:
         assert attempt is not None
         if attempt.state is VideoShotState.DOWNLOADED and attempt.local_clip_path:
             compiled = self._compiled(self._record(job_id), shot_id)
+            candidate_path = Path(attempt.local_clip_path)
+            # Promotion can complete just before a crash prevents SQLite update.
+            # Recover that file through full verification, never marker presence.
+            if not candidate_path.is_file() and candidate_path.with_name("provider.mp4").is_file():
+                candidate_path = candidate_path.with_name("provider.mp4")
+                attempt = attempt.model_copy(update={"local_clip_path": str(candidate_path)})
             try:
                 evidence = await asyncio.to_thread(
                     verify_generated_clip,
-                    Path(attempt.local_clip_path),
+                    candidate_path,
                     resolution=compiled.resolution,
                     aspect_ratio=compiled.aspect_ratio,
                     expected_duration_seconds=compiled.duration_seconds,
                     ffprobe=str(self.ffprobe_path()) if self.ffprobe_path() else None,
                 )
             except Exception as exc:
-                await self._fail_attempt(job_id, shot_id, attempt.id, self._safe_error(exc))
+                if attempt.output_uri and isinstance(exc, ContractError) and any(
+                    text in str(exc) for text in ("video frame decode failed", "decoded frame count", "ffprobe failed")
+                ):
+                    atomic_write_json(self._job_root(self._record(job_id)) / "verification" / f"rejected-{uuid4().hex}.json", {
+                        "attemptId": attempt.id, "candidatePath": attempt.local_clip_path,
+                        "sha256": sha256_file(candidate_path) if candidate_path.is_file() else None,
+                        "result": "corrupt-or-incomplete", "retained": True,
+                    })
+                    attempt = attempt.model_copy(update={"state": VideoShotState.SUCCEEDED, "local_clip_path": None})
+                await self._stage_failure(job_id, shot_id, attempt, self._safe_error(exc))
                 return False
+            candidate = candidate_path
+            destination = candidate.with_name("provider.mp4")
+            if candidate != destination:
+                if destination.exists() and sha256_file(destination) != evidence.sha256:
+                    await self._stage_failure(job_id, shot_id, attempt, VideoError(
+                        code="local_clip_conflict", summary="Retained verified clip conflicts with the downloaded candidate.",
+                        remedy="Reconcile both retained artifacts; no generation is needed.",
+                    ))
+                    return False
+                os.replace(candidate, destination)
+                evidence = replace(evidence, path=str(destination))
             attempt = attempt.model_copy(
                 update={
                     "state": VideoShotState.VERIFIED,
                     "clip_sha256": evidence.sha256,
                     "probe_evidence": evidence.to_dict(),
+                    "local_clip_path": str(destination),
+                    "error": None,
                     "updated_at": utc_now(),
                 }
             )
@@ -1887,6 +2403,45 @@ class VideoGenerationController:
             )
             return True
         return attempt.state is VideoShotState.VERIFIED
+
+    @staticmethod
+    def _is_uncertain_submission(attempt: VideoShotAttempt | None) -> bool:
+        if attempt is None:
+            return False
+        if attempt.state is VideoShotState.RESERVED:
+            return True
+        if attempt.state is not VideoShotState.FAILED or attempt.operation_name:
+            return False
+        if attempt.error is not None and attempt.error.code == "provider_submission_outcome_unknown":
+            return True
+        if attempt.request_digest is not None and attempt.submission_intent_at is None:
+            return False  # New write-ahead protocol proves no POST was begun.
+        return attempt.error is None or attempt.error.code not in {
+            "provider_reference_upload_failed", "provider_reference_reauthentication_required",
+            "provider_request_failed", "provider_access_denied", "api_disabled",
+            "provider_filtered", "provider_operation_failed",
+        }
+
+    @staticmethod
+    def _has_recoverable_output(attempt: VideoShotAttempt | None) -> bool:
+        return bool(attempt is not None and (attempt.operation_name or attempt.output_uri or attempt.local_clip_path)
+                    and attempt.state not in {VideoShotState.FILTERED, VideoShotState.VERIFIED}
+                    and (attempt.error is None or attempt.error.code not in {
+                        "provider_filtered", "provider_operation_failed", "provider_submission_outcome_unknown",
+                    }))
+
+    @classmethod
+    def _compiled_attempt(cls, job: VideoJobRecord, shot_id: str, attempt: VideoShotAttempt) -> CompiledShot:
+        shot = cls._compiled(job, shot_id)
+        return replace(shot, storage_uri=attempt.storage_uri or shot.storage_uri)
+
+    async def _stage_failure(self, job_id: str, shot_id: str, attempt: VideoShotAttempt, error: VideoError) -> None:
+        await self._update_attempt(job_id, shot_id, attempt.model_copy(update={
+            "error": error, "next_retry_at": None, "updated_at": utc_now(),
+        }))
+        await self._save(self._record(job_id).model_copy(update={
+            "state": self._blocked_state(error.code), "error": error,
+        }))
 
     async def _prepare_reference(
         self,
@@ -1936,50 +2491,86 @@ class VideoGenerationController:
         self, job_id: str, shot_id: str
     ) -> tuple[VideoJobRecord, VideoShotRecord, VideoShotAttempt]:
         async with self._lock:
-            job = self._record(job_id)
-            shot = self._shot(job, shot_id)
-            self._authorization(job, next_cost=shot.estimated_cost_usd)
-            number = len(shot.attempts) + 1
-            compiled = self._compiled(job, shot_id)
-            key = sha256_json(
-                {
-                    "planDigest": job.plan_digest,
-                    "shotId": shot_id,
-                    "attempt": number,
-                    "modelId": compiled.model_id,
-                    "request": build_request_payload(compiled),
-                }
-            )
-            now = utc_now()
-            attempt = VideoShotAttempt(
-                id=f"{shot_id}-attempt-{number:02d}-{key[:12]}",
-                attempt=number,
-                idempotency_key=key,
-                state=VideoShotState.RESERVED,
-                reserved_cost_usd=shot.estimated_cost_usd,
-                created_at=now,
-                updated_at=now,
-            )
-            shot = shot.model_copy(
-                update={
-                    "attempts": (*shot.attempts, attempt),
-                    "retry_requested": False,
-                }
-            )
-            job = self._replace_shot(job, shot).model_copy(
-                update={
-                    "reserved_cost_usd": round(job.reserved_cost_usd + shot.estimated_cost_usd, 4),
-                    "updated_at": now,
-                }
-            )
-            return await self._save(job), shot, attempt
+            with admission_lock(self.runtime_root):
+                return await self._reserve_locked(job_id, shot_id)
+
+    async def _reserve_locked(
+        self, job_id: str, shot_id: str
+    ) -> tuple[VideoJobRecord, VideoShotRecord, VideoShotAttempt]:
+        job = self._record(job_id)
+        shot = self._shot(job, shot_id)
+        limits = job.plan.get("continuity", {}).get("executionLimits", {})
+        maximum_attempts = int(limits.get("maxAttemptsPerShot", 2))
+        maximum_concurrent = int(limits.get("maxConcurrentPaid", 1))
+        if not 1 <= maximum_attempts <= 10 or not 1 <= maximum_concurrent <= 4:
+            raise ContractError("invalid plan-bound execution limits")
+        outstanding = 0
+        for candidate in self.store.list_video_jobs(limit=100_000):
+            if candidate.gcp_project_id != job.gcp_project_id:
+                continue
+            for item in candidate.shots:
+                for prior in item.attempts:
+                    if prior.state in {VideoShotState.SUBMITTED, VideoShotState.RUNNING} or self._is_uncertain_submission(prior):
+                        outstanding += 1
+        if outstanding >= maximum_concurrent:
+            raise self._error(409, "video_paid_concurrency_limit", "An outstanding or uncertain paid attempt occupies the approved concurrency limit; reconcile or finish it before new spending")
+        if len(shot.attempts) >= maximum_attempts:
+            raise self._error(409, "video_maximum_attempts", "This shot has reached the plan-bound maximum attempts")
+        self._authorization(job, next_cost=shot.estimated_cost_usd)
+        number = len(shot.attempts) + 1
+        compiled = self._compiled(job, shot_id)
+        if compiled.continuation_mode == "local-composition":
+            raise ContractError("local composition cannot reserve a paid attempt")
+        storage_uri = f"{str(compiled.storage_uri).rstrip('/')}/{job.id}/{shot_id}/attempt-{number:02d}/"
+        compiled = replace(compiled, storage_uri=storage_uri)
+        request_digest = sha256_json(build_request_payload(compiled))
+        authorization_digest = sha256_json(job.authorization)
+        key = sha256_json(
+            {
+                "jobId": job.id,
+                "planDigest": job.plan_digest,
+                "shotId": shot_id,
+                "attempt": number,
+                "modelId": compiled.model_id,
+                "authorizationDigest": authorization_digest,
+                "inputHashes": job.plan.get("sourceArtifacts", {}),
+                "request": build_request_payload(compiled),
+            }
+        )
+        now = utc_now()
+        attempt = VideoShotAttempt(
+            id=f"{shot_id}-attempt-{number:02d}-{key[:12]}",
+            attempt=number,
+            idempotency_key=key,
+            state=VideoShotState.RESERVED,
+            reserved_cost_usd=shot.estimated_cost_usd,
+            storage_uri=storage_uri,
+            request_digest=request_digest,
+            authorization_digest=authorization_digest,
+            created_at=now,
+            updated_at=now,
+        )
+        shot = shot.model_copy(
+            update={
+                "attempts": (*shot.attempts, attempt),
+                "retry_requested": False,
+            }
+        )
+        job = self._replace_shot(job, shot).model_copy(
+            update={
+                "reserved_cost_usd": round(job.reserved_cost_usd + shot.estimated_cost_usd, 4),
+                "updated_at": now,
+            }
+        )
+        return await self._save(job), shot, attempt
 
     async def _update_attempt(self, job_id: str, shot_id: str, attempt: VideoShotAttempt) -> VideoJobRecord:
         async with self._lock:
             job = self._record(job_id)
             shot = self._shot(job, shot_id)
             attempts = tuple(attempt if item.id == attempt.id else item for item in shot.attempts)
-            return await self._save(self._replace_shot(job, shot.model_copy(update={"attempts": attempts})))
+            updated = self._replace_shot(job, shot.model_copy(update={"attempts": attempts}))
+            return await self._save(updated.model_copy(update={"worker_heartbeat_at": utc_now()}))
 
     async def _terminal_attempt(
         self,
@@ -2585,10 +3176,20 @@ class VideoGenerationController:
             atomic_write_json(history, value)
 
     async def _save(self, job: VideoJobRecord) -> VideoJobRecord:
+        self._require_prepared_owner(job)
         updated = job.model_copy(update={"updated_at": utc_now()})
         self.store.put_video_job(updated)
-        event = self.store.append_video_event(self._event(updated))
-        await self.notify_event(event.sequence)
+        # Execution persistence must succeed; observation must never veto it.
+        try:
+            from app.wnp import emit_video_job
+            emit_video_job(updated.model_dump(mode="json", by_alias=True))
+        except Exception:
+            pass
+        try:
+            event = self.store.append_video_event(self._event(updated))
+            await self.notify_event(event.sequence)
+        except Exception:
+            pass
         return updated
 
     def _event(self, job: VideoJobRecord) -> VideoGenerationEvent:
@@ -2747,6 +3348,12 @@ class VideoGenerationController:
     def _safe_error(exc: Exception) -> VideoError:
         from app.mission_control.errors import MissionControlError
 
+        from .gcp_auth import GcpAuthError
+
+        if isinstance(exc, GcpAuthError):
+            return VideoError(code=exc.code, summary=str(exc), retryable=exc.retryable,
+                              remedy=exc.remedy, retry_classification="operator-action")
+
         if isinstance(exc, ProviderError):
             return VideoError(
                 code=exc.code,
@@ -2756,6 +3363,8 @@ class VideoGenerationController:
                 provider_status=exc.provider_status,
                 provider_error_code=exc.provider_error_code,
                 diagnostic_id=exc.diagnostic_id,
+                remedy=exc.remedy,
+                retry_classification=exc.retry_classification,
             )
         if isinstance(exc, MissionControlError):
             return VideoError(
@@ -2764,14 +3373,18 @@ class VideoGenerationController:
                 retryable=exc.error.retryable,
             )
         if isinstance(exc, ContractError):
-            return VideoError(code="video_contract_error", summary=str(exc)[:1_000])
+            return VideoError(code="video_contract_error", summary="Local media or plan verification failed.",
+                              remedy="Check the selected clip, decoder tools and compiled media contract; resume verification without generation.")
+        if isinstance(exc, OSError) and exc.errno == 28:
+            return VideoError(code="local_disk_exhausted", summary="The local artifact disk is full.",
+                              remedy="Free space outside retained run evidence, then resume transfer or verification.")
         return VideoError(code="video_operation_failed", summary="The video operation failed locally.")
 
     @staticmethod
     def _blocked_state(code: str) -> VideoJobState:
-        if code in {"provider_quota_exhausted", "provider_rate_exhausted"}:
+        if code in {"provider_quota_exhausted", "provider_rate_exhausted", "provider_rate_limited"}:
             return VideoJobState.BLOCKED_PROVIDER_QUOTA
-        if code in {"provider_access_denied", "api_disabled", "provider_model_unavailable"}:
+        if code in {"provider_access_denied", "api_disabled", "provider_model_unavailable", "provider_authentication_required", "auth_required", "provider_billing_disabled", "auth_identity_mismatch"}:
             return VideoJobState.BLOCKED_PROVIDER_ACCESS
         if code in {"video_budget_exceeded"}:
             return VideoJobState.BLOCKED_BUDGET

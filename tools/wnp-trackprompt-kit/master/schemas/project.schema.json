@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wzhk:wnp:1:project",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "const": "wnp/1"
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+      },
+      "uniqueItems": true,
+      "contains": {
+        "const": "events"
+      }
+    }
+  },
+  "required": [
+    "protocol",
+    "project",
+    "kind",
+    "capabilities"
+  ],
+  "additionalProperties": true
+}

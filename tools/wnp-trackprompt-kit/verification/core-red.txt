@@ -1,0 +1,165 @@
+test_changed_stream_and_ahead_cursor_rejected (test_core.CoreTests.test_changed_stream_and_ahead_cursor_rejected) ... FAIL
+test_complete_corruption_is_not_discarded (test_core.CoreTests.test_complete_corruption_is_not_discarded) ... FAIL
+test_empty_sync_does_not_jump_cursor (test_core.CoreTests.test_empty_sync_does_not_jump_cursor) ... FAIL
+test_events_are_contiguous_and_snapshot_replayable (test_core.CoreTests.test_events_are_contiguous_and_snapshot_replayable) ... FAIL
+test_evidence_registered_and_hash_checked (test_core.CoreTests.test_evidence_registered_and_hash_checked) ... FAIL
+test_evidence_symlink_denied (test_core.CoreTests.test_evidence_symlink_denied) ... FAIL
+test_evidence_traversal_denied (test_core.CoreTests.test_evidence_traversal_denied) ... FAIL
+test_explicit_null_clears_task (test_core.CoreTests.test_explicit_null_clears_task) ... FAIL
+test_idempotency_and_conflict (test_core.CoreTests.test_idempotency_and_conflict) ... FAIL
+test_init_and_restart_keep_stream (test_core.CoreTests.test_init_and_restart_keep_stream) ... FAIL
+test_metrics_do_not_change_journal_cursor (test_core.CoreTests.test_metrics_do_not_change_journal_cursor) ... FAIL
+test_snapshot_ahead_is_integrity_error (test_core.CoreTests.test_snapshot_ahead_is_integrity_error) ... FAIL
+test_sync_fixed_watermark (test_core.CoreTests.test_sync_fixed_watermark) ... FAIL
+test_torn_tail_is_not_served_and_recovery_preserves_evidence (test_core.CoreTests.test_torn_tail_is_not_served_and_recovery_preserves_evidence) ... FAIL
+test_unknown_extension_roundtrips (test_core.CoreTests.test_unknown_extension_roundtrips) ... FAIL
+test_validation_rejects_nan_and_bad_progress (test_core.CoreTests.test_validation_rejects_nan_and_bad_progress) ... FAIL
+
+======================================================================
+FAIL: test_changed_stream_and_ahead_cursor_rejected (test_core.CoreTests.test_changed_stream_and_ahead_cursor_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_complete_corruption_is_not_discarded (test_core.CoreTests.test_complete_corruption_is_not_discarded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_empty_sync_does_not_jump_cursor (test_core.CoreTests.test_empty_sync_does_not_jump_cursor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_events_are_contiguous_and_snapshot_replayable (test_core.CoreTests.test_events_are_contiguous_and_snapshot_replayable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_evidence_registered_and_hash_checked (test_core.CoreTests.test_evidence_registered_and_hash_checked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_evidence_symlink_denied (test_core.CoreTests.test_evidence_symlink_denied)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_evidence_traversal_denied (test_core.CoreTests.test_evidence_traversal_denied)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_explicit_null_clears_task (test_core.CoreTests.test_explicit_null_clears_task)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_idempotency_and_conflict (test_core.CoreTests.test_idempotency_and_conflict)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_init_and_restart_keep_stream (test_core.CoreTests.test_init_and_restart_keep_stream)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_metrics_do_not_change_journal_cursor (test_core.CoreTests.test_metrics_do_not_change_journal_cursor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_snapshot_ahead_is_integrity_error (test_core.CoreTests.test_snapshot_ahead_is_integrity_error)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_sync_fixed_watermark (test_core.CoreTests.test_sync_fixed_watermark)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_torn_tail_is_not_served_and_recovery_preserves_evidence (test_core.CoreTests.test_torn_tail_is_not_served_and_recovery_preserves_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_unknown_extension_roundtrips (test_core.CoreTests.test_unknown_extension_roundtrips)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+======================================================================
+FAIL: test_validation_rejects_nan_and_bad_progress (test_core.CoreTests.test_validation_rejects_nan_and_bad_progress)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_core.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.store'), 'WNP core must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : WNP core must be implemented
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.003s
+
+FAILED (failures=16)

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..subprocess_utils import run_process_bounded
 from .contracts import ContractError
 from .jsonio import sha256_file
 
@@ -125,4 +127,22 @@ def verify_generated_clip(
         raise ContractError(f"unexpected duration for {path.name}: {result.duration_seconds:.3f}s")
     if result.has_audio:
         raise ContractError(f"{path.name} contains audio; this pipeline expects video-only clips")
+    executable = os.getenv("TRACKPROMPT_MC_FFMPEG_PATH") or shutil.which("ffmpeg")
+    if not executable and ffprobe:
+        sibling = Path(ffprobe).with_name("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+        if sibling.is_file():
+            executable = str(sibling)
+    if not executable:
+        raise ContractError("ffmpeg is required to verify decoded video frames")
+    decoded = run_process_bounded(
+        [executable, "-hide_banner", "-nostdin", "-v", "error", "-xerror",
+         "-err_detect", "explode", "-i", str(path), "-map", "0:v:0", "-an",
+         "-progress", "pipe:1", "-nostats", "-f", "null", "-"],
+        timeout_seconds=120, stdout_limit=16_384, stderr_limit=8_192, hide_window=True,
+    )
+    frames = re.findall(r"(?m)^frame=\s*(\d+)\s*$", decoded.stdout.decode("ascii", errors="replace"))
+    if decoded.returncode != 0 or decoded.stdout_exceeded or not frames:
+        raise ContractError("video frame decode failed; retain the artifact for transfer/verification recovery")
+    if int(frames[-1]) != expected_duration_seconds * 24:
+        raise ContractError("decoded frame count does not match the compiled source duration")
     return result

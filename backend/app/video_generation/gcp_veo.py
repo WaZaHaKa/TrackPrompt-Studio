@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
+import random
 import re
-import shutil
-import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -64,6 +65,10 @@ class ProviderError(RuntimeError):
         provider_status: str | None = None,
         provider_error_code: str | None = None,
         diagnostic_id: str | None = None,
+        remedy: str | None = None,
+        retry_classification: str | None = None,
+        retry_after_seconds: float | None = None,
+        request_not_sent: bool = False,
     ) -> None:
         super().__init__(message[:_REDACTED_ERROR_LIMIT])
         self.code = code
@@ -72,6 +77,42 @@ class ProviderError(RuntimeError):
         self.provider_status = provider_status
         self.provider_error_code = provider_error_code
         self.diagnostic_id = diagnostic_id
+        self.remedy = remedy or provider_remedy(code)
+        self.retry_classification = retry_classification or ("safe-read" if retryable else "operator-action")
+        self.retry_after_seconds = retry_after_seconds
+        self.request_not_sent = request_not_sent
+
+
+def provider_remedy(code: str) -> str:
+    return {
+        "provider_authentication_required": "Run tools/reauth-gcp.ps1 -Mode Reauth, then resume this recorded run.",
+        "provider_access_denied": "Verify the bound identity's Vertex and storage permissions. A persistent 403 requires targeted IAM correction, not repeated login.",
+        "api_disabled": "Have the project administrator enable the Vertex AI API for the bound project; then resume.",
+        "provider_billing_disabled": "Ask the billing administrator to restore billing on the bound project; then resume.",
+        "provider_quota_exhausted": "Review the project quota; resume safe reads later. Do not raise quotas automatically.",
+        "provider_rate_limited": "Wait for the bounded safe-read retry or resume the retained operation later.",
+        "provider_model_unavailable": "Verify this exact model and region are available to the bound project before compiling a new plan.",
+        "provider_request_failed": "Inspect the private diagnostic and correct the model request before authorizing a new plan.",
+        "provider_network_error": "Restore network access, then resume polling or transfer of this recorded attempt.",
+    }.get(code, "Inspect this attempt's retained evidence and resume its earliest unverified stage.")
+
+
+def safe_read_delay(failures: int, *, base_seconds: float = 1.0, retry_after: float | None = None) -> float:
+    ceiling = min(60.0, base_seconds * 2 ** max(0, failures - 1))
+    return min(60.0, max(retry_after or 0.0, random.uniform(ceiling / 2, ceiling)))
+
+
+def _retry_after(headers: Any) -> float | None:
+    value = headers.get("Retry-After") if headers else None
+    if value is None:
+        return None
+    try:
+        return min(60.0, max(0.0, float(value)))
+    except (TypeError, ValueError):
+        try:
+            return min(60.0, max(0.0, (parsedate_to_datetime(value) - datetime.now(UTC)).total_seconds()))
+        except (TypeError, ValueError, OverflowError):
+            return None
 
 
 @dataclass(frozen=True)
@@ -88,160 +129,37 @@ class DoctorResult:
         }
 
 
-def _run(arguments: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        arguments,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        encoding="utf-8",
-        errors="replace",
-    )
-
-
-def active_access_token() -> str:
-    executable = shutil.which("gcloud")
-    if not executable:
-        raise ProviderError("gcloud CLI is not installed or not on PATH")
-    result = _run([executable, "auth", "print-access-token"], timeout=30)
-    token = result.stdout.strip()
-    if result.returncode != 0 or not token:
-        raise ProviderError(
-            "gcloud could not provide an access token; run gcloud auth login.",
-            code="provider_access_denied",
-        )
-    return token
+def active_access_token(*, project_id: str | None = None) -> str:
+    from .gcp_auth import GcpAuthError, access_token
+    try:
+        return access_token(project_id=project_id)
+    except GcpAuthError as exc:
+        raise ProviderError(str(exc), code=exc.code, retryable=exc.retryable,
+                            remedy=exc.remedy, request_not_sent=True) from exc
 
 
 def doctor(*, project_id: str, bucket: str, region: str = DEFAULT_REGION) -> DoctorResult:
-    checks: list[dict[str, Any]] = []
-    executable = shutil.which("gcloud")
-    checks.append(
-        {
-            "id": "gcloud-installed",
-            "ok": bool(executable),
-            "detail": executable or "not found on PATH",
-            "safeDetail": "gcloud CLI is available."
-            if executable
-            else "gcloud CLI is not available on PATH.",
-        }
-    )
-    if not executable:
-        return DoctorResult(ok=False, network_contacted=False, checks=tuple(checks))
-
-    account = _run(
-        [
-            executable,
-            "auth",
-            "list",
-            "--filter=status:ACTIVE",
-            "--format=value(account)",
-        ],
-        timeout=30,
-    )
-    checks.append(
-        {
-            "id": "active-account",
-            "ok": account.returncode == 0 and bool(account.stdout.strip()),
-            "detail": account.stdout.strip() or account.stderr.strip(),
-            "safeDetail": "An active gcloud account is available."
-            if account.returncode == 0 and account.stdout.strip()
-            else "No active gcloud account is available.",
-        }
-    )
-
-    token = _run([executable, "auth", "print-access-token"], timeout=30)
-    checks.append(
-        {
-            "id": "access-token",
-            "ok": token.returncode == 0 and bool(token.stdout.strip()),
-            "detail": "available" if token.stdout.strip() else token.stderr.strip(),
-            "safeDetail": "Application credentials are available."
-            if token.returncode == 0 and token.stdout.strip()
-            else "Application credentials are unavailable.",
-        }
-    )
-
-    project = _run(
-        [executable, "projects", "describe", project_id, "--format=value(projectId)"],
-        timeout=45,
-    )
-    checks.append(
-        {
-            "id": "project-access",
-            "ok": project.returncode == 0 and project.stdout.strip() == project_id,
-            "detail": project.stdout.strip() or project.stderr.strip(),
-            "safeDetail": "The configured project is accessible."
-            if project.returncode == 0 and project.stdout.strip() == project_id
-            else "The configured project is not accessible.",
-        }
-    )
-
-    api = _run(
-        [
-            executable,
-            "services",
-            "list",
-            "--enabled",
-            f"--project={project_id}",
-            "--filter=config.name:aiplatform.googleapis.com",
-            "--format=value(config.name)",
-        ],
-        timeout=45,
-    )
-    checks.append(
-        {
-            "id": "aiplatform-api-enabled",
-            "ok": "aiplatform.googleapis.com" in api.stdout,
-            "detail": api.stdout.strip() or api.stderr.strip(),
-            "safeDetail": "Vertex AI API is enabled."
-            if "aiplatform.googleapis.com" in api.stdout
-            else "Vertex AI API is not confirmed enabled.",
-        }
-    )
-
-    normalized_bucket = bucket.removeprefix("gs://").strip("/")
-    bucket_result = _run(
-        [
-            executable,
-            "storage",
-            "buckets",
-            "describe",
-            f"gs://{normalized_bucket}",
-            "--format=value(name)",
-        ],
-        timeout=45,
-    )
-    checks.append(
-        {
-            "id": "gcs-bucket-access",
-            "ok": bucket_result.returncode == 0,
-            "detail": bucket_result.stdout.strip() or bucket_result.stderr.strip(),
-            "safeDetail": "The configured GCS bucket is accessible."
-            if bucket_result.returncode == 0
-            else "The configured GCS bucket is not accessible.",
-        }
-    )
-
-    checks.append(
-        {
-            "id": "region",
-            "ok": region == DEFAULT_REGION,
-            "detail": region,
-            "safeDetail": f"Provider region is {region}.",
-        }
-    )
-    return DoctorResult(
-        ok=all(item["ok"] for item in checks),
-        network_contacted=True,
-        checks=tuple(checks),
-    )
+    from .gcp_auth import check_access
+    value = check_access(mode="cloud", project_id=project_id, bucket=bucket, region=region)
+    return DoctorResult(ok=bool(value["ok"]), network_contacted=bool(value["networkContacted"]),
+                        checks=tuple(value["checks"]))
 
 
 def build_request_payload(shot: CompiledShot) -> dict[str, Any]:
+    if shot.model_id not in {"veo-3.1-generate-001", "veo-3.1-fast-generate-001"}:
+        raise ContractError("unsupported model; explicit capability qualification is required")
+    if shot.resolution not in {"720p", "1080p", "4k"}:
+        raise ContractError("unsupported provider resolution")
+    if shot.continuation_mode not in {"prompt-anchors", "first-frame-reference", "accepted-previous-shot-end-frame", "local-composition"}:
+        raise ContractError("unsupported image mode; only the qualified first-frame image payload is supported")
     if not shot.storage_uri:
         raise ContractError(f"{shot.shot_id}: a GCS storageUri is required for resumable generation")
+    if shot.continuation_mode == "local-composition":
+        raise ContractError("local-composition shots cannot be sent to the provider")
+    if shot.duration_seconds not in {4, 6, 8} or shot.sample_count != 1:
+        raise ContractError("this verified video lane requires 4/6/8 seconds and one sample per attempt")
+    if shot.aspect_ratio not in {"16:9", "9:16"} or shot.generate_audio:
+        raise ContractError("this lane requires supported aspect ratio and visual-only generation")
     if shot.resolution == "4k" and shot.model_id in {
         "veo-3.1-generate-001",
         "veo-3.1-fast-generate-001",
@@ -396,7 +314,7 @@ class VeoRestClient:
         *,
         project_id: str,
         region: str = DEFAULT_REGION,
-        token_provider: Callable[[], str] = active_access_token,
+        token_provider: Callable[[], str] | None = None,
         timeout_seconds: int = 120,
         diagnostics_root: Path | None = None,
     ) -> None:
@@ -406,7 +324,7 @@ class VeoRestClient:
             raise ValueError(f"This starter supports {DEFAULT_REGION}; got {region!r}")
         self.project_id = project_id
         self.region = region
-        self.token_provider = token_provider
+        self.token_provider = token_provider or (lambda: active_access_token(project_id=self.project_id))
         self.timeout_seconds = timeout_seconds
         self.diagnostics_root = diagnostics_root.resolve() if diagnostics_root is not None else None
 
@@ -496,9 +414,12 @@ class VeoRestClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                raw = response.read().decode("utf-8")
+                raw_bytes = response.read(2_000_001)
+                if len(raw_bytes) > 2_000_000:
+                    raise ProviderError("Provider response exceeded its safe size bound", code="provider_response_invalid")
+                raw = raw_bytes.decode("utf-8")
         except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
+            body = exc.read(_DIAGNOSTIC_BODY_LIMIT).decode("utf-8", errors="replace")
             diagnostic = self._write_diagnostic(
                 url=url,
                 payload=payload,
@@ -508,21 +429,30 @@ class VeoRestClient:
                 raw_body=body,
             )
             lowered = body.lower()
-            if exc.code in {401, 403} and "serviceusage" in lowered:
+            if exc.code == 401:
+                code = "provider_authentication_required"
+            elif exc.code == 403 and "billing" in lowered:
+                code = "provider_billing_disabled"
+            elif exc.code == 403 and any(value in lowered for value in ("serviceusage", "service_disabled", "api has not been used")):
                 code = "api_disabled"
-            elif exc.code in {401, 403}:
+            elif exc.code == 403:
                 code = "provider_access_denied"
-            elif exc.code == 429 or "quota" in lowered or "resource_exhausted" in lowered:
+            elif "quota" in lowered or "resource_exhausted" in lowered:
                 code = "provider_quota_exhausted"
+            elif exc.code == 429:
+                code = "provider_rate_limited"
+            elif exc.code == 404:
+                code = "provider_model_unavailable"
             elif exc.code >= 500:
                 code = "provider_transient"
             else:
                 code = "provider_request_failed"
             provider_status = diagnostic.provider_status if diagnostic else None
             provider_error_code = diagnostic.provider_error_code if diagnostic else None
-            provider_message = diagnostic.provider_message if diagnostic else None
             provider_label = provider_status or provider_error_code
-            detail = f" {provider_label}: {provider_message}" if provider_label and provider_message else ""
+            # Raw provider messages can contain prompts, resource names or URIs.
+            # They remain only in the private diagnostic, never public errors.
+            detail = f" {provider_label}." if provider_label else ""
             diagnostic_label = f" Diagnostic ID {diagnostic.diagnostic_id}." if diagnostic is not None else ""
             raise ProviderError(
                 f"Google Veo returned HTTP {exc.code} ({code}).{detail}{diagnostic_label}",
@@ -532,6 +462,7 @@ class VeoRestClient:
                 provider_status=provider_status,
                 provider_error_code=provider_error_code,
                 diagnostic_id=diagnostic.diagnostic_id if diagnostic else None,
+                retry_after_seconds=_retry_after(exc.headers),
             ) from exc
         except urllib.error.URLError as exc:
             diagnostic = self._write_diagnostic(
@@ -612,24 +543,40 @@ def response_output_uris(response: dict[str, Any], *, required_prefix: str | Non
     return tuple(values)
 
 
-def copy_gcs_uri(uri: str, destination: Path) -> None:
+def copy_gcs_uri(uri: str, destination: Path, *, project_id: str | None = None) -> None:
     validate_gcs_uri(uri)
     if destination.exists():
         raise ProviderError(
             "A local file already exists at the requested clip destination.",
             code="local_clip_conflict",
         )
-    executable = shutil.which("gcloud")
-    if not executable:
-        raise ProviderError("gcloud CLI is not installed or not on PATH")
+    from .gcp_auth import GcpAuthError, run_bound_gcloud
     destination.parent.mkdir(parents=True, exist_ok=True)
-    result = _run([executable, "storage", "cp", uri, str(destination)], timeout=600)
-    if result.returncode != 0:
+    partial = destination.with_name(f".{destination.name}-{uuid4().hex}.transfer")
+    try:
+        metadata_result = run_bound_gcloud(["storage", "objects", "describe", uri, "--format=json"],
+                                          project_id=project_id, timeout=60)
+        metadata = json.loads(metadata_result.stdout)
+        generation = str(metadata.get("generation", ""))
+        size = int(metadata.get("size", 0))
+        if metadata_result.returncode != 0 or not generation.isdecimal() or size <= 0:
+            raise ProviderError("GCS object identity could not be verified", code="provider_artifact_invalid")
+        result = run_bound_gcloud(["storage", "cp", f"{uri}#{generation}", str(partial)], project_id=project_id, timeout=600)
+    except GcpAuthError as exc:
+        raise ProviderError(str(exc), code=exc.code, retryable=exc.retryable, remedy=exc.remedy) from exc
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise ProviderError("GCS object metadata was invalid", code="provider_artifact_invalid") from exc
+    if result.returncode != 0 or not partial.is_file() or partial.stat().st_size != size:
         raise ProviderError(
             "The generated clip could not be downloaded from GCS.",
             code="provider_download_failed",
             retryable=True,
         )
+    os.replace(partial, destination)
+    atomic_write_json(destination.with_name(destination.name + ".gcs-object.json"), {
+        "uri": uri, "generation": generation, "size": size, "sha256": sha256_file(destination),
+        "crc32c": metadata.get("crc32c"), "md5Hash": metadata.get("md5Hash"),
+    })
 
 
 def upload_reference_image(
@@ -637,6 +584,7 @@ def upload_reference_image(
     destination_uri: str,
     *,
     expected_sha256: str,
+    project_id: str | None = None,
 ) -> None:
     validate_gcs_uri(destination_uri)
     if not source.is_file() or sha256_file(source) != expected_sha256:
@@ -644,22 +592,31 @@ def upload_reference_image(
             "The approved local reference image is missing or changed; compile a fresh exact plan.",
             code="reference_asset_changed",
         )
-    executable = shutil.which("gcloud")
-    if not executable:
-        raise ProviderError("gcloud CLI is not installed or not on PATH")
-    result = _run(
-        [
-            executable,
-            "storage",
-            "cp",
-            "--content-type",
-            "image/png" if source.suffix.lower() == ".png" else "image/jpeg",
-            str(source),
-            destination_uri,
-        ],
-        timeout=600,
-    )
+    from .gcp_auth import GcpAuthError, run_bound_gcloud
+    try:
+        result = run_bound_gcloud(
+            [
+                "storage",
+                "cp",
+                "--content-type",
+                "image/png" if source.suffix.lower() == ".png" else "image/jpeg",
+                str(source),
+                destination_uri,
+            ],
+            timeout=600,
+            project_id=project_id,
+        )
+    except GcpAuthError as exc:
+        code = "provider_reference_reauthentication_required" if exc.code == "auth_required" else "provider_reference_upload_failed"
+        raise ProviderError(str(exc), code=code, retryable=exc.retryable, remedy=exc.remedy) from exc
     if result.returncode != 0:
+        detail = (result.stderr or "").lower()
+        if "reauthentication failed" in detail or "reauth is required" in detail:
+            raise ProviderError(
+                "gcloud sign-in requires interactive reauthentication. Run gcloud auth login in your own terminal, then explicitly resume the pre-submission upload failure.",
+                code="provider_reference_reauthentication_required",
+                retryable=True,
+            )
         raise ProviderError(
             "The approved reference image could not be uploaded to GCS.",
             code="provider_reference_upload_failed",

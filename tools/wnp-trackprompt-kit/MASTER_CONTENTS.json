@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "files": {
+    "PROMPT_START.txt": "1214e1be107853e97dccce810c6c94024def01149e941c41009862333e62de75",
+    "README.md": "7b520da9b6305d429932b5d16ba086c170c57fc79dece2f9281175166635b4ff",
+    "examples/demo.py": "f3362d897e8b243d4a52c3c627b85c81238c241a50512d5d167ae3856cdf3315",
+    "schemas/error.schema.json": "d1c542d892dcfdc9000a981aee180e87fe1a89a218f4253b335cfada94178b1c",
+    "schemas/event.schema.json": "3e9b935f3644a3604eb4a37752986987a42216fee8cb8801b353040910d6ae29",
+    "schemas/evidence.schema.json": "984197f1eb56a7a1d26e9842881d91e0dc2d9ef722f39747cb7f582330e237b8",
+    "schemas/node.schema.json": "4f431f3194faa94d69b8d2e968a173570a9c892564ae90d1b2efd5da47537503",
+    "schemas/project.schema.json": "1a8b7c83a367dd5dfec07010790e830df28c29af9fb690d9e35360218b6a1521",
+    "schemas/state.schema.json": "479a00f017b1c515fe80a5d35a86e4dbf42a394806944b43ff511de054d549bb",
+    "schemas/sync.schema.json": "e4ceb77f130941220bb14fd89127bdbd5a099ba2191e35fa30ed9b04d62e5da7",
+    "spec/ADAPTER_GUIDE.md": "f5127c96a9efbd364d6bd94902fa72c25d254abb49ca374404d599d93b8a9cc8",
+    "spec/SECURITY.md": "07283d9bc67ec823ebe7e724ced00d0c96bdddecaf59b87aafdd29db57d66a34",
+    "spec/SPEC_CLARIFICATIONS.md": "11017f08a88cf24fbdc74803757637129277db540f6dd8f04d145e1eec36010a",
+    "spec/WNP1.md": "eeea6cb0ea895996040106f96f04eee9efe50fc83cfbfda785fff2d05946b3f8",
+    "src/wnp_host/__init__.py": "082db7687387fc37d111ad7736a3227cc6e2ee8c317ad61a77ab23f30f8a2f2e",
+    "src/wnp_host/api.py": "144b0c0f93d7cceb7d948e1418cfb2972c74daa18403a5ed725c86183372f917",
+    "src/wnp_host/cli.py": "a0b284c16b3b8d3694a3ba285c0da7adea9fb5088c5686375e83e002f154300e",
+    "src/wnp_host/fs.py": "1f3b6a86e62b9ed6236081d4282abea8673f185bd27480abcc6b34fa993dd9b4",
+    "src/wnp_host/model.py": "55a07b3cd349d8ba2ed3d6524874b79d236ff58e75c5f097aab7b65dd085bbe5",
+    "src/wnp_host/store.py": "8867c00ed88bc5ccdf0018ddf1a9afd4d38501ebf2a79017462b523f6a32c027",
+    "tests/test_api.py": "ca4328a7662583514cd9dea089902eff8d4acf6f41bb54248d402a67880f8e3b",
+    "tests/test_core.py": "1d2cecbe2e5ea1b85396b22e4914324838ea7341b07e33f281e3b81f9d3ad2ab",
+    "tests/test_hardening.py": "856ab550b538b647f7ad47cb9a27bac4bfec95a784848ffc6880f67442f9a628",
+    "tests/test_schema_examples.py": "9699b6031060fa2843d4708baf5e2d6b1cb0b074ab853e70cf0879050affaba7",
+    "wnp.py": "83f1306b82ed482367df17d9382a37aef7fa22d3ba7eb1a61bfd8cd2dc4d507b"
+  }
+}

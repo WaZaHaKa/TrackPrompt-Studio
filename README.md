@@ -1,5 +1,10 @@
 # TrackPrompt Studio
 
+For the versioned Hayale 16-scene GCP workflow, start with
+`./run-hayale-16x4.ps1 -Action Check` and the
+[Hayale operator runbook](docs/hayale-16x4-runbook.md). Preparing and testing the
+workflow does not authorize a paid render or private media upload.
+
 ## WZHK Media Mission Control
 
 The primary local production-render interface is the modern React Mission

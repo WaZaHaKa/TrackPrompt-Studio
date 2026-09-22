@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "hayale-flowers-promo",
+  "title": "Hayale Flowers - V2 - 60 second cinematic promo",
+  "selectedProfileId": "quality-1080p",
+  "generationProfiles": [
+    {
+      "profileId": "quality-1080p",
+      "modelId": "veo-3.1-generate-001",
+      "resolution": "1080p",
+      "aspectRatio": "16:9",
+      "fps": 24,
+      "durationSeconds": 8,
+      "sampleCount": 1,
+      "generateAudio": false,
+      "enhancePrompt": false,
+      "compressionQuality": "optimized",
+      "personGeneration": "disallow"
+    }
+  ],
+  "maxSpendUsd": 11.2,
+  "retryReserveFactor": 1,
+  "requiredShotIds": [
+    "shot-001",
+    "shot-002",
+    "shot-003",
+    "shot-004",
+    "shot-005",
+    "shot-006",
+    "shot-007"
+  ],
+  "storagePrefix": "hayale-promo-v2",
+  "localOutputRoot": ".trackprompt-data/video-generation/hayale-flowers-promo",
+  "timeline": {
+    "durationSeconds": 60,
+    "fps": 24,
+    "width": 1920,
+    "height": 1080,
+    "clockSource": "fixed-duration",
+    "audioIsOptionalAndReplaceable": true,
+    "introAndOutroUseShot": "shot-007"
+  }
+}

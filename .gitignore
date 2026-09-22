@@ -5,6 +5,7 @@
 
 # TrackPrompt runtime state (uploads, derived audio, SQLite, model cache)
 .trackprompt-data/
+.wnp/
 
 # Reviewed model seeds/caches stay local and are provisioned into Docker volumes.
 deep-models/

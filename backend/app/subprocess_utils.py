@@ -31,7 +31,12 @@ class BoundedProcessResult:
 
 def _bounded_drain(stream: BinaryIO, limit: int, target: bytearray, exceeded: list[bool]) -> None:
     while True:
-        chunk = stream.read(64 * 1024)
+        try:
+            chunk = stream.read(64 * 1024)
+        except (OSError, ValueError):
+            # Bounded process cleanup may close a pipe while its daemon drain
+            # is waking from a read. Keep the captured prefix and stop cleanly.
+            return
         if not chunk:
             return
         remaining = max(0, limit - len(target))
@@ -150,6 +155,7 @@ def run_process_bounded(
     capture_stdout: bool = True,
     stdout_limit: int = 1024 * 1024,
     stderr_limit: int = 64 * 1024,
+    hide_window: bool = False,
 ) -> BoundedProcessResult:
     """Run a shell-free subprocess while draining output into fixed-size buffers."""
     process = subprocess.Popen(
@@ -159,7 +165,18 @@ def run_process_bounded(
         stderr=subprocess.PIPE,
         shell=False,
         env=dict(environment) if environment is not None else None,
-        creationflags=(subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0),
+        creationflags=(
+            (
+                subprocess.CREATE_NEW_PROCESS_GROUP
+                | (
+                    getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                    if hide_window
+                    else 0
+                )
+            )
+            if os.name == "nt"
+            else 0
+        ),
         start_new_session=os.name != "nt",
     )
     stdout = bytearray()

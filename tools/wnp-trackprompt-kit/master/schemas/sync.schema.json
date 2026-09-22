@@ -1,0 +1,491 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:wzhk:wnp:1:sync",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "const": "wnp/1"
+    },
+    "stream": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "after": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "head": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "next_after": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "more": {
+      "type": "boolean"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attempt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "snapshot": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  "idle",
+                  "queued",
+                  "running",
+                  "waiting",
+                  "paused",
+                  "complete",
+                  "failed",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "health": {
+                "enum": [
+                  "ok",
+                  "degraded",
+                  "error",
+                  "unknown"
+                ]
+              },
+              "run": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "task": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "attempt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "detail": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "progress": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "current": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "unit": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                      }
+                    },
+                    "required": [
+                      "current",
+                      "unit"
+                    ],
+                    "additionalProperties": true
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "extensions": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "state",
+              "health"
+            ],
+            "additionalProperties": true,
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "protocol"
+                  ]
+                },
+                {
+                  "required": [
+                    "stream"
+                  ]
+                },
+                {
+                  "required": [
+                    "sequence"
+                  ]
+                },
+                {
+                  "required": [
+                    "timestamp"
+                  ]
+                },
+                {
+                  "required": [
+                    "observations"
+                  ]
+                },
+                {
+                  "required": [
+                    "metrics"
+                  ]
+                }
+              ]
+            }
+          },
+          "data": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/[A-Za-z0-9_./-]+$",
+                  "maxLength": 512
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 8388608
+                },
+                "media_type": {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                "kind": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                }
+              },
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "additionalProperties": true
+            },
+            "maxItems": 32
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "request_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "stream",
+          "sequence",
+          "timestamp",
+          "type"
+        ],
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "state.changed"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "snapshot"
+              ]
+            }
+          }
+        ]
+      },
+      "maxItems": 5000
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "const": "wnp/1"
+        },
+        "stream": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "state": {
+          "enum": [
+            "idle",
+            "queued",
+            "running",
+            "waiting",
+            "paused",
+            "complete",
+            "failed",
+            "degraded",
+            "unknown"
+          ]
+        },
+        "health": {
+          "enum": [
+            "ok",
+            "degraded",
+            "error",
+            "unknown"
+          ]
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "current": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "total": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "unit": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+                }
+              },
+              "required": [
+                "current",
+                "unit"
+              ],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object"
+        },
+        "observations": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "protocol",
+        "stream",
+        "sequence",
+        "timestamp",
+        "state",
+        "health"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "protocol",
+    "stream",
+    "after",
+    "head",
+    "next_after",
+    "more",
+    "events"
+  ],
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "more": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "snapshot"
+        ]
+      }
+    }
+  ]
+}

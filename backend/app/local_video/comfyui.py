@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import mimetypes
+import os
 import re
 import secrets
 import urllib.error
@@ -12,6 +14,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 
 class ComfyUIProviderError(RuntimeError):
@@ -28,6 +31,11 @@ class ComfyUIProviderError(RuntimeError):
         self.safe_message = message
         self.retryable = retryable
         self.status_code = status_code
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *_args: Any, **_kwargs: Any) -> None:
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,10 +144,13 @@ class ComfyUIClient:
         allow_non_loopback: bool = False,
         connect_timeout_seconds: float = 5,
         request_timeout_seconds: float = 30,
+        exclusive_control: bool = False,
     ) -> None:
         self.base_url = _safe_endpoint(base_url, allow_non_loopback=allow_non_loopback)
         self.connect_timeout_seconds = connect_timeout_seconds
         self.request_timeout_seconds = request_timeout_seconds
+        self.exclusive_control = exclusive_control
+        self._opener = urllib.request.build_opener(_NoRedirectHandler())
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}/{path.lstrip('/')}"
@@ -159,7 +170,7 @@ class ComfyUIClient:
             headers["Content-Type"] = content_type
         request = urllib.request.Request(self._url(path), data=body, headers=headers, method=method)
         try:
-            with urllib.request.urlopen(
+            with self._opener.open(
                 request,
                 timeout=timeout_seconds or self.request_timeout_seconds,
             ) as response:
@@ -291,10 +302,121 @@ class ComfyUIClient:
         safe = urllib.parse.quote(prompt_id, safe="")
         return self._request_json("GET", f"/history/{safe}", label="history")
 
-    def cancel(self, prompt_id: str) -> None:
-        # Interrupt the active workflow, then remove this exact queued prompt if
-        # it has not started. Both operations are idempotent in ComfyUI.
+    def queue_snapshot(self) -> dict[str, Any]:
+        return self._request_json("GET", "/queue", label="queue")
+
+    @staticmethod
+    def _queue_contains(value: object, prompt_id: str) -> bool:
+        if isinstance(value, str):
+            return value == prompt_id
+        if isinstance(value, list):
+            return any(ComfyUIClient._queue_contains(item, prompt_id) for item in value)
+        if isinstance(value, dict):
+            return any(ComfyUIClient._queue_contains(item, prompt_id) for item in value.values())
+        return False
+
+    @staticmethod
+    def history_outputs(history: dict[str, Any], prompt_id: str) -> tuple[dict[str, str], ...]:
+        raw = history.get(prompt_id)
+        record = raw if isinstance(raw, dict) else history
+        outputs = record.get("outputs") if isinstance(record, dict) else None
+        result: list[dict[str, str]] = []
+        if not isinstance(outputs, dict):
+            return ()
+        for node_id, node in outputs.items():
+            if not isinstance(node, dict):
+                continue
+            for key in ("images", "videos", "gifs"):
+                rows = node.get(key)
+                if not isinstance(rows, list):
+                    continue
+                for row in rows:
+                    if not isinstance(row, dict) or not isinstance(row.get("filename"), str):
+                        continue
+                    result.append(
+                        {
+                            "nodeId": str(node_id),
+                            "filename": Path(str(row["filename"]).replace("\\", "/")).name,
+                            "subfolder": str(row.get("subfolder") or "").replace("\\", "/"),
+                            "type": str(row.get("type") or "output"),
+                        }
+                    )
+        return tuple(result)
+
+    def retrieve_output(
+        self,
+        output: dict[str, str],
+        *,
+        attempt_root: Path,
+        destination_name: str,
+        maximum_bytes: int = 8_000_000_000,
+    ) -> tuple[Path, str]:
+        """Copy one ComfyUI output into an authorized attempt directory."""
+
+        filename = output.get("filename", "")
+        subfolder = output.get("subfolder", "")
+        output_type = output.get("type", "output")
+        if (
+            not filename
+            or Path(filename).name != filename
+            or ".." in subfolder.split("/")
+            or subfolder.startswith(("/", "\\"))
+            or output_type not in {"output", "temp"}
+        ):
+            raise ComfyUIProviderError("provider_output_identity_invalid", "The ComfyUI output identity is invalid.")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}", destination_name):
+            raise ComfyUIProviderError("provider_output_identity_invalid", "The local output identity is invalid.")
+        root = attempt_root.resolve()
+        root.mkdir(parents=True, exist_ok=True)
+        destination = (root / destination_name).resolve()
+        if destination.parent != root:
+            raise ComfyUIProviderError("provider_output_scope_invalid", "The local output escaped its attempt scope.")
+        query = urllib.parse.urlencode(
+            {"filename": filename, "subfolder": subfolder, "type": output_type}
+        )
+        request = urllib.request.Request(self._url(f"/view?{query}"), headers={"Accept": "application/octet-stream"})
+        temporary = destination.with_name(f".{destination.name}.partial-{uuid4().hex}")
+        digest = hashlib.sha256()
+        received = 0
         try:
+            with self._opener.open(request, timeout=self.request_timeout_seconds) as response, temporary.open("xb") as stream:
+                while chunk := response.read(1024 * 1024):
+                    received += len(chunk)
+                    if received > maximum_bytes:
+                        raise ComfyUIProviderError("provider_output_too_large", "The ComfyUI output is too large.")
+                    digest.update(chunk)
+                    stream.write(chunk)
+            if received <= 0:
+                raise ComfyUIProviderError("provider_output_empty", "The ComfyUI output is empty.")
+            os.replace(temporary, destination)
+        except ComfyUIProviderError:
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise ComfyUIProviderError(
+                "provider_output_unavailable", "The ComfyUI output could not be retrieved.", retryable=True
+            ) from exc
+        finally:
+            temporary.unlink(missing_ok=True)
+        return destination, digest.hexdigest()
+
+    def cancel(self, prompt_id: str) -> None:
+        # ComfyUI's /interrupt is process-global. Only use it after the queue
+        # snapshot proves that this exact prompt is the active one; cancelling a
+        # queued prompt must never abort another operator's render.
+        active = False
+        try:
+            snapshot = self.queue_snapshot()
+            running = snapshot.get("queue_running")
+            active = self._queue_contains(running, prompt_id)
+        except ComfyUIProviderError:
+            active = False
+        if active:
+            if not self.exclusive_control:
+                raise ComfyUIProviderError(
+                    "provider_cancel_unresolved",
+                    "The active ComfyUI prompt cannot be safely interrupted without an exclusive local lease.",
+                    retryable=True,
+                )
             self._request_bytes(
                 "POST",
                 "/interrupt",
@@ -302,9 +424,6 @@ class ComfyUIClient:
                 content_type="application/json",
                 maximum_bytes=1_000_000,
             )
-        except ComfyUIProviderError as exc:
-            if not exc.retryable:
-                raise
         self._request_bytes(
             "POST",
             "/queue",

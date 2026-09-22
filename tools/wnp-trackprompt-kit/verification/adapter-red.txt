@@ -1,0 +1,41 @@
+FFFF....
+======================================================================
+FAIL: test_completion_requires_final_validation (test_adapter_frames.AdapterTests.test_completion_requires_final_validation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_adapter_frames.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_trackprompt'),'Adapter must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Adapter must be implemented
+
+======================================================================
+FAIL: test_raw_verified_requires_manifest_binding (test_adapter_frames.AdapterTests.test_raw_verified_requires_manifest_binding)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_adapter_frames.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_trackprompt'),'Adapter must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Adapter must be implemented
+
+======================================================================
+FAIL: test_verified_raw_is_not_final_task_or_run_complete (test_adapter_frames.AdapterTests.test_verified_raw_is_not_final_task_or_run_complete)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_adapter_frames.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_trackprompt'),'Adapter must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Adapter must be implemented
+
+======================================================================
+FAIL: test_worker_fields_are_transient (test_adapter_frames.AdapterTests.test_worker_fields_are_transient)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/trackprompt/tests/test_adapter_frames.py", line 9, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_trackprompt'),'Adapter must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : Adapter must be implemented
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.031s
+
+FAILED (failures=4)

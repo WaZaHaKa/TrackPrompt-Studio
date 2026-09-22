@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "1.0.0",
+  "shots": [
+    {
+      "shotId": "shot-001",
+      "chapterId": "storefront",
+      "order": 1,
+      "title": "Storefront reveal",
+      "narrativeIntent": "Storefront reveal",
+      "prompt": "Slow, stable eye-level dolly toward the real storefront in the first-frame reference. Keep the whole black awning and entrance recognizable throughout. The traffic pole, facade, glazed displays, pavement and plant racks stay fixed in their actual positions. The clear doorway strips and leaves move only slightly in a natural breeze. A short inviting reveal, not a redesign or a walk into an invented building. Settle the camera by six seconds.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092027,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-002",
+      "chapterId": "store-tour",
+      "order": 2,
+      "title": "Tour one - entrance and bouquets",
+      "narrativeIntent": "Tour one - entrance and bouquets",
+      "prompt": "A gentle entrance-side dolly through the existing compact flower display seen in the first frame. Begin with the orchids and plants on the left and bouquets on the right, then reveal a little more depth with a physically modest half-meter move. Preserve the window, mirror, display tables, wrapping and bouquet identities. No passage through flowers or objects, no new aisle, no people. Keep every arrangement stable while only camera parallax and tiny natural leaves provide movement. Ease to a stop by six seconds.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092028,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-003",
+      "chapterId": "store-tour",
+      "order": 3,
+      "title": "Tour two - interior shelves",
+      "narrativeIntent": "Tour two - interior shelves",
+      "prompt": "A complementary gentle left-to-right interior slider shot from the supplied reference. Keep the foreground orchids, hanging green plant, mirror, cream textured wall, glass shelves and real display layout fixed and recognizable. Modest 30-centimeter camera travel and slight focus shift from foreground orchids to the wall displays. Preserve the compact store dimensions and all essential architectural landmarks; no renovation or extra room. Maintain the same warm-neutral daylight as the previous store view. Smooth settle by six seconds.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092029,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-004",
+      "chapterId": "floral-detail",
+      "order": 4,
+      "title": "Orchid - delicate detail",
+      "narrativeIntent": "Orchid - delicate detail",
+      "prompt": "A refined macro drift of the exact pale yellow and blush orchid cluster in the first frame. Preserve the petal shapes, spotted centers, branch structure and natural colors without blooming, morphing or multiplying flowers. A very small rightward camera drift with a gentle focus transition between the two principal blooms, natural warm-neutral window light, creamy shop bokeh. Keep the nearest blossom sharp and completely readable. Settle by six seconds.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092030,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-005",
+      "chapterId": "bouquet-hero",
+      "order": 5,
+      "title": "Bouquet - abundance and craft",
+      "narrativeIntent": "Bouquet - abundance and craft",
+      "prompt": "A slow five-degree camera orbit around the exact orange, cream and purple bouquet in the first-frame reference, preserving the central orange gerbera, creamy lisianthus, purple chrysanthemums, baby breath and green foliage as one stable crafted arrangement. Keep the complete central arrangement inside the wide frame. Subtle depth and light, no hands, no changes to flower counts or wrapping, no flowers growing or rearranging themselves. Warm natural cinematic shop photography. Ease into a stable hero composition by six seconds.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092031,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-006",
+      "chapterId": "floral-detail",
+      "order": 6,
+      "title": "Rose - romantic close",
+      "narrativeIntent": "Rose - romantic close",
+      "prompt": "An intimate final floral macro of the single red rose in the first frame. Preserve its exact petal spiral, burgundy-red color, stem and leaves. A subtle two-percent camera push and soft focus breathing in the background, without warping the rose. Velvety natural petal detail, clean soft highlight edges, green and ivory shop bokeh. No added dew or extra blooms. End in a calm red-rose hero frame that visually connects to the burgundy floral logo.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092032,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    },
+    {
+      "shotId": "shot-007",
+      "chapterId": "logo-bookend",
+      "order": 7,
+      "title": "Logo - artistic floral signature",
+      "narrativeIntent": "Logo - artistic floral signature",
+      "prompt": "Animate the supplied actual Hayale Flowers logo as an elegant artistic brand signature. Keep its complete circular composition, burgundy monogram, Hebrew and English lettering, floral cluster and gold rings exactly recognizable and front-facing. Locked camera. Subtle luminous gold tracing along the existing ring, a delicate breath of the existing illustrated petals and a very slight layered-paper parallax, with a soft ivory background. No new letters, no retyping, no misspelling, no changing glyph shapes or invented branding. Motion peaks within the first three seconds and resolves into a calm legible logo hold by four seconds, holding to eight seconds. This single clip will be reused at both ends of the promo.",
+      "negativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+      "sourceSectionHints": [],
+      "energyRange": [
+        0,
+        1
+      ],
+      "seed": 17092033,
+      "required": true,
+      "reuseModes": [
+        "forward"
+      ],
+      "continuityGroupIds": [
+        "hayale-world"
+      ],
+      "continuationMode": "first-frame-reference",
+      "reviewNotes": [
+        "AI-derived reference; preserve subject and layout; final artistic review required."
+      ]
+    }
+  ]
+}

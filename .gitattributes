@@ -1,0 +1,2 @@
+# Supplied protocol bundle: preserve exact manifest-bound bytes on Windows too.
+tools/wnp-trackprompt-kit/** -text

@@ -227,6 +227,10 @@ def export_davinci_package(
             "Conservative local assembly for final artistic finishing in DaVinci Resolve.",
         )
     )
+    audio_note = (
+        "The one continuous 48 kHz stereo master is the only audible source."
+        if timeline.get("audioPath") else "Silent timeline; source clip audio is intentionally omitted."
+    )
     readme = output_root / "README-DAVINCI.txt"
     atomic_write_text(
         readme,
@@ -234,10 +238,10 @@ def export_davinci_package(
         "1. Import the FCPXML rough cut.\n"
         "2. If needed, use the FCP 7 XML or EDL fallback.\n"
         "3. Relink through relink-map.csv; derived-media contains one rendered event per edit.\n"
-        "4. The one continuous 48 kHz stereo master is the only audible source.\n\n"
+        f"4. {audio_note}\n\n"
         f"{handoff_summary}\n\n"
-        f"The timeline is {width}x{int(timeline.get('height', 1080))}, 24 FPS, Rec.709 SDR. "
-        "Generated provider clips remain "
+        f"The timeline is {width}x{int(timeline.get('height', 1080))}, {int(timeline['fps'])} FPS, Rec.709 SDR. "
+        "Original source media remain "
         "immutable; all retimes, crops, reversals, fades and overlays exist only in derived media.\n"
         "Apply only final artistic touches, grading and optional title work in DaVinci Resolve.\n",
     )

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "hayale-flowers-promo",
+  "title": "Hayale Flowers - V2 - 60 second cinematic promo",
+  "visualIdentity": "An elegant cinematic invitation to the real Hayale Flowers shop, moving from its recognizable street frontage through two complementary compact-store tour views into intimate floral details. Warm-natural daylight, restrained premium photography, authentic flowers and store architecture. The supplied burgundy, ivory and gold logo appears in a separate artistic bookend.",
+  "protagonist": "The actual flower shop, its real displays, and selected flowers. No people.",
+  "palette": [
+    "warm ivory",
+    "natural green",
+    "soft blush",
+    "burgundy",
+    "restrained gold"
+  ],
+  "cameraLanguage": [
+    "24 FPS",
+    "slow stable dolly and short slider movements",
+    "natural lens perspective",
+    "gentle macro focus transition",
+    "no extreme camera flight"
+  ],
+  "lightingLanguage": [
+    "soft warm-neutral daylight",
+    "clean white petals",
+    "controlled highlights",
+    "natural interior lighting"
+  ],
+  "textureLanguage": [
+    "real petal and leaf texture",
+    "authentic stone and glass",
+    "soft photographic depth"
+  ],
+  "globalNegativePrompt": "people, faces, hands, new architecture, extra doors, enlarged rooms, invented flowers, duplicated petals, morphing products, plastic CGI, aggressive HDR, flicker, whip pans, internal cuts, watermarks, subtitles, invented text; only the supplied existing logo lettering may be visible in the logo scene",
+  "privacyRules": [
+    "Audio and music analysis stay local and are never sent to Veo.",
+    "No filenames, paths, song titles, raw lyrics or metadata in prompts.",
+    "Use only the seven reviewed image references."
+  ]
+}

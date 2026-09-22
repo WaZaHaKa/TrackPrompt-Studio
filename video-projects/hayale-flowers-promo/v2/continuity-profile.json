@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "hayale-flowers-promo",
+  "masterSeed": 17092026,
+  "seedLocked": true,
+  "characterProfiles": [],
+  "visualAnchors": {
+    "world": "The real compact Hayale shop and its flowers",
+    "palette": [
+      "warm ivory",
+      "natural green",
+      "soft blush",
+      "burgundy",
+      "restrained gold"
+    ],
+    "aspectRatio": "16:9"
+  },
+  "continuityGroups": [
+    {
+      "id": "hayale-world",
+      "label": "Hayale warm-natural visual identity",
+      "lockedTokens": [
+        "same real flower shop",
+        "warm-neutral photographic light",
+        "natural flower colors",
+        "restrained stable camera motion"
+      ]
+    }
+  ]
+}

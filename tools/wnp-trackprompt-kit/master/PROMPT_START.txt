@@ -1,0 +1,12 @@
+Read this installed kit's master/README.md, master/spec/WNP1.md,
+SPEC_CLARIFICATIONS.md and SECURITY.md, plus this project's own AGENTS.md.
+Integrate the versioned WNP master through a project-owned adapter; do not fork or
+silently change the wire contract. Keep WNP remote-read-only. First inspect the
+actual app lifecycle, state ownership, storage, privacy and test baseline.
+Map meaningful durable transitions to replayable state and stable event IDs;
+keep metrics/heartbeats independently timestamped. Do not infer completion from
+filenames, unvalidated logs or a missing provider job. Add adapter tests and run
+the included synthetic suite. Do not deploy or alter firewall/SSH/VPN settings
+silently. Report IMPLEMENTED_REFERENCE, INTEGRATED_LOCAL and VERIFIED_LIVE as
+separate statuses. Provide one verified local startup command when integration
+is actually ready; never claim machine-specific checks were run when not run.

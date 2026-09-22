@@ -23,6 +23,8 @@ import {
 } from '../components'
 import type { StructuredError } from '../types'
 import { LocalVideoProviderPanel } from './LocalVideoProviderPanel'
+import { HayalePlanSummary } from './HayalePlanSummary'
+import { hayaleEdit } from './hayaleEdit'
 import {
   type VideoCatalog,
   type VideoAudioSelection,
@@ -183,6 +185,7 @@ export function VideoGenerationScreen() {
     analysisId && projectId && gcpProjectId.trim() && gcsBucket.trim() && selectedProfile?.available,
   )
   const exactConfirmation = job?.authorizationPhrase ?? ''
+  const isHayale = hayaleEdit(job?.continuity) !== null
 
   const chooseProject = (nextProjectId: string): void => {
     setProjectId(nextProjectId)
@@ -381,6 +384,7 @@ export function VideoGenerationScreen() {
       </label> : null}
 
       {job ? <>
+        <HayalePlanSummary continuity={job.continuity} jobId={job.jobId} />
         <section className="mc-card mc-video-plan" aria-labelledby="video-plan-title">
           <div className="mc-card__heading"><div><span className="mc-eyebrow">Step 2 · immutable batch</span><h2 id="video-plan-title">Review prompts and maximum spend</h2></div><StatusBadge tone={badgeTone(job.state)}>{label(job.state)}</StatusBadge></div>
           <div className="mc-video-metrics"><Metric label="Shots" value={job.totalShotCount} detail={`${job.verifiedShotCount} verified`} /><Metric label="Base estimate" value={money(job.cost.baseEstimatedUsd)} /><Metric label="Conservative" value={money(job.cost.conservativeEstimatedUsd)} /><Metric label="Maximum spend" value={money(job.cost.maxSpendUsd)} /></div>
@@ -402,9 +406,9 @@ export function VideoGenerationScreen() {
             <code>{exactConfirmation}</code>
             <Button tone="primary" busy={busy === 'authorize'} disabled={confirmation !== exactConfirmation} icon={<ShieldCheck aria-hidden="true" />} onClick={() => { void run('authorize', () => videoGenerationClient.authorize(job.jobId, confirmation), () => setConfirmation('')) }}>Authorize this complete exact batch once</Button>
           </div> : null}
-          {job.state === 'authorized' ? <Notice tone="success" title="Exact batch authorized"><p>Start submits the smoke shot first. Mission Control automatically continues the unchanged remaining batch only after that clip passes technical verification.</p><Button tone="primary" busy={busy === 'start'} icon={<Play aria-hidden="true" />} onClick={() => { void run('start', () => videoGenerationClient.action(job.jobId, 'start')) }}>Start smoke shot and complete batch</Button></Notice> : null}
-          {LIVE_STATES.has(job.state) ? <div className="mc-button-row"><Button tone="danger" busy={busy === 'cancel'} onClick={() => { void run('cancel', () => videoGenerationClient.action(job.jobId, 'cancel')) }}>Cancel batch safely</Button></div> : null}
-          {job.error ? <Notice tone="error" title={label(job.error.code)}><p>{job.error.summary}</p>{job.error.httpStatus ? <p>HTTP {job.error.httpStatus}{job.error.providerStatus ? ` · ${job.error.providerStatus}` : ''}{job.error.diagnosticId ? ` · diagnostic ${job.error.diagnosticId}` : ''}</p> : null}{job.error.retryable || job.state.startsWith('blocked_') ? <Button busy={busy === 'resume'} onClick={() => { void run('resume', () => videoGenerationClient.action(job.jobId, 'resume')) }}>Resume exact plan</Button> : null}</Notice> : null}
+          {job.state === 'authorized' && !isHayale ? <Notice tone="success" title="Exact batch authorized"><p>Start submits the smoke shot first. Mission Control automatically continues the unchanged remaining batch only after that clip passes technical verification.</p><Button tone="primary" busy={busy === 'start'} icon={<Play aria-hidden="true" />} onClick={() => { void run('start', () => videoGenerationClient.action(job.jobId, 'start')) }}>Start smoke shot and complete batch</Button></Notice> : null}
+          {LIVE_STATES.has(job.state) && !isHayale ? <div className="mc-button-row"><Button tone="danger" busy={busy === 'cancel'} onClick={() => { void run('cancel', () => videoGenerationClient.action(job.jobId, 'cancel')) }}>Cancel batch safely</Button></div> : null}
+          {job.error ? <Notice tone="error" title={label(job.error.code)}><p>{job.error.summary}</p>{job.error.httpStatus ? <p>HTTP {job.error.httpStatus}{job.error.providerStatus ? ` · ${job.error.providerStatus}` : ''}{job.error.diagnosticId ? ` · diagnostic ${job.error.diagnosticId}` : ''}</p> : null}{!isHayale && (job.error.retryable || job.state.startsWith('blocked_')) ? <Button busy={busy === 'resume'} onClick={() => { void run('resume', () => videoGenerationClient.action(job.jobId, 'resume')) }}>Resume exact plan</Button> : null}</Notice> : null}
           {job.analysisDependency.legacyAnalysisMissing ? <Notice tone="warning" title="Legacy analysis workspace is unavailable"><p>Your generated clips are safe. Continue using the compiled video plan and reattach the original local audio master only if its durable binding is unavailable.</p><div className="mc-button-row"><Button busy={busy === 'repair-legacy'} onClick={() => { void run('repair-legacy', () => videoGenerationClient.repairLegacyDependency(job.jobId)) }}>Repair legacy dependency</Button><Button icon={<FolderOpen aria-hidden="true" />} busy={busy === 'audio-selecting'} onClick={() => { void pickAudio() }}>Reattach original audio</Button><Button disabled={!job.audioMasterBound || job.verifiedShotCount !== job.totalShotCount} onClick={() => { void run('resolve', () => videoGenerationClient.action(job.jobId, 'resolve')) }}>Resolve timeline</Button></div></Notice> : null}
         </section>
 
@@ -416,15 +420,15 @@ export function VideoGenerationScreen() {
             <p>{shot.prompt}</p>
             <AdvancedDetails summary="Negative prompt, seed, and continuity"><p>{shot.negativePrompt}</p><p><code>Seed {shot.seed}</code> · variation {shot.variationIndex} · {shot.continuationMode}</p><p>Groups: {shot.continuityGroupIds.join(', ') || 'none'}{shot.referenceAssetId ? ` · reference ${shot.referenceAssetId}` : ''}</p></AdvancedDetails>
             <footer><span>Attempt {shot.attemptCount || '—'} · {money(shot.reservedCostUsd)}</span><div className="mc-button-row">
-              {shot.state === 'verified' ? <><Button tone="quiet" onClick={() => { void run(`accept-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'accepted')) }}><Check aria-hidden="true" />Accept</Button><Button tone="quiet" onClick={() => { void run(`reject-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'rejected')) }}>Reject</Button></> : null}
-              {['failed', 'filtered', 'verified'].includes(shot.state) ? <><Button busy={busy === `retry-${shot.shotId}`} onClick={() => { void run(`retry-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'same_setup')) }}>Retry same setup</Button><Button tone="quiet" busy={busy === `variation-${shot.shotId}`} onClick={() => { void run(`variation-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'new_variation'), () => setConfirmation('')) }}>Generate new variation</Button></> : null}
-              {shot.previousShotId && job.shots.some((candidate) => candidate.shotId === shot.previousShotId && candidate.reviewState === 'accepted') ? <Button tone="quiet" busy={busy === `chain-${shot.shotId}`} onClick={() => { void run(`chain-${shot.shotId}`, () => videoGenerationClient.chainReference(job.jobId, shot.shotId, shot.previousShotId as string), () => setConfirmation('')) }}>Use previous accepted end frame</Button> : null}
+              {shot.state === 'verified' && !isHayale ? <><Button tone="quiet" onClick={() => { void run(`accept-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'accepted')) }}><Check aria-hidden="true" />Accept</Button><Button tone="quiet" onClick={() => { void run(`reject-${shot.shotId}`, () => videoGenerationClient.review(job.jobId, shot.shotId, 'rejected')) }}>Reject</Button></> : null}
+              {!isHayale && ['failed', 'filtered', 'verified'].includes(shot.state) ? <><Button busy={busy === `retry-${shot.shotId}`} onClick={() => { void run(`retry-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'same_setup')) }}>Retry same setup</Button><Button tone="quiet" busy={busy === `variation-${shot.shotId}`} onClick={() => { void run(`variation-${shot.shotId}`, () => videoGenerationClient.retry(job.jobId, shot.shotId, 'new_variation'), () => setConfirmation('')) }}>Generate new variation</Button></> : null}
+              {!isHayale && shot.previousShotId && job.shots.some((candidate) => candidate.shotId === shot.previousShotId && candidate.reviewState === 'accepted') ? <Button tone="quiet" busy={busy === `chain-${shot.shotId}`} onClick={() => { void run(`chain-${shot.shotId}`, () => videoGenerationClient.chainReference(job.jobId, shot.shotId, shot.previousShotId as string), () => setConfirmation('')) }}>Use previous accepted end frame</Button> : null}
             </div></footer>
             {shot.error ? <small className="mc-video-shot__error">{shot.error.summary}</small> : null}
           </article>)}
         </section>
 
-        <section className="mc-card mc-video-delivery">
+        {!isHayale ? <section className="mc-card mc-video-delivery">
           <div className="mc-card__heading"><div><span className="mc-eyebrow">Step 3 · local finishing package</span><h2>Automatic assembly and Resolve handoff</h2></div><Download aria-hidden="true" /></div>
           <div className="mc-video-audio-binding" aria-live="polite">
             <div>
@@ -450,7 +454,7 @@ export function VideoGenerationScreen() {
           </div>
           {job.artifacts.previewUrl ? <video className="mc-video-preview" controls preload="metadata" src={job.artifacts.previewUrl} aria-label="Complete assembled music video" /> : null}
           {artifactLinks.length > 0 ? <div className="mc-video-artifacts">{artifactLinks.map(([name, url]) => <a key={name} href={url} download><ExternalLink aria-hidden="true" />{name}</a>)}</div> : null}
-        </section>
+        </section> : job.artifacts.previewUrl ? <video className="mc-video-preview" controls preload="metadata" src={job.artifacts.previewUrl} aria-label="Hayale technically verified delivery" /> : null}
       </> : null}
     </div>
   )

@@ -1,0 +1,18 @@
+Work in the current TrackPrompt-Studio Windows repository. Read
+`tools/wnp-trackprompt-kit/trackprompt/HANDOFF.md`, its master specs, explicit
+clarifications, and local AGENTS.md. This is an incident-repair + WNP integration
+implementation task, not another render experiment.
+
+Preserve run 344ab3d2444c, originals, 129-frame Shot001 outputs and all receipts.
+Do not regenerate Shot001. Do not assume a marker proves verification, one GPU
+sample proves inactivity, or absent ComfyUI history proves a request never ran.
+Find the actual local stale-worker root cause, reproduce it with a failing test,
+then integrate the supplied durable attempt/reconciliation components and WNP
+adapter into the existing architecture. Use no paid/cloud rendering or quality
+reduction. Keep WNP remote-read-only and execution authority local.
+
+Progress T0–T5 autonomously through all non-blocked inspection/code/test work. Do
+not kill/restart owned processes or submit duplicate jobs to "see what happens".
+Before live continuation, prove the exact pending provider state and exclusive
+ownership; preserve ambiguous states. Finish with evidence-backed gates and the
+single correct continuation command for this actual run, not a fresh run.

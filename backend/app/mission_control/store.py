@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import threading
@@ -8,8 +9,9 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..video_generation.mission_models import VideoGenerationEvent, VideoJobRecord
+from ..wnp import emit_encode_status, emit_render_job
 from .eta import EtaPersistentState
-from .models import JobRecord, LogEntry, RenderEvent
+from .models import EncodeJobStatus, JobRecord, LogEntry, RenderEvent
 from .render_contracts import MediaRenderJob
 
 
@@ -163,6 +165,7 @@ class MissionControlStore:
                     payload,
                 ),
             )
+        emit_render_job(json.loads(payload), record_sha256=hashlib.sha256(payload.encode()).hexdigest())
 
     def get_job(self, job_id: str) -> JobRecord | None:
         with self._lock:
@@ -187,6 +190,7 @@ class MissionControlStore:
 
     def put_media_render_job(self, job: MediaRenderJob) -> None:
         """Persist the reusable V2 job contract in Mission Control's canonical DB."""
+        payload = job.model_dump_json(by_alias=False)
         with self._lock, self._connection:
             self._connection.execute(
                 """
@@ -199,9 +203,16 @@ class MissionControlStore:
                 (
                     job.id,
                     job.updated_at.isoformat(),
-                    job.model_dump_json(by_alias=False),
+                    payload,
                 ),
             )
+        try:
+            primary = self.get_job(job.id)
+            emit_render_job(json.loads(payload), record_sha256=hashlib.sha256(payload.encode()).hexdigest(),
+                            primary=primary.model_dump(mode="json", by_alias=False) if primary else None)
+        except Exception:
+            # Observation failure cannot roll back a committed execution record.
+            pass
 
     def get_media_render_job(self, job_id: str) -> MediaRenderJob | None:
         with self._lock:
@@ -261,6 +272,18 @@ class MissionControlStore:
                     job.model_dump_json(by_alias=False),
                 ),
             )
+
+    def insert_video_job_if_absent(self, job: VideoJobRecord) -> bool:
+        """Atomic registration: a concurrent caller must never reset progress."""
+        with self._lock, self._connection:
+            cursor = self._connection.execute(
+                """INSERT INTO mission_control_video_generation_jobs
+                (id, state, created_at, updated_at, payload_json) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING""",
+                (job.id, job.state.value, job.created_at.isoformat(), job.updated_at.isoformat(),
+                 job.model_dump_json(by_alias=False)),
+            )
+            return cursor.rowcount == 1
 
     def get_video_job(self, job_id: str) -> VideoJobRecord | None:
         with self._lock:
@@ -465,3 +488,12 @@ class MissionControlStore:
                     datetime.now(UTC).isoformat(),
                 ),
             )
+        if key.startswith("encode_job:"):
+            try:
+                status = EncodeJobStatus.model_validate(value)
+                if key == "encode_job:" + status.render_job_id:
+                    payload = json.dumps(value, ensure_ascii=False, sort_keys=True)
+                    emit_encode_status(status.model_dump(mode="json", by_alias=False),
+                                       record_sha256=hashlib.sha256(payload.encode()).hexdigest())
+            except Exception:
+                pass

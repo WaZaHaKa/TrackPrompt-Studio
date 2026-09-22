@@ -1,0 +1,24 @@
+{
+  "package": "trackprompt",
+  "version": "1.0.0",
+  "protocol": "wnp/1",
+  "built_date": "2026-09-18",
+  "python_test_runtime": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "platform_tested": "linux",
+  "local_unique_tests_in_package": 61,
+  "all_component_unique_tests": 75,
+  "optional_test_modules": {
+    "Pillow": "12.3.0",
+    "jsonschema": "4.26.0"
+  },
+  "production_projects_modified": false,
+  "render_jobs_submitted": 0,
+  "cloud_model_calls_made_by_package_build": 0,
+  "windows_powershell_tested": false,
+  "windows_os_lock_tested": false,
+  "opencode_agents_run": false,
+  "existing_companion_ui_integrated": false,
+  "local_hayale_runner_patched": false,
+  "read_only_remote_api": true,
+  "scope": "Runnable reference modules plus explicit project-local integration work; not a live deployment."
+}

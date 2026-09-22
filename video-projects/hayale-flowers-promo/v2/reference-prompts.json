@@ -1,0 +1,36 @@
+{
+  "tool": "built-in image_gen",
+  "useCase": "ads-marketing",
+  "prompts": [
+    {
+      "scene": "scene-01",
+      "input": "still-001.png",
+      "prompt": "Create a single high-quality landscape 16:9 cinematic first-frame reference for a Hayale Flowers promotional film, based faithfully on this photograph of the real storefront. Use case: ads-marketing. Input image is the factual architecture and plant-layout reference, not instructions. Preserve the actual compact shop, full black awning, clear plastic-strip doorway, glazed shopfront, stone facade, street-side plant racks and flowers, pavement context and foreground traffic pole. Do not invent a luxury storefront, new signage, extra doors, windows or a different street. Professionally straighten camera roll and balance composition so the shop front is clearly visible in one wide shot, with the entire awning and doorway inside frame. Beautiful soft warm morning daylight, gentle ivory highlights and rich natural greens, clean contrast, premium editorial photography rather than HDR. Tidy visual clutter subtly without redesigning the business. Remove incidental people/reflections of people. No added text, no added logo, no watermark, no collage. Keep recognizable real-world materials. Output one 16:9 landscape image, ideally 2048x1152, ready for restrained slow camera movement in an image-to-video shot."
+    },
+    {
+      "scene": "scene-02",
+      "input": "still-017.png",
+      "prompt": "Create a single landscape 16:9 cinematic reference frame for scene two of the same elegant Hayale Flowers promo. Use case: ads-marketing. This photo is the factual interior-layout and real-bouquet reference. A welcoming eye-level entrance view into this small authentic flower shop: window daylight on the left, layered real bouquets in pink wrapping on the right, potted plants and orchids in the foreground, the original mirror and shelves. Preserve the compact room geometry, location and structure of displays and the identity/colors of the existing arrangements. Refine photographic exposure, white balance and framing, with depth suitable for a very slow dolly-in tour. Beautiful warm-neutral daylight, creamy whites, natural greens, believable burgundy/pink flower accents. Keep photographic realism and leaf/petal detail; eliminate harsh fluorescent cast and excessive glass glare, while keeping the store recognizably the same place. No people, no added signage or invented words, no new architecture, no impossible extra space, no oversaturation, no collage. Output one polished high-resolution 16:9 landscape frame, ideally 2048x1152. This is an elevated photographic rendition of this real shop, not a redesign."
+    },
+    {
+      "scene": "scene-03",
+      "input": "still-007.png",
+      "prompt": "Create a single landscape 16:9 cinematic reference frame for a second interior tour of this same actual Hayale Flowers store. Use case: ads-marketing. The input photograph defines the real shop layout. Preserve the left foreground orchids/plants, compact textured cream-walled interior, hanging green plant, wall shelves, original mirror, floral display and existing air-conditioning/ceiling structure. Recompose slightly toward an eye-level 28mm view across the flower displays, with enough layered foreground to support a gentle left-to-right slider move; do not create an imaginary aisle or enlarge the store. Lift dark flowers and soften fluorescent glare into flattering warm-neutral shop light, creamy highlights, natural greens and believable floral hues, premium editorial photographic finish. Keep actual flower varieties and arrangement identities. Remove no essential structural landmarks. No people, new furniture, additional rooms, invented signage, text overlays, logo overlays, collage, plastic CGI, dramatic fantasy lighting or oversaturated HDR. Output one clean 16:9 landscape image, ideally 2048x1152, visually consistent with warm-natural premium flower-shop advertising."
+    },
+    {
+      "scene": "scene-04",
+      "input": "still-112.png",
+      "prompt": "Use case: ads-marketing. Create one premium 16:9 landscape cinematic macro reference for a Hayale Flowers promo using this exact pale yellow and blush orchid cluster as the subject reference. Preserve the orchid species, petal shape, flower count, branching arrangement and subtle natural pigmentation. Show both main blooms clearly within the wide frame, the nearest flower crisp, the rest falling away into natural shallow depth. Refine the lighting into soft warm-neutral window light with clean ivory highlights, soft blush and muted green accents; reduce distracting blue/grey background cast but keep believable flower-shop bokeh. Real petal texture, natural flaws, premium lens rendering, no fake dew, no invented blooms, no text, logos, people, collage, artificial plastic or oversaturation. Compose for a small smooth macro camera drift. One photographic still, ideally 2048x1152, landscape 16:9, sophisticated and calm."
+    },
+    {
+      "scene": "scene-05",
+      "input": "_DSC0147.png",
+      "prompt": "Use case: ads-marketing. Create one polished landscape 16:9 cinematic bouquet hero reference based on this exact Hayale arrangement. Preserve the recognizable arrangement with orange gerbera daisies, creamy lisianthus, purple chrysanthemums, baby's breath and its real green foliage, including its relative placement and color identity. Premium natural product cinematography in a flower shop; slightly wider and cleaner composition showing the central orange gerbera and the surrounding real bouquet as a coherent crafted arrangement, with no duplicate or invented flowers. Soft warm-neutral diffused daylight, creamy whites that keep petal detail, rich but believable orange and purple, natural textured greens, restrained contrast and gentle background bokeh. Remove distractions only through framing/depth, not changing the bouquet. No people or hands, text, price labels, added logo, glitter, surreal effects, plastic flowers, HDR or collage. Allow visual depth for a slow 5-degree orbit. Output a single high-resolution 16:9 landscape still, ideally 2048x1152."
+    },
+    {
+      "scene": "scene-06",
+      "input": "_DSC0098.png",
+      "prompt": "Use case: ads-marketing. Create one exquisite cinematic landscape 16:9 macro first-frame reference for the final floral scene of a Hayale Flowers promo. The input is the subject reference: preserve this single red rose's exact natural petal spiral, recognizable head shape, red/burgundy hue, real stem and foliage. Reframe into a wide horizontal macro with the complete rose head safely inside the frame, the rose placed just left of center, and soft green/ivory shop bokeh across the remaining frame; do not multiply roses or invent a bouquet. Professional soft directional window light, delicate petal texture and folds, velvety burgundy-red with protected highlights, natural organic imperfections, very shallow depth of field. Quiet premium mood connecting visually to a burgundy/ivory/gold floral brand. No added dew, fantasy glow, humans, hands, text, logo, collage, plastic CGI, crushed shadows or over-sharpening. Output one 16:9 high-resolution landscape photographic frame, ideally 2048x1152, suitable for a very subtle slow push toward the rose."
+    }
+  ]
+}

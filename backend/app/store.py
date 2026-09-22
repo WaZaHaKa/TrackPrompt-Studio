@@ -20,6 +20,7 @@ from .analysis_archive import (
 from .config import Settings
 from .privacy import secure_private_directory, secure_private_file
 from .schemas import AnalysisMode, JobStatus
+from .wnp import emit_analysis
 
 
 def utc_now() -> datetime:
@@ -227,6 +228,7 @@ class JobStore:
             created_at=created.created_at,
             updated_at=created.updated_at,
         )
+        emit_analysis(created)
         return created
 
     def get_job(self, job_id: str) -> JobRecord | None:
@@ -323,6 +325,7 @@ class JobStore:
             status=updated.status.value,
             updated_at=updated.updated_at,
         )
+        emit_analysis(updated)
         return updated
 
     def active_job_ids(self) -> list[str]:

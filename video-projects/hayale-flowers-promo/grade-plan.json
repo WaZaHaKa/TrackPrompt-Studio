@@ -1,0 +1,215 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "hayale-flowers-promo",
+  "status": "manual-resolve-review-required",
+  "gradeApplied": false,
+  "previewNormalization": {
+    "video": "BT.709 SDR, limited range; no HDR transform",
+    "jpeg": "Camera JPEG RGB interpretation is provisional: EXIF ColorSpace 65535 and no embedded ICC. Resolve operator must confirm input profile from camera/RAW.",
+    "encoding": "Scale converts preview YUV matrix to BT.709 and limited range, all events tagged consistently. This is not ICC/gamut correction or final creative grading."
+  },
+  "sharedLook": {
+    "whiteBalance": "clean whites; gently warm without yellow/orange cast",
+    "greens": "natural, distinguish leaf texture",
+    "flowers": "rich believable color; protect reds, pinks and purples",
+    "contrast": "moderate with soft highlight rolloff",
+    "hdr": "no overprocessed HDR effect"
+  },
+  "shots": [
+    {
+      "assetId": "asset-8aeb83b0b54e6488",
+      "reviewLabel": "still-166",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Shop entrance and hanging greenery; place before product details.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-2c009f8b39ee1b6e",
+      "reviewLabel": "video-001",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "BT.709 SDR / video",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Pink orchids; avoid supplier label and late handheld sweep.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-7fde79ae825ca6fb",
+      "reviewLabel": "video-002",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "BT.709 SDR / video",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Red roses and natural foliage; bouquet rotation.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-bf45fc4b4baae2d2",
+      "reviewLabel": "video-003",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "BT.709 SDR / video",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Purple flowering plant with white ceramic pot.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-234f32df7cf98d60",
+      "reviewLabel": "video-004",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "BT.709 SDR / video",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Outdoor mixed arrangement; exclude opening pedestrians.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-ca4b23859809a4c2",
+      "reviewLabel": "video-006",
+      "cuts": [
+        "master"
+      ],
+      "inputInterpretation": "BT.709 SDR / video",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "White peace lily and green leaves; gentle handheld movement.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-573eef91b3de08af",
+      "reviewLabel": "still-008",
+      "cuts": [
+        "hero"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Storefront through glazing; modest centered crop.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-b6c6447cb3e5d023",
+      "reviewLabel": "still-121",
+      "cuts": [
+        "hero"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Pink orchid detail.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-e85d6d0b40b72282",
+      "reviewLabel": "still-103",
+      "cuts": [
+        "hero"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Orange and cream mixed bouquet.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-8d7bda05670e00cd",
+      "reviewLabel": "still-057",
+      "cuts": [
+        "hero"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Purple floral detail.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    },
+    {
+      "assetId": "asset-e0d54ab3cba10be1",
+      "reviewLabel": "still-165",
+      "cuts": [
+        "hero"
+      ],
+      "inputInterpretation": "unresolved camera JPEG input profile; confirm before final grade",
+      "normalization": {
+        "exposure": "check waveform and match adjoining shots",
+        "whiteBalance": "balance from plausible neutral whites; do not assume white wrapping is neutral",
+        "tint": "inspect mixed shop-light cast",
+        "highlightsShadows": "protect pale petals and recover foliage detail where source permits",
+        "saturation": "match shot-to-shot without clipping flower colors"
+      },
+      "shotTrim": "Pink daisies and bouquet detail; flower-first close.",
+      "numericCorrection": "not-measured; no invented CDL/LUT"
+    }
+  ],
+  "operatorGates": [
+    "Confirm JPEG input color",
+    "Review framing and handheld motion",
+    "Match exposure and white balance",
+    "Check brand-label legibility",
+    "Verify Resolve import against preview",
+    "Approve final visual quality"
+  ]
+}

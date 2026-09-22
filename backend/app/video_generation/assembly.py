@@ -20,7 +20,7 @@ class AssemblyPlan:
     commands: tuple[tuple[str, ...], ...]
     concat_list_path: str
     video_only_path: str
-    audio_path: str
+    audio_path: str | None
     total_frames: int
     fps: int
 
@@ -56,10 +56,11 @@ def build_assembly_plan(
     fps = int(timeline["fps"])
     width = int(timeline["width"])
     height = int(timeline["height"])
-    audio_path = Path(str(timeline["audioPath"]))
+    audio_value = timeline.get("audioPath")
+    audio_path = Path(str(audio_value)) if audio_value else None
     segment_directory = output_path.parent / "derived-media"
     concat_path = work_root / "segments.ffconcat"
-    video_only_path = work_root / "assembled-video-only.mp4"
+    video_only_path = work_root / "assembled-video-only.mp4" if audio_path else output_path
     segment_directory.mkdir(parents=True, exist_ok=True)
     work_root.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,6 +85,9 @@ def build_assembly_plan(
         scaled_height = math.ceil(height * crop_scale / 2) * 2
         x_offset = round((scaled_width - width) * crop_x)
         y_offset = round((scaled_height - height) * crop_y)
+        crop_filter = f"crop={width}:{height}:{x_offset}:{y_offset}"
+        if item.get("sourceFraming") == "center":
+            crop_filter = f"crop={width}:{height}:(iw-ow)/2:(ih-oh)/2"
         reverse = bool(item.get("reverse", False))
         ping_pong = bool(item.get("pingPong", False))
         freeze_frames = max(0, min(int(item.get("freezeFrames", 0)), int(item["durationFrames"]) - 1))
@@ -97,9 +101,12 @@ def build_assembly_plan(
             transition_path = Path(str(previous["clipPath"]))
             transition_seconds = max(1 / fps, min(duration_seconds / 2, fade_in or 8 / fps))
             fade_in = 0.0
+        scale_filter = f"scale={scaled_width}:{scaled_height}:force_original_aspect_ratio=increase"
+        if timeline.get("normalizeSdr"):
+            scale_filter += ":out_range=tv:out_color_matrix=bt709"
         base_filters = [
-            f"scale={scaled_width}:{scaled_height}:force_original_aspect_ratio=increase",
-            f"crop={width}:{height}:{x_offset}:{y_offset}",
+            scale_filter,
+            crop_filter,
             f"fps={fps}",
             f"setpts=(PTS-STARTPTS)/{playback_rate:.6f}",
         ]
@@ -135,13 +142,15 @@ def build_assembly_plan(
             "-loglevel",
             "warning",
             "-y",
-            "-stream_loop",
-            "1",
-            "-ss",
-            f"{source_in_seconds:.6f}",
-            "-i",
-            str(source_path),
         ]
+        if item.get("inputKind") == "still":
+            # Bound the demuxer too: buffering filters must reach EOF.
+            command_parts.extend([
+                "-loop", "1", "-framerate", str(fps), "-t", f"{duration_seconds + 1:.6f}",
+            ])
+        else:
+            command_parts.extend(["-stream_loop", "1", "-ss", f"{source_in_seconds:.6f}"])
+        command_parts.extend(["-i", str(source_path)])
         overlay_shot_id = item.get("overlayShotId")
         overlay_opacity = float(item.get("overlayOpacity", 0.0))
         overlay_path: Path | None = None
@@ -195,6 +204,32 @@ def build_assembly_plan(
             command_parts.extend(["-filter_complex", filter_graph, "-map", "[outv]"])
         else:
             command_parts.extend(["-vf", ",".join(base_filters)])
+        if timeline.get("normalizeSdr"):
+            # FFmpeg can propagate per-frame unspecified primaries/transfer over
+            # output encoder flags. Set frame properties at the final filter too.
+            color_filter = "setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709"
+            if "-vf" in command_parts:
+                filter_index = command_parts.index("-vf") + 1
+                command_parts[filter_index] += "," + color_filter
+            else:
+                filter_index = command_parts.index("-filter_complex") + 1
+                command_parts[filter_index] = command_parts[filter_index].replace(
+                    "[outv]", "," + color_filter + "[outv]"
+                )
+        if timeline.get("frameExact"):
+            # Retime changes PTS after the input FPS filter. Normalize again and
+            # trim by frame count so fractional cuts cannot silently lose frames.
+            exact_filter = (
+                f"fps={fps},tpad=stop_mode=clone:stop_duration={duration_seconds + 1:.6f},"
+                f"trim=end_frame={int(item['durationFrames'])},setpts=N/({fps}*TB)"
+            )
+            if "-vf" in command_parts:
+                command_parts[command_parts.index("-vf") + 1] += "," + exact_filter
+            else:
+                filter_index = command_parts.index("-filter_complex") + 1
+                command_parts[filter_index] = command_parts[filter_index].replace(
+                    "[outv]", "," + exact_filter + "[outv]"
+                )
         command_parts.extend([
             "-t",
             f"{duration_seconds:.6f}",
@@ -211,10 +246,21 @@ def build_assembly_plan(
             "+faststart",
             str(target_path),
         ])
+        if timeline.get("normalizeSdr"):
+            command_parts[-1:-1] = [
+                "-color_range", "tv", "-colorspace", "bt709",
+                "-color_primaries", "bt709", "-color_trc", "bt709", "-pix_fmt", "yuv420p",
+            ]
+        if timeline.get("frameExact"):
+            command_parts[-1:-1] = ["-frames:v", str(int(item["durationFrames"]))]
         command = tuple(command_parts)
         commands.append(command)
         escaped = str(target_path.resolve()).replace("'", "'\\''")
         concat_lines.append(f"file '{escaped}'")
+        if timeline.get("frameExact"):
+            # Supply exact edit durations instead of allowing container-boundary
+            # inference and concat timebase rounding to accumulate across cuts.
+            concat_lines.append(f"duration {int(item['durationFrames']) / fps:.12f}")
 
     atomic_write_text(concat_path, "\n".join(concat_lines) + "\n")
     commands.append(
@@ -235,35 +281,36 @@ def build_assembly_plan(
             str(video_only_path),
         )
     )
-    commands.append(
-        (
-            str(executable),
-            "-hide_banner",
-            "-loglevel",
-            "warning",
-            "-y",
-            "-i",
-            str(video_only_path),
-            "-i",
-            str(audio_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "320k",
-            "-shortest",
-            "-t",
-            f"{int(timeline['durationFrames']) / fps:.6f}",
-            "-movflags",
-            "+faststart",
-            str(output_path),
+    if audio_path:
+        commands.append(
+            (
+                str(executable),
+                "-hide_banner",
+                "-loglevel",
+                "warning",
+                "-y",
+                "-i",
+                str(video_only_path),
+                "-i",
+                str(audio_path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "320k",
+                "-shortest",
+                "-t",
+                f"{int(timeline['durationFrames']) / fps:.6f}",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            )
         )
-    )
     return AssemblyPlan(
         ffmpeg=str(executable),
         output_path=str(output_path),
@@ -271,7 +318,7 @@ def build_assembly_plan(
         commands=tuple(commands),
         concat_list_path=str(concat_path),
         video_only_path=str(video_only_path),
-        audio_path=str(audio_path),
+        audio_path=str(audio_path) if audio_path else None,
         total_frames=int(timeline["durationFrames"]),
         fps=fps,
     )

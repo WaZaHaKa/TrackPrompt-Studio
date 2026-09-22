@@ -1,0 +1,236 @@
+{
+  "$defs": {
+    "EditProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "enum": [
+            "720p",
+            "1080p"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        },
+        "paidSceneIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paidsceneids",
+          "type": "array"
+        },
+        "localMotion": {
+          "title": "Localmotion",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resolution",
+        "paidSceneIds",
+        "localMotion"
+      ],
+      "title": "EditProfile",
+      "type": "object"
+    },
+    "Scene": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^shot-[0-9]{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "assetSlot": {
+          "title": "Assetslot",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "logo",
+            "customer",
+            "shop",
+            "bouquet",
+            "product",
+            "craft",
+            "detail"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "gcp-first-frame",
+            "local-composition",
+            "retained-video"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "start": {
+          "minLength": 20,
+          "title": "Start",
+          "type": "string"
+        },
+        "movement": {
+          "minLength": 20,
+          "title": "Movement",
+          "type": "string"
+        },
+        "reveal": {
+          "minLength": 20,
+          "title": "Reveal",
+          "type": "string"
+        },
+        "finish": {
+          "minLength": 20,
+          "title": "Finish",
+          "type": "string"
+        },
+        "localMotion": {
+          "enum": [
+            "hold",
+            "pan-left",
+            "pan-right",
+            "push",
+            "pull"
+          ],
+          "title": "Localmotion",
+          "type": "string"
+        },
+        "timelineFrames": {
+          "exclusiveMinimum": 0,
+          "title": "Timelineframes",
+          "type": "integer"
+        },
+        "transition": {
+          "const": "cut",
+          "default": "cut",
+          "title": "Transition",
+          "type": "string"
+        },
+        "sourceSeconds": {
+          "maximum": 600,
+          "minimum": 4,
+          "title": "Sourceseconds",
+          "type": "integer"
+        },
+        "sourceFps": {
+          "maximum": 120,
+          "minimum": 1,
+          "title": "Sourcefps",
+          "type": "integer"
+        },
+        "sourceInSeconds": {
+          "minimum": 0,
+          "title": "Sourceinseconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "assetSlot",
+        "title",
+        "role",
+        "mode",
+        "start",
+        "movement",
+        "reveal",
+        "finish",
+        "localMotion",
+        "timelineFrames",
+        "sourceSeconds",
+        "sourceFps",
+        "sourceInSeconds"
+      ],
+      "title": "Scene",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "hayale-edit/1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "projectId": {
+      "const": "hayale-flowers-promo",
+      "title": "Projectid",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "fps": {
+      "const": 24,
+      "title": "Fps",
+      "type": "integer"
+    },
+    "aspectRatio": {
+      "const": "16:9",
+      "title": "Aspectratio",
+      "type": "string"
+    },
+    "scenes": {
+      "items": {
+        "$ref": "#/$defs/Scene"
+      },
+      "title": "Scenes",
+      "type": "array"
+    },
+    "profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EditProfile"
+      },
+      "title": "Profiles",
+      "type": "object"
+    },
+    "music": {
+      "additionalProperties": true,
+      "title": "Music",
+      "type": "object"
+    },
+    "pricing": {
+      "additionalProperties": true,
+      "title": "Pricing",
+      "type": "object"
+    },
+    "capabilities": {
+      "additionalProperties": true,
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "executionLimits": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Executionlimits",
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "version",
+    "projectId",
+    "title",
+    "fps",
+    "aspectRatio",
+    "scenes",
+    "profiles",
+    "music",
+    "pricing",
+    "capabilities",
+    "executionLimits"
+  ],
+  "title": "Scenario",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

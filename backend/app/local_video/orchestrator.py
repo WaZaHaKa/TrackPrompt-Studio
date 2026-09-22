@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
 
+from ..wnp import emit_local_run
+
 
 class LocalVideoRunError(RuntimeError):
     pass
@@ -53,6 +55,8 @@ def _atomic_json(path: Path, value: object) -> None:
             encoding="utf-8",
         )
         os.replace(temporary, path)
+        if isinstance(value, dict) and value.get("kind") == "trackprompt-local-video-resumable-run":
+            emit_local_run(value)
     finally:
         temporary.unlink(missing_ok=True)
 

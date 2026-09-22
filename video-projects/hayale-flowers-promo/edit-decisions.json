@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "hayale-flowers-promo",
+  "mode": "recorded-media-v1",
+  "sourceInventory": "inspection/media-inventory.json",
+  "frameRate": 30,
+  "audio": null,
+  "gradeStatus": "ungraded-reference; input interpretation and shot matching require Resolve review",
+  "cuts": [
+    {
+      "name": "master",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationFrames": 900,
+      "segments": [
+        {
+          "segmentId": "event-001",
+          "assetId": "asset-8aeb83b0b54e6488",
+          "sourceSha256": "24433f6cf56d576bf013529a53d2d51bab318991e10b4fbfeeda35e7b52916c4",
+          "reviewLabel": "still-166",
+          "inputKind": "still",
+          "timelineStartFrames": 0,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "establishing",
+          "editorialNote": "Shop entrance and hanging greenery; place before product details.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-002",
+          "assetId": "asset-2c009f8b39ee1b6e",
+          "sourceSha256": "46dff85d43abc9fab39db2b04b946a15e34db16786a5b8f80edf12422a3a48fb",
+          "reviewLabel": "video-001",
+          "inputKind": "video",
+          "timelineStartFrames": 90,
+          "durationFrames": 120,
+          "sourceInFrames": 390,
+          "chapterId": "floral-hero",
+          "editorialNote": "Pink orchids; avoid supplier label and late handheld sweep.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-003",
+          "assetId": "asset-7fde79ae825ca6fb",
+          "sourceSha256": "82e3c5d3fbc13be6753d98bd14b9cc383343f2ead26c6f1b5282399c1ee15787",
+          "reviewLabel": "video-002",
+          "inputKind": "video",
+          "timelineStartFrames": 210,
+          "durationFrames": 150,
+          "sourceInFrames": 225,
+          "chapterId": "bouquet-hero",
+          "editorialNote": "Red roses and natural foliage; bouquet rotation.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-004",
+          "assetId": "asset-bf45fc4b4baae2d2",
+          "sourceSha256": "05aa7207f818625d377b7a189da24f4602bbc3f4e62add84410700dc8b82ea63",
+          "reviewLabel": "video-003",
+          "inputKind": "video",
+          "timelineStartFrames": 360,
+          "durationFrames": 90,
+          "sourceInFrames": 30,
+          "chapterId": "potted-arrangement",
+          "editorialNote": "Purple flowering plant with white ceramic pot.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-005",
+          "assetId": "asset-234f32df7cf98d60",
+          "sourceSha256": "8311344711dd0c338f353922250c45ece8dd3c9a2abd9e5b238ee880d5b4b55c",
+          "reviewLabel": "video-004",
+          "inputKind": "video",
+          "timelineStartFrames": 450,
+          "durationFrames": 120,
+          "sourceInFrames": 210,
+          "chapterId": "arrangement",
+          "editorialNote": "Outdoor mixed arrangement; exclude opening pedestrians.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-006",
+          "assetId": "asset-bf45fc4b4baae2d2",
+          "sourceSha256": "05aa7207f818625d377b7a189da24f4602bbc3f4e62add84410700dc8b82ea63",
+          "reviewLabel": "video-003",
+          "inputKind": "video",
+          "timelineStartFrames": 570,
+          "durationFrames": 120,
+          "sourceInFrames": 690,
+          "chapterId": "detail",
+          "editorialNote": "Pink and burgundy floral detail; cut before aisle sweep.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-007",
+          "assetId": "asset-ca4b23859809a4c2",
+          "sourceSha256": "a9ef24e6ac89778610b81d0247271c6b75054be596c7e2e7c7a62d3e28536fd3",
+          "reviewLabel": "video-006",
+          "inputKind": "video",
+          "timelineStartFrames": 690,
+          "durationFrames": 90,
+          "sourceInFrames": 75,
+          "chapterId": "atmosphere",
+          "editorialNote": "White peace lily and green leaves; gentle handheld movement.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-008",
+          "assetId": "asset-7fde79ae825ca6fb",
+          "sourceSha256": "82e3c5d3fbc13be6753d98bd14b9cc383343f2ead26c6f1b5282399c1ee15787",
+          "reviewLabel": "video-002",
+          "inputKind": "video",
+          "timelineStartFrames": 780,
+          "durationFrames": 120,
+          "sourceInFrames": 45,
+          "chapterId": "closing-brand",
+          "editorialNote": "Existing Hayale ribbon label in real footage; no invented logo.",
+          "sourceFraming": "center"
+        }
+      ]
+    },
+    {
+      "name": "hero",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "durationFrames": 450,
+      "segments": [
+        {
+          "segmentId": "event-001",
+          "assetId": "asset-573eef91b3de08af",
+          "sourceSha256": "277dfefb43e2d2b7fc19b070e568d75cb512567db6a8da4529be891b5d7c13ba",
+          "reviewLabel": "still-008",
+          "inputKind": "still",
+          "timelineStartFrames": 0,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "establishing",
+          "editorialNote": "Storefront through glazing; modest centered crop.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-002",
+          "assetId": "asset-b6c6447cb3e5d023",
+          "sourceSha256": "aa0e2504fb3dc61c8d0a507308665c02496d5e6bce21ee30bc2cf571067377a9",
+          "reviewLabel": "still-121",
+          "inputKind": "still",
+          "timelineStartFrames": 90,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "floral-hero",
+          "editorialNote": "Pink orchid detail.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-003",
+          "assetId": "asset-e85d6d0b40b72282",
+          "sourceSha256": "5fb5aaae9cd302eaaf962be60ad95022e1b81d31c27c53a7c8d5654bc1082b1b",
+          "reviewLabel": "still-103",
+          "inputKind": "still",
+          "timelineStartFrames": 180,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "arrangement",
+          "editorialNote": "Orange and cream mixed bouquet.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-004",
+          "assetId": "asset-8d7bda05670e00cd",
+          "sourceSha256": "07ae758e227abc8b1f9cf734e3423b2140cbd0461f245a316af06a4fefd79a24",
+          "reviewLabel": "still-057",
+          "inputKind": "still",
+          "timelineStartFrames": 270,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "detail",
+          "editorialNote": "Purple floral detail.",
+          "sourceFraming": "center"
+        },
+        {
+          "segmentId": "event-005",
+          "assetId": "asset-e0d54ab3cba10be1",
+          "sourceSha256": "571bc7c28dd91e55fe5049affb6c1c9248702b95af5e7a93d072d0cda1fb442d",
+          "reviewLabel": "still-165",
+          "inputKind": "still",
+          "timelineStartFrames": 360,
+          "durationFrames": 90,
+          "sourceInFrames": 0,
+          "chapterId": "closing-hero",
+          "editorialNote": "Pink daisies and bouquet detail; flower-first close.",
+          "sourceFraming": "center"
+        }
+      ]
+    }
+  ]
+}

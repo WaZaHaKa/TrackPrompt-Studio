@@ -1,0 +1,77 @@
+FFFFFFFF
+======================================================================
+FAIL: test_arbitrary_files_not_served (test_api.APITests.test_arbitrary_files_not_served)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_auth_required (test_api.APITests.test_auth_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_duplicate_query_rejected (test_api.APITests.test_duplicate_query_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_evidence_requires_registration (test_api.APITests.test_evidence_requires_registration)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_post_forbidden (test_api.APITests.test_post_forbidden)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_public_bind_rejected (test_api.APITests.test_public_bind_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_status_and_sync (test_api.APITests.test_status_and_sync)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+======================================================================
+FAIL: test_unknown_route_and_errors_are_sanitized (test_api.APITests.test_unknown_route_and_errors_are_sanitized)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/wnp_work/master/tests/test_api.py", line 11, in setUp
+    self.assertIsNotNone(importlib.util.find_spec('wnp_host.api'),'API must be implemented')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : API must be implemented
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.003s
+
+FAILED (failures=8)

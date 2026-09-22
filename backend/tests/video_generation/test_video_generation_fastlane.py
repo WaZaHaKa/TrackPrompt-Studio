@@ -363,7 +363,9 @@ def test_provider_output_uris_are_scoped_and_reject_traversal() -> None:
 def test_doctor_reports_no_network_contact_when_gcloud_is_absent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    monkeypatch.setattr("app.video_generation.gcp_auth.check_access", lambda **kwargs: {
+        "ok": False, "networkContacted": False, "checks": [{"id": "gcloud-installed", "ok": False}],
+    })
     result = doctor(
         project_id="trackprompt-preflight",
         bucket="trackprompt-video-preflight",
@@ -885,8 +887,8 @@ async def test_mission_control_owns_exact_batch_smoke_first_and_persists_events(
         async def fetch(self, *, model_id: str, operation_name: str, context) -> dict[str, object]:  # type: ignore[no-untyped-def]
             shot_id = operation_name.rsplit("/", 1)[-1]
             job = store.list_video_jobs(limit=1)[0]
-            shot = next(item for item in job.plan["shots"] if item["shotId"] == shot_id)
-            return {"done": True, "response": {"videos": [{"gcsUri": f"{shot['storageUri']}result.mp4"}]}}
+            shot = job.shot(shot_id)
+            return {"done": True, "response": {"videos": [{"gcsUri": f"{shot.latest_attempt.storage_uri}result.mp4"}]}}
 
         async def download(self, uri: str, destination: Path) -> None:
             destination.parent.mkdir(parents=True, exist_ok=True)
